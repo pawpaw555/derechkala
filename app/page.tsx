@@ -347,8 +347,22 @@ export default function Home() {
                 </div>
               </div>
 
+              {useCustomTime && (
+                <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+                  <span style={{ fontSize: 12, color: t.muted }}>זמן מתוכנן: </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
+                    {["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][customDay]} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
+                  </span>
+                </div>
+              )}
+
               {(() => {
-                const deps = getNextDepartures(new Date(), 3);
+                const baseDate = new Date();
+                if (useCustomTime) {
+                  baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
+                  baseDate.setHours(customHour, customMinute, 0, 0);
+                }
+                const deps = getNextDepartures(baseDate, 3);
                 if (deps.length === 0) return (
                   <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, textAlign: "center", color: t.muted, fontSize: 13 }}>
                     הרכבת אינה פועלת כעת
@@ -492,7 +506,7 @@ export default function Home() {
                   background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 10, padding: "12px 14px",
                   display: "flex", gap: 10, alignItems: "center",
-                  justifyContent: "space-between",
+                  justifyContent: "center",
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
