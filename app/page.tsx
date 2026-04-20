@@ -149,6 +149,7 @@ export default function Home() {
   const [customDay, setCustomDay] = useState(1);
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
+  const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
 
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
@@ -238,8 +239,20 @@ export default function Home() {
       baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
-    const departures = getNextDepartures(baseDate, 1);
-    setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow));
+
+    if (useCustomTime && timeMode === "arrival") {
+      // Work backwards — estimate travel time then subtract
+      const fromIdx = STATIONS.findIndex(s => s.name === fromStation.name);
+      const toIdx = STATIONS.findIndex(s => s.name === toStation.name);
+      const stops = Math.abs(toIdx - fromIdx);
+      const estimatedTravelMins = stops * 2 + 2;
+      const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
+      const departures = getNextDepartures(departureDate, 1);
+      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, departureDate));
+    } else {
+      const departures = getNextDepartures(baseDate, 1);
+      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
+    }
   };
 
   const getLocation = () => {
@@ -335,12 +348,12 @@ export default function Home() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0", borderTop: `1px solid ${t.border}` }}>
                   {[
-                    ["הרכבת הבאה", `${result.next}′`, result.lineColor],
+                    ["שעת יציאה", result.departureTime || `${result.next}′`, result.lineColor],
                     ["זמן נסיעה", `${result.mins}′`, t.text],
-                    ["תחנות", String(result.stops), t.text],
+                    ["שעת הגעה", result.arrivalTime || "", t.text],
                   ].map(([label, val, color]) => (
                     <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 24, fontWeight: 700, color }}>{val}</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color }}>{val}</div>
                       <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
                     </div>
                   ))}
@@ -349,7 +362,7 @@ export default function Home() {
 
               {useCustomTime && (
                 <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
-                  <span style={{ fontSize: 12, color: t.muted }}>זמן מתוכנן: </span>
+                  <span style={{ fontSize: 12, color: t.muted }}>{timeMode === "arrival" ? "מגיע ב: " : "יוצא ב: "}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
                     {["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][customDay]} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
                   </span>
@@ -381,16 +394,34 @@ export default function Home() {
                         }}>
                           <span style={{ fontSize: 13, color: i === 0 ? t.text : t.muted, fontWeight: i === 0 ? 600 : 400 }}>{d.label}</span>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? fromStation?.lineColor : t.text }}>{d.minsFromNow}</span>
-                            <span style={{ fontSize: 11, color: t.muted }}>דקות</span>
-                            <span style={{ fontSize: 12, color: t.muted }}>({d.time})</span>
-                          </div>
+                          {useCustomTime ? (
+                            <span style={{ fontSize: 18, fontWeight: 700, color: i === 0 ? fromStation?.lineColor : t.text }}>{d.time}</span>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? fromStation?.lineColor : t.text }}>{d.minsFromNow}</span>
+                              <span style={{ fontSize: 11, color: t.muted }}>דקות</span>
+                              <span style={{ fontSize: 12, color: t.muted }}>({d.time})</span>
+                            </>
+                          )}
+                        </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 );
               })()}
+
+              {/* Route map */}
+              <div style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${t.border}` }}>
+                <Map
+                  stations={STATIONS}
+                  userLoc={null}
+                  fromStation={fromStation}
+                  toStation={toStation}
+                  onUserLocation={() => {}}
+                  onSelectStation={() => {}}
+                />
+              </div>
 
               <button onClick={() => setResult(null)} style={{
                 background: "transparent", border: `1px solid ${t.border}`,
@@ -502,6 +533,25 @@ export default function Home() {
               </div>
 
               {useCustomTime && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setTimeMode("departure")} style={{
+                    flex: 1, padding: "8px 12px", borderRadius: 8,
+                    border: `1px solid ${timeMode === "departure" ? t.borderSelected : t.border}`,
+                    background: timeMode === "departure" ? t.resultBg : "transparent",
+                    color: timeMode === "departure" ? t.text : t.muted,
+                    fontFamily: "'Rubik', sans-serif", fontSize: 13,
+                    fontWeight: timeMode === "departure" ? 600 : 400, cursor: "pointer",
+                  }}>זמן יציאה</button>
+                  <button onClick={() => setTimeMode("arrival")} style={{
+                    flex: 1, padding: "8px 12px", borderRadius: 8,
+                    border: `1px solid ${timeMode === "arrival" ? t.borderSelected : t.border}`,
+                    background: timeMode === "arrival" ? t.resultBg : "transparent",
+                    color: timeMode === "arrival" ? t.text : t.muted,
+                    fontFamily: "'Rubik', sans-serif", fontSize: 13,
+                    fontWeight: timeMode === "arrival" ? 600 : 400, cursor: "pointer",
+                  }}>זמן הגעה</button>
+                </div>
                 <div style={{
                   background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 10, padding: "12px 14px",
@@ -548,6 +598,7 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                </div>
                 </div>
               )}
 

@@ -134,6 +134,62 @@ export const LANDMARKS: Landmark[] = [
 
   // הקוממיות
   { name: "אצטדיון בת ים", stationName: "הקוממיות", walkMins: 5, lineId: "red" },
+
+  // ── כתובות רחובות ────────────────────────────────────────────
+  // זאב אורלוב — פתח תקווה
+  { name: "זאב אורלוב 70", stationName: "תחנה מרכזית פתח תקווה", walkMins: 1, lineId: "red" },
+  { name: "זאב אורלוב 41", stationName: "פינסקר", walkMins: 1, lineId: "red" },
+  { name: "זאב אורלוב 8", stationName: "קרול", walkMins: 1, lineId: "red" },
+
+  // ז'בוטינסקי — פתח תקווה
+  { name: "ז'בוטינסקי 31 פתח תקווה", stationName: "דנקנר", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 72 פתח תקווה", stationName: "בילינסון", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 82 פתח תקווה", stationName: "שחם", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 101 פתח תקווה", stationName: "שנקר", walkMins: 1, lineId: "red" },
+
+  // ז'בוטינסקי — בני ברק
+  { name: "ז'בוטינסקי 166 בני ברק", stationName: "אהרונוביץ'", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 117 בני ברק", stationName: "אהרונוביץ'", walkMins: 2, lineId: "red" },
+  { name: "ז'בוטינסקי 12 בני ברק", stationName: "בן גוריון", walkMins: 1, lineId: "red" },
+
+  // ז'בוטינסקי — רמת גן
+  { name: "ז'בוטינסקי 85 רמת גן", stationName: "ביאליק", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 68 רמת גן", stationName: "ביאליק", walkMins: 2, lineId: "red" },
+  { name: "ז'בוטינסקי 5 רמת גן", stationName: "אבא הלל", walkMins: 1, lineId: "red" },
+
+  // מנחם בגין — תל אביב
+  { name: "מנחם בגין 160", stationName: "ארלוזורוב", walkMins: 1, lineId: "red" },
+  { name: "מנחם בגין 125", stationName: "שאול המלך", walkMins: 1, lineId: "red" },
+  { name: "מנחם בגין 144", stationName: "שאול המלך", walkMins: 1, lineId: "red" },
+  { name: "מנחם בגין 112", stationName: "יהודית", walkMins: 1, lineId: "red" },
+  { name: "מנחם בגין 98", stationName: "יהודית", walkMins: 2, lineId: "red" },
+
+  // קרליבך — תל אביב
+  { name: "קרליבך לינקולן", stationName: "קרליבך", walkMins: 1, lineId: "red" },
+  { name: "קרליבך מנחם בגין", stationName: "קרליבך", walkMins: 1, lineId: "red" },
+
+  // יהודה הלוי — תל אביב
+  { name: "יהודה הלוי 63", stationName: "אלנבי", walkMins: 1, lineId: "red" },
+  { name: "מקווה ישראל 10", stationName: "אלנבי", walkMins: 1, lineId: "red" },
+
+  // שדרות ירושלים — תל אביב יפו
+  { name: "שדרות ירושלים 15", stationName: "שלמה (סלמה)", walkMins: 1, lineId: "red" },
+  { name: "שדרות ירושלים 42", stationName: "אצטדיון בלומפילד", walkMins: 1, lineId: "red" },
+  { name: "שדרות ירושלים 94", stationName: "ארליך", walkMins: 1, lineId: "red" },
+  { name: "שדרות ירושלים 120", stationName: "איסקוב", walkMins: 1, lineId: "red" },
+  { name: "שדרות ירושלים 146", stationName: 'הבעש"ט', walkMins: 1, lineId: "red" },
+  { name: "שדרות ירושלים 210", stationName: "מחרוזת", walkMins: 1, lineId: "red" },
+
+  // בת ים
+  { name: "שד' העצמאות 69", stationName: "העצמאות", walkMins: 1, lineId: "red" },
+  { name: "רוטשילד 17 בת ים", stationName: "רוטשילד", walkMins: 1, lineId: "red" },
+  { name: "הרצל 64 בת ים", stationName: "ז'בוטינסקי", walkMins: 1, lineId: "red" },
+  { name: "יוספטל 44", stationName: "בלפור", walkMins: 1, lineId: "red" },
+  { name: "יוספטל 70", stationName: "בנימין", walkMins: 1, lineId: "red" },
+  { name: "יוספטל 82", stationName: "יוספטל", walkMins: 1, lineId: "red" },
+  { name: "ניסבאום 48", stationName: 'כ"ט בנובמבר', walkMins: 1, lineId: "red" },
+  { name: "ניסבאום 7", stationName: "העמל", walkMins: 1, lineId: "red" },
+  { name: "מנחם בגין 4 בת ים", stationName: "הקוממיות", walkMins: 1, lineId: "red" },
 ];
 
 export function searchAll(query: string): {
@@ -165,7 +221,7 @@ export function searchAll(query: string): {
   return { stations, landmarks };
 }
 
-export function findRoute(fromName: string, toName: string, nextMins?: number): {
+export function findRoute(fromName: string, toName: string, nextMins?: number, baseDate?: Date): {
   stops: number;
   mins: number;
   next: number;
@@ -173,6 +229,8 @@ export function findRoute(fromName: string, toName: string, nextMins?: number): 
   lineName: string;
   lineColor: string;
   change?: string;
+  departureTime?: string;
+  arrivalTime?: string;
 } | null {
   const from = STATIONS.find(s => s.name === fromName);
   const to = STATIONS.find(s => s.name === toName);
@@ -184,13 +242,24 @@ export function findRoute(fromName: string, toName: string, nextMins?: number): 
   const stops = Math.abs(ti - fi);
 
 
-return {
+const travelMins = stops * 2 + Math.round(Math.random() * 3);
+  const next = nextMins ?? Math.round(Math.random() * 4) + 1;
+  const base = baseDate ?? new Date();
+  const depTime = baseDate
+    ? new Date(base.getTime())
+    : new Date(base.getTime() + next * 60 * 1000);
+  const arrTime = new Date(depTime.getTime() + travelMins * 60 * 1000);
+  const fmt = (d: Date) => `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+
+  return {
     stops,
-    mins: stops * 2 + Math.round(Math.random() * 3),
-    next: nextMins ?? Math.round(Math.random() * 4) + 1,
+    mins: travelMins,
+    next,
     direct: true,
     lineName: "קו אדום",
     lineColor: "#b04050",
+    departureTime: fmt(depTime),
+    arrivalTime: fmt(arrTime),
   };
 }
 
