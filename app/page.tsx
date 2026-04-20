@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, Station, STATIONS, searchAll, Landmark } from "./lib/data";
+import { findRoute, Station, STATIONS, searchAll, Landmark, getNextDepartures } from "./lib/data";
 import { SITE_NAME } from "./lib/SiteComponents";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
@@ -162,6 +162,10 @@ export default function Home() {
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
   const [showMap, setShowMap] = useState(false);
   const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customDay, setCustomDay] = useState(1); // 0=sun, 1=mon... 6=sat
+  const [customHour, setCustomHour] = useState(8);
+  const [customMinute, setCustomMinute] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
@@ -248,7 +252,13 @@ export default function Home() {
 
   const handlePlan = () => {
     if (!fromStation || !toStation) return;
-    setResult(findRoute(fromStation.name, toStation.name));
+    const baseDate = new Date();
+    if (useCustomTime) {
+      baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
+      baseDate.setHours(customHour, customMinute, 0, 0);
+    }
+    const departures = getNextDepartures(baseDate, 1);
+    setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow));
   };
 
   const getLocation = () => {
@@ -402,6 +412,101 @@ export default function Home() {
                   setShowMap(false);
                 }}
               />
+            </div>
+          )}
+{/* Time picker */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              onClick={() => setUseCustomTime(false)}
+              style={{
+                flex: 1, padding: "9px 12px", borderRadius: 8,
+                border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
+                background: !useCustomTime ? t.resultBg : "transparent",
+                color: !useCustomTime ? t.text : t.muted,
+                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: !useCustomTime ? 600 : 400,
+                cursor: "pointer",
+              }}
+            >
+              עכשיו
+            </button>
+            <button
+              onClick={() => setUseCustomTime(true)}
+              style={{
+                flex: 1, padding: "9px 12px", borderRadius: 8,
+                border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
+                background: useCustomTime ? t.resultBg : "transparent",
+                color: useCustomTime ? t.text : t.muted,
+                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: useCustomTime ? 600 : 400,
+                cursor: "pointer",
+              }}
+            >
+              בחר זמן
+            </button>
+          </div>
+
+          {/* Custom time selectors */}
+          {useCustomTime && (
+            <div style={{
+              background: t.resultBg, border: `1px solid ${t.border}`,
+              borderRadius: 10, padding: "12px 14px",
+              display: "flex", gap: 10, alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
+                <select
+                  value={customDay}
+                  onChange={e => setCustomDay(Number(e.target.value))}
+                  style={{
+                    background: t.inputBg, border: `1px solid ${t.border}`,
+                    borderRadius: 7, padding: "6px 10px",
+                    color: t.text, fontSize: 13,
+                    fontFamily: "'Rubik', sans-serif", outline: "none",
+                  }}
+                >
+                  <option value={0}>ראשון</option>
+                  <option value={1}>שני</option>
+                  <option value={2}>שלישי</option>
+                  <option value={3}>רביעי</option>
+                  <option value={4}>חמישי</option>
+                  <option value={5}>שישי</option>
+                  <option value={6}>שבת</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>שעה</div>
+                <select
+                  value={customHour}
+                  onChange={e => setCustomHour(Number(e.target.value))}
+                  style={{
+                    background: t.inputBg, border: `1px solid ${t.border}`,
+                    borderRadius: 7, padding: "6px 10px",
+                    color: t.text, fontSize: 13,
+                    fontFamily: "'Rubik', sans-serif", outline: "none",
+                  }}
+                >
+                  {Array.from({length: 24}, (_, i) => (
+                    <option key={i} value={i}>{i.toString().padStart(2, "0")}:00</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>דקות</div>
+                <select
+                  value={customMinute}
+                  onChange={e => setCustomMinute(Number(e.target.value))}
+                  style={{
+                    background: t.inputBg, border: `1px solid ${t.border}`,
+                    borderRadius: 7, padding: "6px 10px",
+                    color: t.text, fontSize: 13,
+                    fontFamily: "'Rubik', sans-serif", outline: "none",
+                  }}
+                >
+                  {[0, 15, 30, 45].map(m => (
+                    <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 

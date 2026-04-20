@@ -165,7 +165,7 @@ export function searchAll(query: string): {
   return { stations, landmarks };
 }
 
-export function findRoute(fromName: string, toName: string): {
+export function findRoute(fromName: string, toName: string, nextMins?: number): {
   stops: number;
   mins: number;
   next: number;
@@ -183,12 +183,83 @@ export function findRoute(fromName: string, toName: string): {
   const ti = lineStations.findIndex(s => s.name === toName);
   const stops = Math.abs(ti - fi);
 
-  return {
+
+return {
     stops,
     mins: stops * 2 + Math.round(Math.random() * 3),
-    next: Math.round(Math.random() * 4) + 1,
+    next: nextMins ?? Math.round(Math.random() * 4) + 1,
     direct: true,
     lineName: "קו אדום",
     lineColor: "#b04050",
   };
+}
+
+// ── Schedule Engine ──────────────────────────────────────────────
+
+export type DayType = "weekday" | "friday" | "saturday";
+
+export function getDayType(date: Date): DayType {
+  const day = date.getDay();
+  if (day === 6) return "saturday";
+  if (day === 5) return "friday";
+  return "weekday";
+}
+
+export function isOperating(date: Date): boolean {
+  const dayType = getDayType(date);
+  const mins = date.getHours() * 60 + date.getMinutes();
+
+  if (dayType === "saturday") {
+    return false;
+  }
+  if (dayType === "friday") {
+    return mins >= 5 * 60 + 30 && mins <= 17 * 60 + 10;
+  }
+  return mins >= 5 * 60 + 30;
+}
+
+export function isSaturdayNight(date: Date): boolean {
+  return date.getDay() === 6 && date.getHours() >= 21;
+}
+
+export function getFrequencyMins(date: Date): number {
+  const hour = date.getHours();
+  const isPeak = (hour >= 7 && hour < 9) || (hour >= 16 && hour < 19);
+  return isPeak ? 3.5 : 6;
+}
+
+export function getNextDepartures(date: Date, count: number = 3): {
+  time: string;
+  minsFromNow: number;
+  label: string;
+}[] {
+  if (date.getDay() === 6 && date.getHours() < 21) return [];
+
+  if (date.getDay() === 5) {
+    const mins = date.getHours() * 60 + date.getMinutes();
+    if (mins > 17 * 60 + 10) return [];
+  }
+
+  const currentMins = date.getHours() * 60 + date.getMinutes();
+  if (currentMins < 5 * 60 + 30 && !isSaturdayNight(date)) return [];
+
+  const frequency = getFrequencyMins(date);
+  const departures = [];
+  const firstOffset = Math.random() * frequency;
+
+  for (let i = 0; i < count; i++) {
+    const offsetMins = firstOffset + i * frequency;
+    const depDate = new Date(date.getTime() + offsetMins * 60 * 1000);
+    const h = depDate.getHours().toString().padStart(2, "0");
+    const m = depDate.getMinutes().toString().padStart(2, "0");
+    const minsFromNow = Math.round(offsetMins);
+
+    departures.push({
+      time: `${h}:${m}`,
+      minsFromNow,
+      label: i === 0 ? "הרכבת הקרובה" : i === 1 ? "הרכבת הבאה" : "הרכבת אחריה",
+    });
+  }
+
+  return departures;
 }

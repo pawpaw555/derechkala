@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, searchAll, findRoute, STATIONS } from "../../lib/data";
+import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures } from "../../lib/data";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 
@@ -21,18 +21,21 @@ export default function StationClient({ stationName, station }: Props) {
   const [toStation, setToStation] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
-  const [departures, setDepartures] = useState<{mins: number; label: string}[]>([]);
+  const [departures, setDepartures] = useState<{mins: number; time?: string; label: string}[]>([]);
 
   const color = station?.lineColor || "#b04050";
 
   useEffect(() => {
-    const interval = station?.lineId === "red" ? 3.5 : 4;
-    const first = Math.floor(Math.random() * interval) + 1;
-    setDepartures([
-      { mins: first, label: "הרכבת הקרובה" },
-    { mins: Math.round(first + interval), label: "הרכבת הבאה" },
-    { mins: Math.round(first + interval * 2), label: "הרכבת אחריה" },
-    ]);
+    const now = new Date();
+    const deps = getNextDepartures(now, 3);
+    setDepartures(deps.map(d => ({ mins: d.minsFromNow, time: d.time, label: d.label })));
+
+    // Refresh every minute
+    const id = setInterval(() => {
+      const updated = getNextDepartures(new Date(), 3);
+      setDepartures(updated.map(d => ({ mins: d.minsFromNow, time: d.time, label: d.label })));
+    }, 60000);
+    return () => clearInterval(id);
   }, [station]);
 
   const handleSearch = (val: string) => {
@@ -273,6 +276,7 @@ export default function StationClient({ stationName, station }: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? color : t.text }}>{d.mins}</span>
                   <span style={{ fontSize: 11, color: t.muted }}>דקות</span>
+                  {d.time && <span style={{ fontSize: 11, color: t.muted }}>({d.time})</span>}
                 </div>
               </div>
             ))}
