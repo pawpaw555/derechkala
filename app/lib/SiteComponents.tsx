@@ -29,10 +29,13 @@ export function SiteFooter() {
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 24px 48px" }}>
       <div style={{ padding: 14, background: t.card, border: `1px solid ${t.border}`, borderRadius: 10 }}>
-        <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.7 }}>
+        <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.7, marginBottom: 8 }}>
           האתר אינו קשור רשמית לדנקל או לנת"ע. המידע והזמנים המוצגים הם הערכה בלבד ואינם מידע רשמי.
           לזמנים מדויקים ומידע עדכני יש לפנות לאתר הרשמי של דנקל או לאפליקציית דנקל.
         </p>
+        <a href="/privacy" style={{ fontSize: 11, color: t.muted, textDecoration: "underline" }}>
+          מדיניות פרטיות
+        </a>
       </div>
     </div>
   );
