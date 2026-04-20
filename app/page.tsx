@@ -35,46 +35,35 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
       background: t.card, border: `1px solid ${t.border}`,
       borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
     }}>
-      {/* Landmarks first */}
       {results.landmarks.map((l) => (
-  <button
-    key={l.name}
-    onClick={() => onSelectLandmark(l)}
-    style={{
-      display: "flex", alignItems: "center", gap: 12,
-      width: "100%", background: "transparent",
-      border: "none", borderBottom: `1px solid ${t.border}`,
-      padding: "12px 14px", cursor: "pointer",
-    }}
-  >
-    <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
-    <div style={{ flex: 1, textAlign: "right" }}>
-      <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
-      <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
-        תחנת {l.stationName} · {l.walkMins} דקות הליכה
-      </div>
-    </div>
-  </button>
-))}
-
-      {/* Stations */}
+        <button key={l.name} onClick={() => onSelectLandmark(l)} style={{
+          display: "flex", alignItems: "center", gap: 12,
+          width: "100%", background: "transparent",
+          border: "none", borderBottom: `1px solid ${t.border}`,
+          padding: "12px 14px", cursor: "pointer",
+        }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
+              תחנת {l.stationName} · {l.walkMins} דקות הליכה
+            </div>
+          </div>
+        </button>
+      ))}
       {results.stations.map(s => (
-        <button
-          key={s.lineId + s.name}
-          onClick={() => onSelectStation(s)}
-          style={{
-            display: "flex", alignItems: "center", gap: 10,
-            width: "100%", background: "transparent",
-            border: "none", borderBottom: `1px solid ${t.border}`,
-            padding: "11px 14px", cursor: "pointer",
-          }}
-        >
+        <button key={s.lineId + s.name} onClick={() => onSelectStation(s)} style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", background: "transparent",
+          border: "none", borderBottom: `1px solid ${t.border}`,
+          padding: "11px 14px", cursor: "pointer",
+        }}>
           <div style={{ width: 11, height: 11, borderRadius: "50%", background: s.lineColor, flexShrink: 0 }} />
           <div style={{ flex: 1, textAlign: "right" }}>
             <div style={{ fontSize: 13, color: t.text, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>{s.name}</div>
             <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
-            {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
-          </div>
+              {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
+            </div>
           </div>
         </button>
       ))}
@@ -115,16 +104,10 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
             position: "absolute", right: 12, top: "50%",
             transform: "translateY(-50%)",
             width: 10, height: 10, borderRadius: "50%",
-            background: selected.lineColor,
-            pointerEvents: "none",
+            background: selected.lineColor, pointerEvents: "none",
           }} />
         )}
-        <SearchDropdown
-          results={results}
-          onSelectStation={onSelectStation}
-          onSelectLandmark={onSelectLandmark}
-          t={t}
-        />
+        <SearchDropdown results={results} onSelectStation={onSelectStation} onSelectLandmark={onSelectLandmark} t={t} />
         {value.length >= 2 && results.stations.length === 0 && results.landmarks.length === 0 && !selected && (
           <div style={{
             position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 100,
@@ -163,15 +146,13 @@ export default function Home() {
   const [showMap, setShowMap] = useState(false);
   const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
   const [useCustomTime, setUseCustomTime] = useState(false);
-  const [customDay, setCustomDay] = useState(1); // 0=sun, 1=mon... 6=sat
+  const [customDay, setCustomDay] = useState(1);
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
     if (saved === "dark") setDark(true);
-
-    // Pre-fill from station if coming from station page
     const params = new URLSearchParams(window.location.search);
     const from = params.get("from");
     if (from) {
@@ -330,240 +311,243 @@ export default function Home() {
           display: "flex", flexDirection: "column", gap: 10,
           textAlign: "right", boxShadow: t.shadow,
         }}>
-          <InputField
-            label="מתחנה"
-            value={fromQuery}
-            onChange={handleFromSearch}
-            placeholder="מאיפה אתה יוצא?"
-            selected={fromStation}
-            results={fromResults}
-            onSelectStation={handleFromSelectStation}
-            onSelectLandmark={handleFromSelectLandmark}
-            t={t}
-          />
-
-          {/* Location + Swap */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={getLocation} style={{
-              flex: 1, background: dark ? "#1a2220" : "#f0faf5",
-              border: `1px solid ${dark ? "#3a906066" : "#3a906088"}`,
-              borderRadius: 8, padding: "9px 12px",
-              color: "#3a9060", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", fontFamily: "'Rubik', sans-serif",
-            }}>
-              המיקום שלי
-            </button>
-            <button onClick={handleSwap} style={{
-              background: "#b04050", border: "none",
-              borderRadius: "50%", width: 40, height: 40,
-              color: "#ffffff", fontSize: 20,
-              cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center",
-              flexShrink: 0, boxShadow: "0 2px 8px #b0405044",
-            }}>⇅</button>
-          </div>
-
-          <InputField
-            label="לתחנה"
-            value={toQuery}
-            onChange={handleToSearch}
-            placeholder="לאן אתה רוצה להגיע?"
-            selected={toStation}
-            results={toResults}
-            onSelectStation={handleToSelectStation}
-            onSelectLandmark={handleToSelectLandmark}
-            t={t}
-          />
-
-          {/* Map toggle */}
-          <button onClick={() => setShowMap(m => !m)} style={{
-            background: showMap ? (dark ? "#1a2220" : "#f0faf5") : t.mapBtn,
-            border: `1.5px dashed ${showMap ? "#3a906088" : t.border}`,
-            borderRadius: 10, padding: "12px 14px",
-            color: showMap ? "#3a9060" : t.muted,
-            fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: 500,
-            cursor: "pointer", display: "flex", alignItems: "center",
-            justifyContent: "center", gap: 8,
-          }}>
-            {showMap ? "סגור מפה" : "בחר תחנת יעד מהמפה"}
-          </button>
-
-          {/* Map */}
-          {showMap && (
-            <div>
-              <div style={{
-                background: dark ? "#1a1a2a" : "#f4f0fc",
-                padding: "8px 14px", fontSize: 12, fontWeight: 500,
-                color: "#6a52a8",
-                fontFamily: "'Rubik', sans-serif", textAlign: "right",
-                borderRadius: "10px 10px 0 0",
-                border: `1px solid ${t.border}`, borderBottom: "none",
-              }}>
-                לחץ על תחנת היעד שלך
-              </div>
-              <Map
-                stations={STATIONS}
-                userLoc={userLoc}
-                fromStation={fromStation}
-                toStation={toStation}
-                onUserLocation={(lat, lng) => setUserLoc({ lat, lng })}
-                onSelectStation={(s) => {
-                  handleToSelectStation(s);
-                  setShowMap(false);
-                }}
-              />
-            </div>
-          )}
-{/* Time picker */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              onClick={() => setUseCustomTime(false)}
-              style={{
-                flex: 1, padding: "9px 12px", borderRadius: 8,
-                border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
-                background: !useCustomTime ? t.resultBg : "transparent",
-                color: !useCustomTime ? t.text : t.muted,
-                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: !useCustomTime ? 600 : 400,
-                cursor: "pointer",
-              }}
-            >
-              עכשיו
-            </button>
-            <button
-              onClick={() => setUseCustomTime(true)}
-              style={{
-                flex: 1, padding: "9px 12px", borderRadius: 8,
-                border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
-                background: useCustomTime ? t.resultBg : "transparent",
-                color: useCustomTime ? t.text : t.muted,
-                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: useCustomTime ? 600 : 400,
-                cursor: "pointer",
-              }}
-            >
-              בחר זמן
-            </button>
-          </div>
-
-          {/* Custom time selectors */}
-          {useCustomTime && (
-            <div style={{
-              background: t.resultBg, border: `1px solid ${t.border}`,
-              borderRadius: 10, padding: "12px 14px",
-              display: "flex", gap: 10, alignItems: "center",
-              justifyContent: "space-between",
-            }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
-                <select
-                  value={customDay}
-                  onChange={e => setCustomDay(Number(e.target.value))}
-                  style={{
-                    background: t.inputBg, border: `1px solid ${t.border}`,
-                    borderRadius: 7, padding: "6px 10px",
-                    color: t.text, fontSize: 13,
-                    fontFamily: "'Rubik', sans-serif", outline: "none",
-                  }}
-                >
-                  <option value={0}>ראשון</option>
-                  <option value={1}>שני</option>
-                  <option value={2}>שלישי</option>
-                  <option value={3}>רביעי</option>
-                  <option value={4}>חמישי</option>
-                  <option value={5}>שישי</option>
-                  <option value={6}>שבת</option>
-                </select>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>שעה</div>
-                <select
-                  value={customHour}
-                  onChange={e => setCustomHour(Number(e.target.value))}
-                  style={{
-                    background: t.inputBg, border: `1px solid ${t.border}`,
-                    borderRadius: 7, padding: "6px 10px",
-                    color: t.text, fontSize: 13,
-                    fontFamily: "'Rubik', sans-serif", outline: "none",
-                  }}
-                >
-                  {Array.from({length: 24}, (_, i) => (
-                    <option key={i} value={i}>{i.toString().padStart(2, "0")}:00</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>דקות</div>
-                <select
-                  value={customMinute}
-                  onChange={e => setCustomMinute(Number(e.target.value))}
-                  style={{
-                    background: t.inputBg, border: `1px solid ${t.border}`,
-                    borderRadius: 7, padding: "6px 10px",
-                    color: t.text, fontSize: 13,
-                    fontFamily: "'Rubik', sans-serif", outline: "none",
-                  }}
-                >
-                  {[0, 15, 30, 45].map(m => (
-                    <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Search button */}
-          <button onClick={handlePlan} style={{
-            background: fromStation && toStation ? fromStation.lineColor : t.border,
-            color: fromStation && toStation ? "#fff" : t.subtle,
-            border: "none", borderRadius: 10, padding: "14px",
-            fontSize: 15, fontWeight: 600,
-            cursor: fromStation && toStation ? "pointer" : "default",
-            fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
-          }}>
-            חפש נסיעה
-          </button>
-
-          {/* Result */}
-          {result && (
-            <div style={{ background: t.resultBg, borderRadius: 12, padding: 16, border: `1px solid ${t.border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: result.lineColor }} />
-                <span style={{ fontSize: 13, color: t.muted, fontWeight: 500 }}>{result.lineName}</span>
-                {!result.direct && (
-                  <span style={{ fontSize: 11, background: dark ? "#2a1e1e" : "#fdf0f0", color: "#a04040", borderRadius: 5, padding: "2px 8px", border: "1px solid #e0a0a044" }}>
-                    החלפה ב{result.change}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 14 }}>
-                {[
-                  ["הרכבת הבאה", `${result.next}′`, result.lineColor],
-                  ["זמן נסיעה", `${result.mins}′`, t.text],
-                  ["תחנות", String(result.stops), t.text],
-                ].map(([label, val, color]) => (
-                  <div key={label} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 26, fontWeight: 700, color }}>{val}</div>
-                    <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>{label}</div>
+          {result ? (
+            /* Collapsed result view */
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>מסלול נסיעה</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div style={{ textAlign: "right", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>מוצא</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: fromStation?.lineColor }}>{fromStation?.name}</div>
+                    {fromStation && fromStation.nearbyPlaces.length > 0 && (
+                      <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>ליד: {fromStation.nearbyPlaces[0]}</div>
+                    )}
                   </div>
-                ))}
-              </div>
-              <div style={{ background: t.routeBg, borderRadius: 8, padding: "9px 12px" }}>
-                <div style={{ fontSize: 10, color: t.muted, marginBottom: 6, textAlign: "right" }}>מסלול הנסיעה</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 11, color: t.muted }}>מוצא</div>
-                    <div style={{ fontSize: 13, color: fromStation?.lineColor, fontWeight: 600 }}>{fromStation?.name}</div>
-                  </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ flex: 1, height: 2, background: result.lineColor + "44", borderRadius: 1 }} />
-                    <span style={{ fontSize: 14, color: result.lineColor }}>←</span>
-                  </div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 11, color: t.muted }}>יעד</div>
-                    <div style={{ fontSize: 13, color: toStation?.lineColor, fontWeight: 600 }}>{toStation?.name}</div>
+                  <div style={{ fontSize: 18, color: result.lineColor }}>←</div>
+                  <div style={{ textAlign: "left", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>יעד</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: toStation?.lineColor }}>{toStation?.name}</div>
+                    {toStation && toStation.nearbyPlaces.length > 0 && (
+                      <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>ליד: {toStation.nearbyPlaces[0]}</div>
+                    )}
                   </div>
                 </div>
+                <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0", borderTop: `1px solid ${t.border}` }}>
+                  {[
+                    ["הרכבת הבאה", `${result.next}′`, result.lineColor],
+                    ["זמן נסיעה", `${result.mins}′`, t.text],
+                    ["תחנות", String(result.stops), t.text],
+                  ].map(([label, val, color]) => (
+                    <div key={label} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 24, fontWeight: 700, color }}>{val}</div>
+                      <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {(() => {
+                const deps = getNextDepartures(new Date(), 3);
+                if (deps.length === 0) return (
+                  <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, textAlign: "center", color: t.muted, fontSize: 13 }}>
+                    הרכבת אינה פועלת כעת
+                  </div>
+                );
+                return (
+                  <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>עזיבות הבאות</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {deps.map((d, i) => (
+                        <div key={i} style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          background: i === 0 ? t.resultBg : "transparent",
+                          border: `1px solid ${i === 0 ? fromStation?.lineColor + "44" : t.border}`,
+                          borderRadius: 8, padding: "10px 14px",
+                        }}>
+                          <span style={{ fontSize: 13, color: i === 0 ? t.text : t.muted, fontWeight: i === 0 ? 600 : 400 }}>{d.label}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? fromStation?.lineColor : t.text }}>{d.minsFromNow}</span>
+                            <span style={{ fontSize: 11, color: t.muted }}>דקות</span>
+                            <span style={{ fontSize: 12, color: t.muted }}>({d.time})</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <button onClick={() => setResult(null)} style={{
+                background: "transparent", border: `1px solid ${t.border}`,
+                borderRadius: 10, padding: "11px 14px",
+                color: t.muted, fontSize: 13, fontWeight: 500,
+                cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+              }}>
+                חפש מסלול אחר
+              </button>
             </div>
+
+          ) : (
+            /* Full search form */
+            <>
+              <InputField
+                label="מתחנה"
+                value={fromQuery}
+                onChange={handleFromSearch}
+                placeholder="מאיפה אתה יוצא?"
+                selected={fromStation}
+                results={fromResults}
+                onSelectStation={handleFromSelectStation}
+                onSelectLandmark={handleFromSelectLandmark}
+                t={t}
+              />
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button onClick={getLocation} style={{
+                  flex: 1, background: dark ? "#1a2220" : "#f0faf5",
+                  border: `1px solid ${dark ? "#3a906066" : "#3a906088"}`,
+                  borderRadius: 8, padding: "9px 12px",
+                  color: "#3a9060", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+                }}>
+                  המיקום שלי
+                </button>
+                <button onClick={handleSwap} style={{
+                  background: "#b04050", border: "none",
+                  borderRadius: "50%", width: 40, height: 40,
+                  color: "#ffffff", fontSize: 20,
+                  cursor: "pointer", display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, boxShadow: "0 2px 8px #b0405044",
+                }}>⇅</button>
+              </div>
+
+              <InputField
+                label="לתחנה"
+                value={toQuery}
+                onChange={handleToSearch}
+                placeholder="לאן אתה רוצה להגיע?"
+                selected={toStation}
+                results={toResults}
+                onSelectStation={handleToSelectStation}
+                onSelectLandmark={handleToSelectLandmark}
+                t={t}
+              />
+
+              <button onClick={() => setShowMap(m => !m)} style={{
+                background: showMap ? (dark ? "#1a2220" : "#f0faf5") : t.mapBtn,
+                border: `1.5px dashed ${showMap ? "#3a906088" : t.border}`,
+                borderRadius: 10, padding: "12px 14px",
+                color: showMap ? "#3a9060" : t.muted,
+                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: 500,
+                cursor: "pointer",
+              }}>
+                {showMap ? "סגור מפה" : "בחר תחנת יעד מהמפה"}
+              </button>
+
+              {showMap && (
+                <div>
+                  <div style={{
+                    background: dark ? "#1a1a2a" : "#f4f0fc",
+                    padding: "8px 14px", fontSize: 12, fontWeight: 500,
+                    color: "#6a52a8", fontFamily: "'Rubik', sans-serif", textAlign: "right",
+                    borderRadius: "10px 10px 0 0",
+                    border: `1px solid ${t.border}`, borderBottom: "none",
+                  }}>
+                    לחץ על תחנת היעד שלך
+                  </div>
+                  <Map
+                    stations={STATIONS}
+                    userLoc={userLoc}
+                    fromStation={fromStation}
+                    toStation={toStation}
+                    onUserLocation={(lat, lng) => setUserLoc({ lat, lng })}
+                    onSelectStation={(s) => { handleToSelectStation(s); setShowMap(false); }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button onClick={() => setUseCustomTime(false)} style={{
+                  flex: 1, padding: "9px 12px", borderRadius: 8,
+                  border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
+                  background: !useCustomTime ? t.resultBg : "transparent",
+                  color: !useCustomTime ? t.text : t.muted,
+                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
+                  fontWeight: !useCustomTime ? 600 : 400, cursor: "pointer",
+                }}>עכשיו</button>
+                <button onClick={() => setUseCustomTime(true)} style={{
+                  flex: 1, padding: "9px 12px", borderRadius: 8,
+                  border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
+                  background: useCustomTime ? t.resultBg : "transparent",
+                  color: useCustomTime ? t.text : t.muted,
+                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
+                  fontWeight: useCustomTime ? 600 : 400, cursor: "pointer",
+                }}>בחר זמן</button>
+              </div>
+
+              {useCustomTime && (
+                <div style={{
+                  background: t.resultBg, border: `1px solid ${t.border}`,
+                  borderRadius: 10, padding: "12px 14px",
+                  display: "flex", gap: 10, alignItems: "center",
+                  justifyContent: "space-between",
+                }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
+                    <select value={customDay} onChange={e => setCustomDay(Number(e.target.value))} style={{
+                      background: t.inputBg, border: `1px solid ${t.border}`,
+                      borderRadius: 7, padding: "6px 10px", color: t.text,
+                      fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
+                    }}>
+                      <option value={0}>ראשון</option>
+                      <option value={1}>שני</option>
+                      <option value={2}>שלישי</option>
+                      <option value={3}>רביעי</option>
+                      <option value={4}>חמישי</option>
+                      <option value={5}>שישי</option>
+                      <option value={6}>שבת</option>
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>שעה</div>
+                    <select value={customHour} onChange={e => setCustomHour(Number(e.target.value))} style={{
+                      background: t.inputBg, border: `1px solid ${t.border}`,
+                      borderRadius: 7, padding: "6px 10px", color: t.text,
+                      fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
+                    }}>
+                      {Array.from({length: 24}, (_, i) => (
+                        <option key={i} value={i}>{i.toString().padStart(2, "0")}:00</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>דקות</div>
+                    <select value={customMinute} onChange={e => setCustomMinute(Number(e.target.value))} style={{
+                      background: t.inputBg, border: `1px solid ${t.border}`,
+                      borderRadius: 7, padding: "6px 10px", color: t.text,
+                      fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
+                    }}>
+                      {[0, 15, 30, 45].map(m => (
+                        <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={handlePlan} style={{
+                background: fromStation && toStation ? fromStation.lineColor : t.border,
+                color: fromStation && toStation ? "#fff" : t.subtle,
+                border: "none", borderRadius: 10, padding: "14px",
+                fontSize: 15, fontWeight: 600,
+                cursor: fromStation && toStation ? "pointer" : "default",
+                fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
+              }}>
+                חפש נסיעה
+              </button>
+            </>
           )}
         </div>
       </section>
@@ -620,7 +604,7 @@ export default function Home() {
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
             הרכבת הקלה פועלת בימי חול מ-05:30 עד חצות, בערב שבת עד 17:10, ובמוצאי שבת מ-21:00.
           </p>
-       </div>
+        </div>
       </section>
 
       {/* Disclaimer */}
