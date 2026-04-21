@@ -36,8 +36,12 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
       borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
     }}>
       {results.landmarks.map((l) => (
-        <button key={l.name} onClick={() => onSelectLandmark(l)} style={{
-          display: "flex", alignItems: "center", gap: 12,
+        <button
+    key={l.name}
+    onClick={() => onSelectLandmark(l)}
+    className="dropdown-item"
+    style={{
+      display: "flex", alignItems: "center", gap: 12,
           width: "100%", background: "transparent",
           border: "none", borderBottom: `1px solid ${t.border}`,
           padding: "12px 14px", cursor: "pointer",
@@ -52,8 +56,12 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
         </button>
       ))}
       {results.stations.map(s => (
-        <button key={s.lineId + s.name} onClick={() => onSelectStation(s)} style={{
-          display: "flex", alignItems: "center", gap: 10,
+        <button
+          key={s.lineId + s.name}
+          onClick={() => onSelectStation(s)}
+          className="dropdown-item"
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
           width: "100%", background: "transparent",
           border: "none", borderBottom: `1px solid ${t.border}`,
           padding: "11px 14px", cursor: "pointer",
@@ -136,6 +144,7 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
 
 export default function Home() {
   const [dark, setDark] = useState(false);
+  const [swapSpinning, setSwapSpinning] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [fromResults, setFromResults] = useState<SearchResults>({ stations: [], landmarks: [] });
@@ -143,6 +152,7 @@ export default function Home() {
   const [fromStation, setFromStation] = useState<Station | null>(null);
   const [toStation, setToStation] = useState<Station | null>(null);
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
+  const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
   const [useCustomTime, setUseCustomTime] = useState(false);
@@ -234,25 +244,30 @@ export default function Home() {
 
   const handlePlan = () => {
     if (!fromStation || !toStation) return;
+    setLoading(true);
+    setResult(null);
+
     const baseDate = new Date();
     if (useCustomTime) {
       baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
-    if (useCustomTime && timeMode === "arrival") {
-      // Work backwards — estimate travel time then subtract
-      const fromIdx = STATIONS.findIndex(s => s.name === fromStation.name);
-      const toIdx = STATIONS.findIndex(s => s.name === toStation.name);
-      const stops = Math.abs(toIdx - fromIdx);
-      const estimatedTravelMins = stops * 2 + 2;
-      const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
-      const departures = getNextDepartures(departureDate, 1);
-      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, departureDate));
-    } else {
-      const departures = getNextDepartures(baseDate, 1);
-      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
-    }
+    setTimeout(() => {
+      if (useCustomTime && timeMode === "arrival") {
+        const fromIdx = STATIONS.findIndex(s => s.name === fromStation.name);
+        const toIdx = STATIONS.findIndex(s => s.name === toStation.name);
+        const stops = Math.abs(toIdx - fromIdx);
+        const estimatedTravelMins = stops * 2 + 2;
+        const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
+        const departures = getNextDepartures(departureDate, 1);
+        setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, departureDate));
+      } else {
+        const departures = getNextDepartures(baseDate, 1);
+        setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
+      }
+      setLoading(false);
+    }, 2000 + Math.random() * 1000);
   };
 
   const getLocation = () => {
@@ -285,6 +300,42 @@ export default function Home() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: ${t.subtle}; }
         a { text-decoration: none; }
+
+        .station-dot { animation: stationPulse 0.6s ease-in-out infinite alternate; }
+        .station-dot:nth-child(1) { animation-delay: 0s; }
+        .station-dot:nth-child(2) { animation-delay: 0.15s; }
+        .station-dot:nth-child(3) { animation-delay: 0.3s; }
+        .station-dot:nth-child(4) { animation-delay: 0.45s; }
+        .station-dot:nth-child(5) { animation-delay: 0.6s; }
+        @keyframes stationPulse { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
+
+        input:focus { border-color: #b04050 !important; box-shadow: 0 0 0 3px #b0405018 !important; transition: all 0.2s; }
+
+        .btn-primary { transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease; }
+        .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 4px 12px #b0405030; }
+        .btn-primary:active { transform: scale(0.97); filter: brightness(0.95); }
+
+        .btn-secondary { transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+        .btn-secondary:hover { border-color: #b04050 !important; color: #b04050 !important; }
+        .btn-secondary:active { transform: scale(0.97); }
+
+        .btn-toggle { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+        .btn-toggle:active { transform: scale(0.96); }
+
+        .btn-swap { transition: box-shadow 0.2s ease; }
+        .btn-swap:hover { box-shadow: 0 4px 16px #b0405050 !important; transform: scale(1.1); }
+
+        .dropdown-item { transition: background 0.12s ease; }
+        .dropdown-item:hover { background: ${t.resultBg} !important; }
+
+        .card-selected { animation: cardPop 0.2s ease-out; }
+        @keyframes cardPop { 0% { transform: scale(0.98); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+
+        .dropdown-enter { animation: dropIn 0.15s ease-out; }
+        @keyframes dropIn { 0% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        .line-card { transition: transform 0.15s ease, box-shadow 0.15s ease; display: flex; }
+        .line-card:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px #00000015 !important; }
       `}</style>
 
       {/* Header */}
@@ -313,9 +364,68 @@ export default function Home() {
         <h1 style={{ fontSize: 36, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.25 }}>
           הרכבת הקלה של גוש דן
         </h1>
-        <p style={{ fontSize: 16, color: t.muted, marginBottom: 32, lineHeight: 1.6 }}>
-          תכנון נסיעה ברכבת הקלה בגוש דן · קו אדום, קו ירוק וקו סגול
-        </p>
+
+        <div style={{ marginBottom: 32, position: "relative", overflow: "hidden", height: 72 }}>
+          <style>{`
+            @keyframes trainSlide {
+              0% { transform: translateX(600px); }
+              100% { transform: translateX(-600px); }
+            }
+            @keyframes textFadeIn {
+              0% { opacity: 0; transform: translateY(6px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            .train-anim { animation: trainSlide 14s linear infinite; display: inline-block; }
+            .slogan-anim { animation: textFadeIn 1.2s ease-out forwards; }
+          `}</style>
+
+          <div style={{
+            position: "absolute", bottom: 8, left: 0, right: 0,
+            height: 2, background: "#b04050", opacity: 0.2, borderRadius: 1,
+          }} />
+
+          <div className="train-anim" style={{
+            position: "absolute", bottom: 6, left: "50%",
+          }}>
+            <svg width="160" height="16" viewBox="0 0 160 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Car 1 */}
+              <rect x="0" y="0" width="34" height="12" rx="3" fill="#b04050"/>
+              <rect x="2" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="12" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="22" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <circle cx="7" cy="14" r="2.5" fill="#7a2030"/>
+              <circle cx="27" cy="14" r="2.5" fill="#7a2030"/>
+              {/* Car 2 */}
+              <rect x="38" y="0" width="34" height="12" rx="3" fill="#b04050"/>
+              <rect x="40" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="50" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="60" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <circle cx="45" cy="14" r="2.5" fill="#7a2030"/>
+              <circle cx="65" cy="14" r="2.5" fill="#7a2030"/>
+              {/* Car 3 */}
+              <rect x="76" y="0" width="34" height="12" rx="3" fill="#b04050"/>
+              <rect x="78" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="88" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="98" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <circle cx="83" cy="14" r="2.5" fill="#7a2030"/>
+              <circle cx="103" cy="14" r="2.5" fill="#7a2030"/>
+              {/* Car 4 */}
+              <rect x="114" y="0" width="34" height="12" rx="3" fill="#b04050"/>
+              <rect x="116" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="126" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <rect x="136" y="2" width="7" height="6" rx="1" fill="#f8d0d4" opacity="0.8"/>
+              <circle cx="121" cy="14" r="2.5" fill="#7a2030"/>
+              <circle cx="141" cy="14" r="2.5" fill="#7a2030"/>
+            </svg>
+          </div>
+
+          <p className="slogan-anim" style={{
+            fontSize: 15, color: t.muted, lineHeight: 1.8,
+            position: "absolute", top: 0, left: 0, right: 0, textAlign: "center",
+          }}>
+            הדרך הקלה להגיע ולנסוע ברכבת הקלה<br/>הקו האדום — פתח תקווה עד בת ים
+          </p>
+        </div>
 
         {/* Search Card */}
         <div style={{
@@ -324,7 +434,25 @@ export default function Home() {
           display: "flex", flexDirection: "column", gap: 10,
           textAlign: "right", boxShadow: t.shadow,
         }}>
-          {result ? (
+          {loading ? (
+            <div style={{ padding: "32px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+              <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
+                <div style={{ flex: 1, height: 2, background: "#b04050", opacity: 0.15, borderRadius: 1 }} />
+                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 10px" }}>
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} className="station-dot" style={{
+                      width: 14, height: 14, borderRadius: "50%",
+                      background: "#b04050", border: "3px solid #fff",
+                      boxShadow: "0 0 0 2px #b04050",
+                    }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 14, color: t.muted, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>
+                מחפש את הנסיעה הטובה ביותר...
+              </div>
+            </div>
+          ) : result ? (
             /* Collapsed result view */
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
@@ -468,13 +596,15 @@ export default function Home() {
                 }}>
                   המיקום שלי
                 </button>
-                <button onClick={handleSwap} style={{
+                <button onClick={() => { handleSwap(); setSwapSpinning(true); setTimeout(() => setSwapSpinning(false), 400); }} style={{
                   background: "#b04050", border: "none",
                   borderRadius: "50%", width: 40, height: 40,
                   color: "#ffffff", fontSize: 20,
                   cursor: "pointer", display: "flex",
                   alignItems: "center", justifyContent: "center",
                   flexShrink: 0, boxShadow: "0 2px 8px #b0405044",
+                  transform: swapSpinning ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.35s ease, box-shadow 0.2s ease",
                 }}>⇅</button>
               </div>
 
@@ -524,7 +654,7 @@ export default function Home() {
               )}
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button onClick={() => setUseCustomTime(false)} style={{
+                <button onClick={() => setUseCustomTime(false)} className="btn-toggle" style={{
                   flex: 1, padding: "9px 12px", borderRadius: 8,
                   border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
                   background: !useCustomTime ? t.resultBg : "transparent",
@@ -532,7 +662,7 @@ export default function Home() {
                   fontFamily: "'Rubik', sans-serif", fontSize: 13,
                   fontWeight: !useCustomTime ? 600 : 400, cursor: "pointer",
                 }}>עכשיו</button>
-                <button onClick={() => setUseCustomTime(true)} style={{
+                <button onClick={() => setUseCustomTime(true)} className="btn-toggle" style={{
                   flex: 1, padding: "9px 12px", borderRadius: 8,
                   border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
                   background: useCustomTime ? t.resultBg : "transparent",
@@ -612,14 +742,14 @@ export default function Home() {
                 </div>
               )}
 
-              <button onClick={handlePlan} style={{
-                background: fromStation && toStation ? fromStation.lineColor : t.border,
-                color: fromStation && toStation ? "#fff" : t.subtle,
-                border: "none", borderRadius: 10, padding: "14px",
-                fontSize: 15, fontWeight: 600,
-                cursor: fromStation && toStation ? "pointer" : "default",
-                fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
-              }}>
+              <button onClick={handlePlan} className="btn-primary" style={{
+            background: fromStation && toStation ? fromStation.lineColor : t.border,
+            color: fromStation && toStation ? "#fff" : t.subtle,
+            border: "none", borderRadius: 10, padding: "14px",
+            fontSize: 15, fontWeight: 600,
+            cursor: fromStation && toStation ? "pointer" : "default",
+            fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
+          }}>
                 חפש נסיעה
               </button>
             </>
@@ -635,7 +765,7 @@ export default function Home() {
           { name: "קו ירוק", desc: "הרצליה — ראשון לציון · צפוי לפתיחה דצמבר 2028", color: "#3a9060", href: "/line-green", active: false },
           { name: "קו סגול", desc: "יהוד — תל אביב · צפוי לפתיחה יולי 2028", color: "#6a52a8", href: "/line-purple", active: false },
         ].map(line => (
-          <a key={line.name} href={line.href} style={{
+          <a key={line.name} href={line.href} className="line-card" style={{
             background: t.card, border: `1px solid ${t.border}`,
             borderRadius: 12, padding: "15px 18px",
             display: "flex", alignItems: "center", gap: 14,

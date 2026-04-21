@@ -28,6 +28,7 @@ export default function StationClient({ stationName, station }: Props) {
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
+  const [loading, setLoading] = useState(false);
   const [departures, setDepartures] = useState<{mins: number; time?: string; label: string}[]>([]);
 
   const color = station?.lineColor || "#b04050";
@@ -76,22 +77,28 @@ export default function StationClient({ stationName, station }: Props) {
     const to = STATIONS.find(s => s.name === toStation);
     if (!from || !to) return;
 
+    setLoading(true);
+    setResult(null);
+
     const baseDate = new Date();
     if (useCustomTime) {
       baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
-    if (useCustomTime && timeMode === "arrival") {
-      const stops = Math.abs(STATIONS.findIndex(s => s.name === toStation) - STATIONS.findIndex(s => s.name === stationName));
-      const estimatedTravelMins = stops * 2 + 2;
-      const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
-      const departures = getNextDepartures(departureDate, 1);
-      setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, departureDate));
-    } else {
-      const departures = getNextDepartures(baseDate, 1);
-      setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, baseDate));
-    }
+    setTimeout(() => {
+      if (useCustomTime && timeMode === "arrival") {
+        const stops = Math.abs(STATIONS.findIndex(s => s.name === toStation) - STATIONS.findIndex(s => s.name === stationName));
+        const estimatedTravelMins = stops * 2 + 2;
+        const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
+        const departures = getNextDepartures(departureDate, 1);
+        setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, departureDate));
+      } else {
+        const departures = getNextDepartures(baseDate, 1);
+        setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, baseDate));
+      }
+      setLoading(false);
+    }, 2000 + Math.random() * 1000);
   };
 
   const hasResults = results.stations.length > 0 || results.landmarks.length > 0;
@@ -110,6 +117,29 @@ export default function StationClient({ stationName, station }: Props) {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         a { text-decoration: none; }
         input::placeholder { color: ${t.subtle}; }
+        .station-dot-s { animation: stationPulseS 0.6s ease-in-out infinite alternate; }
+        .station-dot-s:nth-child(1) { animation-delay: 0s; }
+        .station-dot-s:nth-child(2) { animation-delay: 0.15s; }
+        .station-dot-s:nth-child(3) { animation-delay: 0.3s; }
+        .station-dot-s:nth-child(4) { animation-delay: 0.45s; }
+        .station-dot-s:nth-child(5) { animation-delay: 0.6s; }
+        @keyframes stationPulseS { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
+
+        input { transition: border-color 0.2s, box-shadow 0.2s; }
+        input:focus { border-color: #b04050 !important; box-shadow: 0 0 0 3px #b0405018 !important; }
+
+        .btn-primary-s { transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease; }
+        .btn-primary-s:hover { filter: brightness(1.08); box-shadow: 0 4px 12px #b0405030; }
+        .btn-primary-s:active { transform: scale(0.97); filter: brightness(0.95); }
+
+        .btn-toggle-s { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+        .btn-toggle-s:active { transform: scale(0.96); }
+
+        .dropdown-item-s { transition: background 0.12s ease; }
+        .dropdown-item-s:hover { background: ${t.resultBg} !important; }
+
+        .btn-reset-s { transition: border-color 0.15s ease, color 0.15s ease; }
+        .btn-reset-s:hover { border-color: #b04050 !important; color: #b04050 !important; }
       `}</style>
 
       <SiteHeader backHref={station?.lineHref || "/"} />
@@ -150,7 +180,25 @@ export default function StationClient({ stationName, station }: Props) {
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנן נסיעה מתחנה זו</div>
 
-          {result ? (
+          {loading ? (
+            <div style={{ padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+              <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
+                <div style={{ flex: 1, height: 2, background: color, opacity: 0.15, borderRadius: 1 }} />
+                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 10px" }}>
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} className="station-dot-s" style={{
+                      width: 12, height: 12, borderRadius: "50%",
+                      background: color, border: "3px solid #fff",
+                      boxShadow: `0 0 0 2px ${color}`,
+                    }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: t.muted, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>
+                מחפש את הנסיעה הטובה ביותר...
+              </div>
+            </div>
+          ) : result ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {/* Result summary */}
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14 }}>
@@ -214,7 +262,7 @@ export default function StationClient({ stationName, station }: Props) {
                   </div>
                 ) : null;
               })()}
-              <button onClick={() => setResult(null)} style={{
+              <button onClick={() => setResult(null)} className="btn-reset-s" style={{
                 background: "transparent", border: `1px solid ${t.border}`,
                 borderRadius: 9, padding: "10px 14px",
                 color: t.muted, fontSize: 13, fontWeight: 500,
@@ -245,7 +293,7 @@ export default function StationClient({ stationName, station }: Props) {
                     borderRadius: 9, zIndex: 100, boxShadow: t.shadow, overflow: "hidden",
                   }}>
                     {results.landmarks.map(l => (
-                      <button key={l.name} onClick={() => handleSelectLandmark(l)} style={{
+                      <button key={l.name} onClick={() => handleSelectLandmark(l)} className="dropdown-item-s" style={{
                         display: "flex", alignItems: "center", gap: 10,
                         width: "100%", background: "transparent",
                         border: "none", borderBottom: `1px solid ${t.border}`,
@@ -259,7 +307,7 @@ export default function StationClient({ stationName, station }: Props) {
                       </button>
                     ))}
                     {results.stations.map(s => (
-                      <button key={s.name} onClick={() => handleSelectStation(s)} style={{
+                      <button key={s.name} onClick={() => handleSelectStation(s)} className="dropdown-item-s" style={{
                         display: "flex", alignItems: "center", gap: 10,
                         width: "100%", background: "transparent",
                         border: "none", borderBottom: `1px solid ${t.border}`,
@@ -302,7 +350,7 @@ export default function StationClient({ stationName, station }: Props) {
 
               {/* Time picker */}
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setUseCustomTime(false)} style={{
+                <button onClick={() => setUseCustomTime(false)} className="btn-toggle-s" style={{
                   flex: 1, padding: "8px 12px", borderRadius: 8,
                   border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
                   background: !useCustomTime ? t.resultBg : "transparent",
@@ -310,7 +358,7 @@ export default function StationClient({ stationName, station }: Props) {
                   fontFamily: "'Rubik', sans-serif", fontSize: 13,
                   fontWeight: !useCustomTime ? 600 : 400, cursor: "pointer",
                 }}>עכשיו</button>
-                <button onClick={() => setUseCustomTime(true)} style={{
+                <button onClick={() => setUseCustomTime(true)} className="btn-toggle-s" style={{
                   flex: 1, padding: "8px 12px", borderRadius: 8,
                   border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
                   background: useCustomTime ? t.resultBg : "transparent",
@@ -389,7 +437,7 @@ export default function StationClient({ stationName, station }: Props) {
                 </div>
               )}
 
-              <button onClick={handlePlan} style={{
+              <button onClick={handlePlan} className="btn-primary-s" style={{
                 width: "100%", background: toStation ? color : t.border,
                 color: toStation ? "#fff" : t.subtle,
                 border: "none", borderRadius: 9,
