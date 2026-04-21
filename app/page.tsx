@@ -422,7 +422,17 @@ export default function Home() {
                   onSelectStation={() => {}}
                 />
               </div>
-
+{toStation && toStation.nearbyPlaces.length > 0 && (
+                <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מקומות קרובים ליעד</div>
+                  {toStation.nearbyPlaces.map(place => (
+                    <div key={place} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: toStation.lineColor, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: t.text }}>{place}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <button onClick={() => setResult(null)} style={{
                 background: "transparent", border: `1px solid ${t.border}`,
                 borderRadius: 10, padding: "11px 14px",
