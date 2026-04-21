@@ -297,7 +297,16 @@ export default function Home() {
           <a href="/hours" style={{ color: t.muted, fontSize: 14, fontWeight: 500 }}>שעות פעילות</a>
           <a href="/line-red" style={{ color: t.muted, fontSize: 14, fontWeight: 500 }}>קווים</a>
         </nav>
-        <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 28, height: 28, borderRadius: 6,
+            background: "#b04050", display: "inline-flex",
+            alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 800, color: "#fff",
+            fontFamily: "'Rubik', sans-serif", flexShrink: 0,
+          }}>ד</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
+        </span>
         <button onClick={toggleTheme} style={{
           background: t.swapBg, border: `1px solid ${t.swapBorder}`,
           borderRadius: 8, padding: "5px 12px",

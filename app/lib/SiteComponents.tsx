@@ -18,7 +18,16 @@ export function SiteHeader({ backHref, backLabel }: { backHref?: string; backLab
         ? <a href={backHref} style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>{backLabel || "חזרה"}</a>
         : <div style={{ width: 60 }} />
       }
-      <a href="/" style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em", textDecoration: "none" }}>{SITE_NAME}</a>
+      <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+        <span style={{
+          width: 28, height: 28, borderRadius: 6,
+          background: "#b04050", display: "inline-flex",
+          alignItems: "center", justifyContent: "center",
+          fontSize: 16, fontWeight: 800, color: "#fff",
+          fontFamily: "'Rubik', sans-serif", flexShrink: 0,
+        }}>ד</span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>{SITE_NAME}</span>
+      </a>
       <a href="/" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>דף הבית</a>
     </header>
   );
