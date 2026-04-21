@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://www.derechkala.com
+Host: https://www.derechkala.online
 
 # Sitemaps
-Sitemap: https://www.derechkala.com/sitemap.xml
+Sitemap: https://www.derechkala.online/sitemap.xml
