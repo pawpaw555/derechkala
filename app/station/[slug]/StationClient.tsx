@@ -134,7 +134,7 @@ export default function StationClient({ stationName, station }: Props) {
             <input
               value={query}
               onChange={e => handleSearch(e.target.value)}
-              placeholder="תחנה, מקום, שכונה..."
+              placeholder="לאן אתה רוצה להגיע?"
               style={{
                 width: "100%", background: t.inputBg,
                 border: `1.5px solid ${toStation ? t.borderSelected : t.border}`,
@@ -247,12 +247,12 @@ export default function StationClient({ stationName, station }: Props) {
               </div>
               <div style={{ display: "flex", justifyContent: "space-around" }}>
                 {[
-                  ["הרכבת הבאה", `${result.next}′`, result.lineColor],
+                  ["שעת יציאה", result.departureTime || `${result.next}′`, result.lineColor],
                   ["זמן נסיעה", `${result.mins}′`, t.text],
-                  ["תחנות", String(result.stops), t.text],
+                  ["שעת הגעה", result.arrivalTime || "", t.text],
                 ].map(([label, val, col]) => (
                   <div key={label} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: col }}>{val}</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: col }}>{val}</div>
                     <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
                   </div>
                 ))}

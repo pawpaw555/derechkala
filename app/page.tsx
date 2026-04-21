@@ -289,27 +289,18 @@ export default function Home() {
 
       {/* Header */}
       <header style={{
-        padding: "18px 24px", display: "flex",
+        padding: "14px 16px", display: "flex",
         justifyContent: "space-between", alignItems: "center",
         borderBottom: `1px solid ${t.border}`, background: t.card,
       }}>
-        <nav style={{ display: "flex", gap: 20 }}>
-          <a href="/hours" style={{ color: t.muted, fontSize: 14, fontWeight: 500 }}>שעות פעילות</a>
-          <a href="/line-red" style={{ color: t.muted, fontSize: 14, fontWeight: 500 }}>קווים</a>
+        <nav style={{ display: "flex", gap: 14 }}>
+          <a href="/hours" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>שעות פעילות</a>
+          <a href="/line-red" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>תחנות</a>
         </nav>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 28, height: 28, borderRadius: 6,
-            background: "#b04050", display: "inline-flex",
-            alignItems: "center", justifyContent: "center",
-            fontSize: 16, fontWeight: 800, color: "#fff",
-            fontFamily: "'Rubik', sans-serif", flexShrink: 0,
-          }}>ד</span>
-          <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
-        </span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
         <button onClick={toggleTheme} style={{
           background: t.swapBg, border: `1px solid ${t.swapBorder}`,
-          borderRadius: 8, padding: "5px 12px",
+          borderRadius: 8, padding: "5px 10px",
           color: t.swapText, fontSize: 13, fontWeight: 500,
           cursor: "pointer", fontFamily: "'Rubik', sans-serif",
         }}>
@@ -628,7 +619,7 @@ export default function Home() {
 
       {/* Lines */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <h2 style={{ fontSize: 14, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>קווים</h2>
+        <h2 style={{ fontSize: 14, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>קווי הרכבת הקלה</h2>
         {[
           { name: "קו אדום", desc: "פתח תקווה — בת ים · 34 תחנות · פעיל", color: "#b04050", href: "/line-red", active: true },
           { name: "קו ירוק", desc: "הרצליה — ראשון לציון · צפוי לפתיחה דצמבר 2028", color: "#3a9060", href: "/line-green", active: false },
