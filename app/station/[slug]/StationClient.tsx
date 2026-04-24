@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures } from "../../lib/data";
+import { STATION_CONTENT } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import dynamic from "next/dynamic";
@@ -32,7 +33,7 @@ export default function StationClient({ stationName, station }: Props) {
   const [departures, setDepartures] = useState<{mins: number; time?: string; label: string}[]>([]);
 
   const color = station?.lineColor || "#b04050";
-
+const content = STATION_CONTENT[stationName];
   useEffect(() => {
     const now = new Date();
     const deps = getNextDepartures(now, 3);
@@ -448,7 +449,95 @@ export default function StationClient({ stationName, station }: Props) {
             </div>
           )}
         </div>
+{/* Intro + Best for */}
+        {content && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8, marginBottom: 12 }}>{content.intro}</p>
+            <div style={{ fontSize: 12, color: t.muted, fontWeight: 500, marginBottom: 4 }}>למי התחנה שימושית</div>
+            <div style={{ fontSize: 13, color: t.text }}>{content.bestFor}</div>
+          </div>
+        )}
 
+        {/* POIs */}
+        {content && content.pois.length > 0 && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>מוקדי עניין ליד התחנה</div>
+            {content.pois.map(poi => (
+              <div key={poi.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${t.border}` }}>
+                <div>
+                  <div style={{ fontSize: 14, color: t.text, fontWeight: 500 }}>{poi.name}</div>
+                  <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>{poi.type}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Name fact */}
+        {content && content.nameFact && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500, letterSpacing: "0.04em" }}>עובדה מעניינת</div>
+            <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8 }}>{content.nameFact}</p>
+          </div>
+        )}
+
+        {/* Prev/Next stations */}
+        {content && (content.previousStation || content.nextStation) && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות סמוכות בקו</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {content.previousStation && (
+                <a href={`/station/${encodeURIComponent(content.previousStation)}`} style={{
+                  flex: 1, background: t.resultBg, border: `1px solid ${t.border}`,
+                  borderRadius: 9, padding: "12px 14px", textAlign: "right", textDecoration: "none",
+                }}>
+                  <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>תחנה קודמת</div>
+                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>← {content.previousStation}</div>
+                </a>
+              )}
+              {content.nextStation && (
+                <a href={`/station/${encodeURIComponent(content.nextStation)}`} style={{
+                  flex: 1, background: t.resultBg, border: `1px solid ${t.border}`,
+                  borderRadius: 9, padding: "12px 14px", textAlign: "left", textDecoration: "none",
+                }}>
+                  <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>תחנה הבאה</div>
+                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>{content.nextStation} →</div>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* FAQ */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}></div>
+
+{/* FAQ */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>שאלות נפוצות</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              { q: "כמה עולה נסיעה?", a: "עד 15 ק\"מ — 8 ₪. מעל 15 ק\"מ — 14.5 ₪. תוך 90 דקות ניתן להמשיך באוטובוס ללא תוספת." },
+              { q: "איך משלמים?", a: "רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת." },
+              { q: "מה הקנס על נסיעה ללא תיקוף?", a: "180 ₪ בתוספת מחיר הנסיעה. מי ששילם מראש ולא תיקף — עד 100 ₪." },
+              { q: "כל כמה זמן יש רכבת?", a: "שעות שיא כל 3.5 דקות, שעות רגילות כל 6 דקות." },
+            ].map(({ q, a }, i) => (
+              <details key={i} style={{
+                border: `1px solid ${t.border}`, borderRadius: 9,
+                padding: "12px 14px", cursor: "pointer",
+              }}>
+                <summary style={{
+                  fontSize: 14, fontWeight: 600, color: t.text,
+                  listStyle: "none", display: "flex",
+                  justifyContent: "space-between", alignItems: "center",
+                }}>
+                  {q}
+                  <span style={{ color: t.muted, fontSize: 16, fontWeight: 300 }}>+</span>
+                </summary>
+                <p style={{ fontSize: 13, color: t.muted, lineHeight: 1.8, marginTop: 8 }}>{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
       </section>
       <SiteFooter />
     </main>

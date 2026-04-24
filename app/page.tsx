@@ -812,14 +812,49 @@ export default function Home() {
         </div>
       </section>
 
+    {/* FAQ */}
+      <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 24px" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 16 }}>שאלות נפוצות</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { q: "כמה עולה נסיעה ברכבת הקלה?", a: "נסיעה עד 15 ק\"מ עולה 8 ₪. נסיעה מעל 15 ק\"מ עולה 14.5 ₪. מרגע התיקוף ניתן להמשיך לנסוע באוטובוס ללא תוספת תשלום במשך 90 דקות ובטווח של עד 15 ק\"מ." },
+            { q: "איך משלמים ברכבת הקלה?", a: "ניתן לשלם עם כרטיס רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת — בשערי התחנות התת-קרקעיות או במכשירי התיקוף בתחנות העיליות. אין אפשרות לתקף בתוך הרכבת עצמה." },
+            { q: "מה הקנס על נסיעה ללא תיקוף?", a: "הקנס עומד על 180 ₪ בתוספת מחיר הנסיעה. מי שרכש מנוי (חופשי חודשי, שנתי או יומי) ולא תיקף — הקנס לא יעלה על 100 ₪." },
+            { q: "מתי פועלת הרכבת הקלה?", a: "ימי ראשון עד חמישי: 05:30 עד חצות. שישי וערבי חג: 05:30 עד 17:10. מוצאי שבת: מ-21:00 עד חצות. הרכבת אינה פועלת בשבת." },
+            { q: "כל כמה זמן יש רכבת?", a: "בשעות השיא (07:00-09:00 ו-16:00-19:00) רכבת כל 3.5 דקות. בשעות הרגילות רכבת כל 6 דקות." },
+            { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך 24 ק\"מ, מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. 10 מהתחנות הן תת-קרקעיות." },
+            { q: "האם הרכבת הקלה פועלת בשבת?", a: "לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה 21:00." },
+            { q: "מתי ייפתחו הקו הירוק והקו הסגול?", a: "הקו הסגול צפוי לפתיחה ביולי 2028 והקו הירוק בדצמבר 2028. שני הקווים נמצאים כעת בבנייה." },
+          ].map(({ q, a }, i) => (
+            <details key={i} style={{
+              background: t.card, border: `1px solid ${t.border}`,
+              borderRadius: 12, padding: "14px 18px",
+              cursor: "pointer",
+            }}>
+              <summary style={{
+                fontSize: 15, fontWeight: 600, color: t.text,
+                listStyle: "none", display: "flex",
+                justifyContent: "space-between", alignItems: "center",
+              }}>
+                {q}
+                <span style={{ color: t.muted, fontSize: 18, fontWeight: 300 }}>+</span>
+              </summary>
+              <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginTop: 10 }}>{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
     {/* Disclaimer */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 40px" }}>
-        <div style={{ padding: 14, background: t.card, border: `1px solid ${t.border}`, borderRadius: 10 }}>
-          <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.7, marginBottom: 8 }}>
-            האתר אינו קשור רשמית לדנקל או לנת"ע. המידע והזמנים המוצגים הם הערכה בלבד ואינם מידע רשמי.
-            לזמנים מדויקים ומידע עדכני יש לפנות לאתר הרשמי של דנקל או לאפליקציית דנקל.
+        <div style={{ padding: 14, background: dark ? "#1a1a10" : "#fffbe6", border: `1px solid ${dark ? "#44440a" : "#e8d84a"}`, borderRadius: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: dark ? "#d4c840" : "#7a6a00", marginBottom: 6 }}>
+            שימו לב - זמנים משוערים בלבד
+          </div>
+          <p style={{ fontSize: 11, color: dark ? "#b0a840" : "#5a5000", lineHeight: 1.7, marginBottom: 8 }}>
+            האתר אינו קשור רשמית לדנקל או לנת"ע. זמני הרכבות המוצגים הם הערכה בלבד על בסיס לוח זמנים ידוע ואינם מידע רשמי בזמן אמת. לזמנים מדויקים יש להשתמש באפליקציית דנקל הרשמית.
           </p>
-          <a href="/privacy" style={{ fontSize: 11, color: t.muted, textDecoration: "underline" }}>
+          <a href="/privacy" style={{ fontSize: 11, color: dark ? "#b0a840" : "#5a5000", textDecoration: "underline" }}>
             מדיניות פרטיות
           </a>
         </div>
