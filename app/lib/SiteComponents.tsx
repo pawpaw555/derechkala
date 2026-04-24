@@ -38,6 +38,13 @@ export function SiteFooter() {
         <a href="/privacy" style={{ fontSize: 11, color: t.muted, textDecoration: "underline" }}>
           מדיניות פרטיות
         </a>
+        <p style={{ fontSize: 10, color: t.muted, lineHeight: 1.5, marginTop: 8 }}>
+          מפות מבוססות על{' '}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: t.muted }}>
+            OpenStreetMap
+          </a>{' '}
+          contributors
+        </p>
       </div>
     </div>
   );
