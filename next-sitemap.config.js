@@ -7,6 +7,7 @@ module.exports = {
     policies: [
       { userAgent: '*', allow: '/' },
     ],
+    additionalSitemaps: [],
   },
   changefreq: 'weekly',
   priority: 0.7,

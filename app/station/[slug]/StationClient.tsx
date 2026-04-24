@@ -169,11 +169,18 @@ const content = STATION_CONTENT[stationName];
         </div>
 
         {/* Address */}
-        {station && (
+        {(content || station) && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>כתובת</div>
-            <div style={{ fontSize: 15, color: t.text, fontWeight: 500 }}>{station.address}</div>
-            <div style={{ fontSize: 12, color: t.muted, marginTop: 3 }}>{station.city}</div>
+            {(content?.address || station?.address || "").split(/,\s*(?=כניסה)/).map((line, i) => (
+              <div key={i} style={{ fontSize: 14, color: t.text, fontWeight: 500, marginBottom: 2 }}>
+                {line.trim()}
+              </div>
+            ))}
+            <div style={{ fontSize: 12, color: t.muted, marginTop: 3 }}>{content?.city || station?.city}</div>
+            {content?.stationType && (
+              <div style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>{content.stationType === "תת קרקעית" ? "תחנה תת-קרקעית" : content.stationType === "עילית" ? "תחנה עילית" : content.stationType}</div>
+            )}
           </div>
         )}
 
@@ -508,9 +515,7 @@ const content = STATION_CONTENT[stationName];
           </div>
         )}
 
-        {/* FAQ */}
-        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}></div>
-
+       
 {/* FAQ */}
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>שאלות נפוצות</div>
