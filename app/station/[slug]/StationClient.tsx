@@ -113,6 +113,18 @@ const content = STATION_CONTENT[stationName];
       direction: "rtl",
       transition: "background 0.2s",
     }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "ראשי", "item": "https://derechkala.online" },
+            { "@type": "ListItem", "position": 2, "name": "תחנות הקו האדום", "item": "https://derechkala.online/line-red" },
+            { "@type": "ListItem", "position": 3, "name": `תחנת ${stationName}`, "item": `https://derechkala.online/station/${encodeURIComponent(stationName)}` }
+          ]
+        })}}
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -146,6 +158,15 @@ const content = STATION_CONTENT[stationName];
       <SiteHeader backHref={station?.lineHref || "/"} />
 
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px" }}>
+
+        {/* Breadcrumbs */}
+        <nav style={{ fontSize: 12, color: t.muted, marginBottom: 20, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <a href="/" style={{ color: t.muted, textDecoration: "none" }}>ראשי</a>
+          <span>›</span>
+          <a href="/line-red" style={{ color: t.muted, textDecoration: "none" }}>תחנות הקו האדום</a>
+          <span>›</span>
+          <span style={{ color: t.text, fontWeight: 500 }}>תחנת {stationName}</span>
+        </nav>
 
         {/* Station name + line */}
         <div style={{ marginBottom: 24 }}>
