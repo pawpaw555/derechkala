@@ -128,7 +128,8 @@ export default function HoursPage() {
                 <div style={{ fontSize: 11, color: t.muted }}>{row.sub}</div>
               </div>
               <span style={{ fontSize: 13, color: row.key === "shabat" ? t.muted : t.text, fontWeight: 500 }}>
-                {row.first === "—" ? "לא פועל" : `${row.first} — ${row.last}`}
+                
+              
               </span>
             </div>
           ))}
