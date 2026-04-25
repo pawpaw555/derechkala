@@ -347,6 +347,7 @@ export default function Home() {
         <nav style={{ display: "flex", gap: 14 }}>
           <a href="/hours" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>שעות פעילות</a>
           <a href="/line-red" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>תחנות</a>
+          <a href="/map" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>מפה</a>
         </nav>
         <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
         <button onClick={toggleTheme} style={{

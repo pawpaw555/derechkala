@@ -1,7 +1,8 @@
 "use client";
 import { useTheme } from "./useTheme";
 
-export const SITE_NAME = "דרך קלה";
+import { SITE_NAME } from "./constants";
+export { SITE_NAME };
 
 export function SiteHeader({ backHref, backLabel }: { backHref?: string; backLabel?: string }) {
   const { t } = useTheme();
@@ -21,7 +22,10 @@ export function SiteHeader({ backHref, backLabel }: { backHref?: string; backLab
       <a href="/" style={{ textDecoration: "none" }}>
         <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>{SITE_NAME}</span>
       </a>
-      <a href="/" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>דף הבית</a>
+      <div style={{ display: "flex", gap: 16 }}>
+        <a href="/map" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>מפה</a>
+        <a href="/" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>דף הבית</a>
+      </div>
     </header>
   );
 }
