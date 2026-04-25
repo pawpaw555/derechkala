@@ -50,9 +50,15 @@ export default function PrivacyPage() {
 
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: t.text, marginBottom: 10 }}>שירותי צד שלישי</h2>
-            <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
-              האתר משתמש ב-OpenStreetMap להצגת מפות. גלישה במפה עשויה להיות כפופה למדיניות הפרטיות של OpenStreetMap. האתר מתארח על שרתי Netlify.
+            <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 10 }}>
+              האתר משתמש במספר שירותי צד שלישי:
             </p>
+            <ul style={{ fontSize: 14, color: t.muted, lineHeight: 2, paddingRight: 20 }}>
+              <li><strong style={{ color: t.text }}>OpenStreetMap</strong> — להצגת מפות אינטראקטיביות. אריחי המפה נטענים משרתי OpenStreetMap. גלישה במפה כפופה למדיניות הפרטיות של OpenStreetMap.</li>
+              <li><strong style={{ color: t.text }}>Leaflet</strong> — ספריית המפות נטענת מ-unpkg CDN. הדפדפן עשוי לשלוח בקשה לשרתי unpkg בעת טעינת המפה.</li>
+              <li><strong style={{ color: t.text }}>Google Fonts</strong> — גופן Rubik נטען משרתי Google Fonts. הדפדפן עשוי לשלוח בקשה לשרתי Google בעת טעינת העמוד.</li>
+              <li><strong style={{ color: t.text }}>Netlify</strong> — האתר מתארח על שרתי Netlify. Netlify עשויה לתעד נתוני גישה בסיסיים כגון כתובת IP לצורכי אבטחה ותפעול.</li>
+            </ul>
           </div>
 
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20 }}>

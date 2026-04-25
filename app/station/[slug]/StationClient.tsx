@@ -160,12 +160,20 @@ const content = STATION_CONTENT[stationName];
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px" }}>
 
         {/* Breadcrumbs */}
-        <nav style={{ fontSize: 12, color: t.muted, marginBottom: 20, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <a href="/" style={{ color: t.muted, textDecoration: "none" }}>ראשי</a>
-          <span>›</span>
-          <a href="/line-red" style={{ color: t.muted, textDecoration: "none" }}>תחנות הקו האדום</a>
-          <span>›</span>
-          <span style={{ color: t.text, fontWeight: 500 }}>תחנת {stationName}</span>
+        <nav style={{ fontSize: 12, color: t.muted, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <a href="/" style={{ color: t.muted, textDecoration: "none" }}>ראשי</a>
+            <span>›</span>
+            <a href="/line-red" style={{ color: t.muted, textDecoration: "none" }}>תחנות הקו האדום</a>
+            <span>›</span>
+            <span style={{ color: t.text, fontWeight: 500 }}>תחנת {stationName}</span>
+          </div>
+          <a href="/map" style={{
+            fontSize: 12, color: color, fontWeight: 500,
+            textDecoration: "none",
+          }}>
+            ראה במפה
+          </a>
         </nav>
 
         {/* Station name + line */}
@@ -231,7 +239,10 @@ const content = STATION_CONTENT[stationName];
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {/* Result summary */}
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14 }}>
-                <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מסלול נסיעה</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>מסלול נסיעה</div>
+                  <div style={{ fontSize: 10, color: t.muted, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 6, padding: "2px 7px" }}>הערכה בלבד</div>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div style={{ textAlign: "right", flex: 1 }}>
                     <div style={{ fontSize: 11, color: t.muted }}>מוצא</div>

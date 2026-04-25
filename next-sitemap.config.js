@@ -34,6 +34,7 @@ module.exports = {
       { loc: '/line-green', priority: 0.7, changefreq: 'monthly' },
       { loc: '/line-purple', priority: 0.7, changefreq: 'monthly' },
       { loc: '/hours', priority: 0.8, changefreq: 'weekly' },
+      { loc: '/map', priority: 0.9, changefreq: 'monthly' },
       { loc: '/privacy', priority: 0.5, changefreq: 'yearly' },
       ...stationPaths,
     ];

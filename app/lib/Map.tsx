@@ -26,11 +26,12 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
     (async () => {
       const L = await import("leaflet");
 
+      if ((containerRef.current as any)._leaflet_id) return;
       const map = L.map(containerRef.current!).setView([32.025, 34.790], 12);
       mapRef.current = map;
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap",
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
       // Draw line paths

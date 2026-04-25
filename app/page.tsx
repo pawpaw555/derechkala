@@ -457,7 +457,10 @@ export default function Home() {
             /* Collapsed result view */
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>מסלול נסיעה</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 500, letterSpacing: "0.04em" }}>מסלול נסיעה</div>
+                  <div style={{ fontSize: 10, color: t.muted, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 6, padding: "2px 7px" }}>הערכה בלבד</div>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div style={{ textAlign: "right", flex: 1 }}>
                     <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>מוצא</div>

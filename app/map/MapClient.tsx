@@ -46,6 +46,9 @@ export default function MapClient() {
         }}>
           מצא את התחנה הקרובה אליי
         </button>
+        <p style={{ fontSize: 12, color: t.muted, marginTop: 6 }}>
+          אפשרו גישה למיקום כדי לראות איזו תחנה הכי קרובה אליכם.
+        </p>
         {nearestStation && (
           <span style={{ fontSize: 14, color: t.text }}>
             התחנה הקרובה אליך:{' '}
