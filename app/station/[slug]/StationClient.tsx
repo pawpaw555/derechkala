@@ -113,18 +113,6 @@ const content = STATION_CONTENT[stationName];
       direction: "rtl",
       transition: "background 0.2s",
     }}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          "itemListElement": [
-            { "@type": "ListItem", "position": 1, "name": "ראשי", "item": "https://derechkala.online" },
-            { "@type": "ListItem", "position": 2, "name": "תחנות הקו האדום", "item": "https://derechkala.online/line-red" },
-            { "@type": "ListItem", "position": 3, "name": `תחנת ${stationName}`, "item": `https://derechkala.online/station/${encodeURIComponent(stationName)}` }
-          ]
-        })}}
-      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
