@@ -156,7 +156,7 @@ export default function Home() {
   const [showMap, setShowMap] = useState(false);
   const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
   const [useCustomTime, setUseCustomTime] = useState(false);
-  const [customDay, setCustomDay] = useState(1);
+  const [customDay, setCustomDay] = useState(new Date().getDay());
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
@@ -284,7 +284,7 @@ export default function Home() {
         });
         handleFromSelectStation(best);
       },
-      () => handleFromSelectStation(STATIONS[9]),
+      () => {},
       { timeout: 10000, enableHighAccuracy: false }
     );
   };
@@ -737,8 +737,8 @@ export default function Home() {
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
                     }}>
-                      {[0, 15, 30, 45].map(m => (
-                        <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
+                      {Array.from({length: 60}, (_, i) => (
+                        <option key={i} value={i}>{i.toString().padStart(2, "0")}</option>
                       ))}
                     </select>
                   </div>
