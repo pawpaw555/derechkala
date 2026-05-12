@@ -794,6 +794,38 @@ export default function Home() {
         ))}
       </section>
 
+      {/* Popular Stations */}
+      <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 24px" }}>
+        <h2 style={{ fontSize: 14, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות מרכזיות בקו האדום</h2>
+        <style>{`
+          .station-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+          @media (max-width: 320px) { .station-chips { grid-template-columns: 1fr; } }
+        `}</style>
+        <div className="station-chips">
+          {[
+            "תחנה מרכזית פתח תקווה",
+            "בילינסון",
+            "קריית אריה",
+            "ארלוזורוב",
+            "קרליבך",
+            "אלנבי",
+            "אצטדיון בלומפילד",
+            "הקוממיות",
+          ].map(name => (
+            <a key={name} href={`/station/${encodeURIComponent(name)}`} style={{
+              display: "flex", alignItems: "center", gap: 8,
+              background: t.card, border: `1px solid ${t.border}`,
+              borderRadius: 10, padding: "10px 12px",
+              textDecoration: "none",
+              transition: "border-color 0.15s",
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#b04050", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: t.text, lineHeight: 1.3 }}>{name}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
       {/* SEO Content */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 56px" }}>
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: "24px 22px" }}>
