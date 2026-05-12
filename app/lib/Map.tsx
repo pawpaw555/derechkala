@@ -27,7 +27,7 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
       const L = await import("leaflet");
 
       if ((containerRef.current as any)._leaflet_id) return;
-      const map = L.map(containerRef.current!).setView([32.025, 34.790], 12);
+      const map = L.map(containerRef.current!).setView([32.055, 34.790], 11);
       mapRef.current = map;
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -109,7 +109,7 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
           if (!navigator.geolocation) { onUserLocation(32.025, 34.790); return; }
           navigator.geolocation.getCurrentPosition(
             pos => onUserLocation(pos.coords.latitude, pos.coords.longitude),
-            () => onUserLocation(32.025, 34.790),
+            () => {},
             { timeout: 8000 }
           );
         }}
