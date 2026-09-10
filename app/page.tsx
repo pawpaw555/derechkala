@@ -6,6 +6,8 @@ import { SITE_NAME } from "./lib/SiteComponents";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
+const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
+
 type Theme = {
   bg: string; card: string; card2: string; border: string;
   borderSelected: string; text: string; label: string;
@@ -796,34 +798,34 @@ export default function Home() {
 
       {/* Popular Stations */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px 24px" }}>
-        <h2 style={{ fontSize: 14, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות מרכזיות בקו האדום</h2>
+        <h2 style={{ fontSize: 14, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>כל תחנות הקו האדום</h2>
         <style>{`
           .station-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
           @media (max-width: 320px) { .station-chips { grid-template-columns: 1fr; } }
         `}</style>
-        <div className="station-chips">
-          {[
-            "תחנה מרכזית פתח תקווה",
-            "בילינסון",
-            "קריית אריה",
-            "ארלוזורוב",
-            "קרליבך",
-            "אלנבי",
-            "אצטדיון בלומפילד",
-            "הקוממיות",
-          ].map(name => (
-            <a key={name} href={`/station/${encodeURIComponent(name)}`} style={{
-              display: "flex", alignItems: "center", gap: 8,
-              background: t.card, border: `1px solid ${t.border}`,
-              borderRadius: 10, padding: "10px 12px",
-              textDecoration: "none",
-              transition: "border-color 0.15s",
-            }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#b04050", flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: t.text, lineHeight: 1.3 }}>{name}</span>
-            </a>
-          ))}
-        </div>
+        {STATION_CITIES.map(city => {
+          const cityStations = STATIONS.filter(s => s.city === city);
+          if (cityStations.length === 0) return null;
+          return (
+            <div key={city} style={{ marginBottom: 14 }}>
+              <h3 style={{ fontSize: 12, color: t.subtle, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>{city}</h3>
+              <div className="station-chips">
+                {cityStations.map(s => (
+                  <a key={s.name} href={`/station/${encodeURIComponent(s.name)}`} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: t.card, border: `1px solid ${t.border}`,
+                    borderRadius: 10, padding: "10px 12px",
+                    textDecoration: "none",
+                    transition: "border-color 0.15s",
+                  }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.lineColor, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: t.text, lineHeight: 1.3 }}>{s.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* SEO Content */}

@@ -208,6 +208,37 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
     arrivalTime: fmt(arrTime),
   };
 }
+// ── Related stations (internal linking) ──────────────────────────
+// Other stations in the same city, excluding the station itself and its
+// line neighbours (those already get their own links). Tops up from the
+// nearest stations along the line when a city cannot supply enough.
+export function getRelatedStations(
+  stationName: string,
+  exclude: (string | null)[] = [],
+  count: number = 3,
+): { stations: Station[]; sameCityOnly: boolean } {
+  const self = STATIONS.find(s => s.name === stationName);
+  if (!self) return { stations: [], sameCityOnly: true };
+
+  const blocked = new Set([stationName, ...exclude.filter((n): n is string => !!n)]);
+  const sameCity = STATIONS.filter(s => s.city === self.city && !blocked.has(s.name));
+  const picked = sameCity.slice(0, count);
+
+  if (picked.length < count) {
+    const selfIdx = STATIONS.findIndex(s => s.name === stationName);
+    const byDistance = STATIONS
+      .map((s, i) => ({ s, d: Math.abs(i - selfIdx) }))
+      .filter(({ s }) => !blocked.has(s.name) && !picked.some(p => p.name === s.name))
+      .sort((a, b) => a.d - b.d)
+      .map(({ s }) => s);
+    picked.push(...byDistance.slice(0, count - picked.length));
+  }
+
+  // Only claim "same city" in the heading if every pick actually is.
+  const sameCityOnly = picked.length > 0 && picked.every(s => s.city === self.city);
+  return { stations: picked, sameCityOnly };
+}
+
 // ── Schedule Engine ──────────────────────────────────────────────
 export type DayType = "weekday" | "friday" | "saturday";
 export function getDayType(date: Date): DayType {

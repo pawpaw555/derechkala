@@ -1,5 +1,6 @@
 import StationClient from "./StationClient";
 import { STATIONS } from "../../lib/data";
+import { STATION_CONTENT, STATION_FAQ } from "../../lib/stationContent";
 import { SITE_URL, SITE_NAME } from "../../lib/constants";
 
 type Props = {
@@ -71,11 +72,56 @@ export default async function StationPage({ params }: Props) {
     ],
   };
 
+  const content = STATION_CONTENT[stationName];
+  const stationUrl = `${SITE_URL}/station/${encodeURIComponent(stationName)}`;
+
+  // Every value below is read from STATIONS / STATION_CONTENT. Fields with
+  // no backing data (accessibility, platforms, opening date) are omitted.
+  const stationSchema = station
+    ? {
+        "@context": "https://schema.org",
+        "@type": "TrainStation",
+        name: `תחנת ${stationName}`,
+        url: stationUrl,
+        ...(content?.locationSummary ? { description: content.locationSummary } : {}),
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: station.lat,
+          longitude: station.lng,
+        },
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: content?.address ?? station.address,
+          addressLocality: content?.city ?? station.city,
+        },
+      }
+    : null;
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: STATION_FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {stationSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(stationSchema) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       <StationClient stationName={stationName} station={station} />
     </>

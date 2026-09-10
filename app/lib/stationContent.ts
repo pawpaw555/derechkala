@@ -12,6 +12,21 @@ export type StationContent = {
   nextStation: string | null;
 };
 
+// Shown on every station page. Single source for both the rendered
+// FAQ block and the FAQPage JSON-LD.
+export const STATION_FAQ: { q: string; a: string }[] = [
+  { q: "כמה עולה נסיעה?", a: "עד 15 ק\"מ — 8 ₪. מעל 15 ק\"מ — 14.5 ₪. תוך 90 דקות ניתן להמשיך באוטובוס ללא תוספת." },
+  { q: "איך משלמים?", a: "רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת." },
+  { q: "מה הקנס על נסיעה ללא תיקוף?", a: "180 ₪ בתוספת מחיר הנסיעה. מי ששילם מראש ולא תיקף — עד 100 ₪." },
+  { q: "כל כמה זמן יש רכבת?", a: "שעות שיא כל 3.5 דקות, שעות רגילות כל 6 דקות." },
+];
+
+export const STATION_TYPE_LABEL: Record<string, string> = {
+  "תת קרקעית": "תחנה תת-קרקעית",
+  "עילית": "תחנה עילית",
+  "בשיקוע": "תחנה בשיקוע",
+};
+
 export const STATION_CONTENT: Record<string, StationContent> = {
   "תחנה מרכזית פתח תקווה": {
     name: "תחנה מרכזית פתח תקווה",

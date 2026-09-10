@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures } from "../../lib/data";
-import { STATION_CONTENT } from "../../lib/stationContent";
+import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures, getRelatedStations } from "../../lib/data";
+import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import dynamic from "next/dynamic";
@@ -34,6 +34,12 @@ export default function StationClient({ stationName, station }: Props) {
 
   const color = station?.lineColor || "#b04050";
 const content = STATION_CONTENT[stationName];
+  const related = getRelatedStations(stationName, [content?.previousStation ?? null, content?.nextStation ?? null]);
+  // nearbyPlaces overlaps content.pois for most stations; only show what pois don't already cover.
+  const poiNames = content?.pois.map(p => p.name) ?? [];
+  const ownNearby = (station?.nearbyPlaces ?? []).filter(
+    p => !poiNames.some(n => n.includes(p) || p.includes(n))
+  );
   useEffect(() => {
     const now = new Date();
     const deps = getNextDepartures(now, 3);
@@ -188,7 +194,7 @@ const content = STATION_CONTENT[stationName];
         {/* Address */}
         {(content || station) && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>כתובת</div>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>כתובת</h2>
             {(content?.address || station?.address || "").split(/,\s*(?=כניסה)/).map((line, i) => (
               <div key={i} style={{ fontSize: 14, color: t.text, fontWeight: 500, marginBottom: 2 }}>
                 {line.trim()}
@@ -196,14 +202,14 @@ const content = STATION_CONTENT[stationName];
             ))}
             <div style={{ fontSize: 12, color: t.muted, marginTop: 3 }}>{content?.city || station?.city}</div>
             {content?.stationType && (
-              <div style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>{content.stationType === "תת קרקעית" ? "תחנה תת-קרקעית" : content.stationType === "עילית" ? "תחנה עילית" : content.stationType}</div>
+              <div style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>{STATION_TYPE_LABEL[content.stationType] ?? content.stationType}</div>
             )}
           </div>
         )}
 
         {/* Trip planner */}
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנן נסיעה מתחנה זו</div>
+          <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנן נסיעה מתחנה זו</h2>
 
           {loading ? (
             <div style={{ padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
@@ -480,7 +486,10 @@ const content = STATION_CONTENT[stationName];
         {content && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8, marginBottom: 12 }}>{content.intro}</p>
-            <div style={{ fontSize: 12, color: t.muted, fontWeight: 500, marginBottom: 4 }}>למי התחנה שימושית</div>
+            {content.locationSummary && (
+              <p style={{ fontSize: 13, color: t.muted, lineHeight: 1.8, marginBottom: 12 }}>{content.locationSummary}</p>
+            )}
+            <h2 style={{ fontSize: 12, color: t.muted, fontWeight: 500, marginBottom: 4 }}>למי התחנה שימושית</h2>
             <div style={{ fontSize: 13, color: t.text }}>{content.bestFor}</div>
           </div>
         )}
@@ -488,7 +497,7 @@ const content = STATION_CONTENT[stationName];
         {/* POIs */}
         {content && content.pois.length > 0 && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>מוקדי עניין ליד התחנה</div>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>מוקדי עניין ליד התחנה</h2>
             {content.pois.map(poi => (
               <div key={poi.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${t.border}` }}>
                 <div>
@@ -497,13 +506,19 @@ const content = STATION_CONTENT[stationName];
                 </div>
               </div>
             ))}
+            {ownNearby.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500 }}>גם במרחק הליכה</div>
+                <div style={{ fontSize: 13, color: t.text }}>{ownNearby.join(" · ")}</div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Name fact */}
         {content && content.nameFact && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500, letterSpacing: "0.04em" }}>עובדה מעניינת</div>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500, letterSpacing: "0.04em" }}>עובדה מעניינת</h2>
             <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8 }}>{content.nameFact}</p>
           </div>
         )}
@@ -511,7 +526,7 @@ const content = STATION_CONTENT[stationName];
         {/* Prev/Next stations */}
         {content && (content.previousStation || content.nextStation) && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות סמוכות בקו</div>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות סמוכות בקו</h2>
             <div style={{ display: "flex", gap: 10 }}>
               {content.previousStation && (
                 <a href={`/station/${encodeURIComponent(content.previousStation)}`} style={{
@@ -535,17 +550,33 @@ const content = STATION_CONTENT[stationName];
           </div>
         )}
 
-       
+        {/* Other stations nearby */}
+        {related.stations.length > 0 && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>
+              {related.sameCityOnly ? `תחנות נוספות ב${station?.city ?? content?.city}` : "תחנות נוספות בקו"}
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {related.stations.map(s => (
+                <a key={s.name} href={`/station/${encodeURIComponent(s.name)}`} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  background: t.resultBg, border: `1px solid ${t.border}`,
+                  borderRadius: 9, padding: "10px 14px", textDecoration: "none",
+                }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, color: t.text, fontWeight: 500 }}>{s.name}</span>
+                  <span style={{ fontSize: 11, color: t.muted, marginRight: "auto" }}>{s.city}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
 {/* FAQ */}
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>שאלות נפוצות</div>
+          <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>שאלות נפוצות</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {[
-              { q: "כמה עולה נסיעה?", a: "עד 15 ק\"מ — 8 ₪. מעל 15 ק\"מ — 14.5 ₪. תוך 90 דקות ניתן להמשיך באוטובוס ללא תוספת." },
-              { q: "איך משלמים?", a: "רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת." },
-              { q: "מה הקנס על נסיעה ללא תיקוף?", a: "180 ₪ בתוספת מחיר הנסיעה. מי ששילם מראש ולא תיקף — עד 100 ₪." },
-              { q: "כל כמה זמן יש רכבת?", a: "שעות שיא כל 3.5 דקות, שעות רגילות כל 6 דקות." },
-            ].map(({ q, a }, i) => (
+            {STATION_FAQ.map(({ q, a }, i) => (
               <details key={i} style={{
                 border: `1px solid ${t.border}`, borderRadius: 9,
                 padding: "12px 14px", cursor: "pointer",
