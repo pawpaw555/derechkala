@@ -163,12 +163,19 @@ export function searchAll(query: string): {
       }
     });
   const landmarks = Array.from(seen.values()).slice(0, 5);
-  const stations = landmarks.length === 0
-    ? STATIONS.filter(s =>
-        s.name.includes(q) ||
-        s.city.includes(q)
-      ).slice(0, 5)
-    : [];
+  // Both lists are always computed. Previously a landmark match returned an
+  // empty stations array, which hid a station from a search for its own name
+  // whenever a landmark shared the string (e.g. "יוספטל", "רוטשילד").
+  const rank = (s: Station) => {
+    if (s.name === q) return 0;
+    if (s.name.startsWith(q)) return 1;
+    if (s.name.includes(q)) return 2;
+    return 3;
+  };
+  const stations = STATIONS
+    .filter(s => s.name.includes(q) || s.city.includes(q))
+    .sort((a, b) => rank(a) - rank(b))
+    .slice(0, 5);
   return { stations, landmarks };
 }
 export function findRoute(fromName: string, toName: string, nextMins?: number, baseDate?: Date): {

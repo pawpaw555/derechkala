@@ -8,6 +8,9 @@ const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
 const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
+const DENIED_MSG = "הגישה למיקום חסומה בדפדפן. כדי לאפשר: היכנסו להגדרות האתר בדפדפן ואפשרו גישה למיקום, או בחרו תחנה מהרשימה.";
+const RETRY_MSG = "לא הצלחנו לאתר את המיקום. נסו שוב, או בחרו תחנה מהרשימה.";
+
 type Theme = {
   bg: string; card: string; card2: string; border: string;
   borderSelected: string; text: string; label: string;
@@ -37,26 +40,6 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
       background: t.card, border: `1px solid ${t.border}`,
       borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
     }}>
-      {results.landmarks.map((l) => (
-        <button
-    key={l.name}
-    onClick={() => onSelectLandmark(l)}
-    className="dropdown-item"
-    style={{
-      display: "flex", alignItems: "center", gap: 12,
-          width: "100%", background: "transparent",
-          border: "none", borderBottom: `1px solid ${t.border}`,
-          padding: "12px 14px", cursor: "pointer",
-        }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
-          <div style={{ flex: 1, textAlign: "right" }}>
-            <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
-            <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
-              תחנת {l.stationName} · {l.walkMins} דקות הליכה
-            </div>
-          </div>
-        </button>
-      ))}
       {results.stations.map(s => (
         <button
           key={s.lineId + s.name}
@@ -73,6 +56,26 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
             <div style={{ fontSize: 13, color: t.text, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>{s.name}</div>
             <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
               {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
+            </div>
+          </div>
+        </button>
+      ))}
+      {results.landmarks.map((l) => (
+        <button
+    key={l.name}
+    onClick={() => onSelectLandmark(l)}
+    className="dropdown-item"
+    style={{
+      display: "flex", alignItems: "center", gap: 12,
+          width: "100%", background: "transparent",
+          border: "none", borderBottom: `1px solid ${t.border}`,
+          padding: "12px 14px", cursor: "pointer",
+        }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
+              תחנת {l.stationName} · {l.walkMins} דקות הליכה
             </div>
           </div>
         </button>
@@ -162,6 +165,8 @@ export default function Home() {
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
+  const [locError, setLocError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
@@ -272,8 +277,9 @@ export default function Home() {
     }, 2000 + Math.random() * 1000);
   };
 
-  const getLocation = () => {
-    if (!navigator.geolocation) return;
+  const locate = () => {
+    setLocating(true);
+    setLocError(null);
     navigator.geolocation.getCurrentPosition(
       pos => {
         const lat = pos.coords.latitude;
@@ -285,10 +291,33 @@ export default function Home() {
           if (d < bestDist) { bestDist = d; best = s; }
         });
         handleFromSelectStation(best);
+        setLocating(false);
       },
-      () => {},
+      err => {
+        setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
+        setLocating(false);
+      },
       { timeout: 10000, enableHighAccuracy: false }
     );
+  };
+
+  const getLocation = async () => {
+    if (!navigator.geolocation) {
+      setLocError(RETRY_MSG);
+      return;
+    }
+    // An already-denied permission never prompts and never resolves visibly,
+    // so explain up front instead of firing a request that cannot succeed.
+    try {
+      const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+      if (status?.state === "denied") {
+        setLocError(DENIED_MSG);
+        return;
+      }
+    } catch {
+      // Permissions API unavailable — fall through to getCurrentPosition.
+    }
+    locate();
   };
 
   return (
@@ -593,14 +622,15 @@ export default function Home() {
               />
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button onClick={getLocation} style={{
+                <button onClick={getLocation} disabled={locating} aria-busy={locating} style={{
                   flex: 1, background: dark ? "#1a2220" : "#f0faf5",
                   border: `1px solid ${dark ? "#3a906066" : "#3a906088"}`,
                   borderRadius: 8, padding: "9px 12px",
                   color: "#3a9060", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+                  cursor: locating ? "progress" : "pointer", fontFamily: "'Rubik', sans-serif",
+                  opacity: locating ? 0.7 : 1,
                 }}>
-                  המיקום שלי
+                  {locating ? "מאתר..." : "המיקום שלי"}
                 </button>
                 <button onClick={() => { handleSwap(); setSwapSpinning(true); setTimeout(() => setSwapSpinning(false), 400); }} style={{
                   background: "#b04050", border: "none",
@@ -613,6 +643,16 @@ export default function Home() {
                   transition: "transform 0.35s ease, box-shadow 0.2s ease",
                 }}>⇅</button>
               </div>
+
+              {locError && (
+                <div role="alert" style={{
+                  padding: "10px 12px",
+                  background: t.card, border: "1px solid #b0405055",
+                  borderRadius: 8, fontSize: 12, lineHeight: 1.7, color: t.text,
+                }}>
+                  {locError}
+                </div>
+              )}
 
               <InputField
                 label="לתחנה"

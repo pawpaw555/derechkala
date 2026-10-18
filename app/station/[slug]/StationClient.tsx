@@ -326,20 +326,6 @@ const content = STATION_CONTENT[stationName];
                     background: t.card, border: `1px solid ${t.border}`,
                     borderRadius: 9, zIndex: 100, boxShadow: t.shadow, overflow: "hidden",
                   }}>
-                    {results.landmarks.map(l => (
-                      <button key={l.name} onClick={() => handleSelectLandmark(l)} className="dropdown-item-s" style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        width: "100%", background: "transparent",
-                        border: "none", borderBottom: `1px solid ${t.border}`,
-                        padding: "11px 14px", cursor: "pointer",
-                      }}>
-                        <div style={{ width: 9, height: 9, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
-                        <div style={{ flex: 1, textAlign: "right" }}>
-                          <div style={{ fontSize: 13, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
-                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>תחנת {l.stationName} · {l.walkMins} דקות הליכה</div>
-                        </div>
-                      </button>
-                    ))}
                     {results.stations.map(s => (
                       <button key={s.name} onClick={() => handleSelectStation(s)} className="dropdown-item-s" style={{
                         display: "flex", alignItems: "center", gap: 10,
@@ -353,6 +339,20 @@ const content = STATION_CONTENT[stationName];
                           <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
                             {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
                           </div>
+                        </div>
+                      </button>
+                    ))}
+                    {results.landmarks.map(l => (
+                      <button key={l.name} onClick={() => handleSelectLandmark(l)} className="dropdown-item-s" style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        width: "100%", background: "transparent",
+                        border: "none", borderBottom: `1px solid ${t.border}`,
+                        padding: "11px 14px", cursor: "pointer",
+                      }}>
+                        <div style={{ width: 9, height: 9, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                          <div style={{ fontSize: 13, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
+                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>תחנת {l.stationName} · {l.walkMins} דקות הליכה</div>
                         </div>
                       </button>
                     ))}
