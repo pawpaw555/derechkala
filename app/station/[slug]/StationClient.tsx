@@ -311,7 +311,7 @@ const content = STATION_CONTENT[stationName];
                 <input
                   value={query}
                   onChange={e => handleSearch(e.target.value)}
-                  placeholder="לאן אתה רוצה להגיע?"
+                  placeholder="בחרו תחנת יעד"
                   style={{
                     width: "100%", background: t.inputBg,
                     border: `1.5px solid ${toStation ? t.borderSelected : t.border}`,
@@ -365,7 +365,10 @@ const content = STATION_CONTENT[stationName];
                     borderRadius: 9, boxShadow: t.shadow,
                     padding: "14px 16px", fontSize: 13, color: t.muted,
                     fontFamily: "'Rubik', sans-serif", textAlign: "right",
-                  }}>לא נמצאו תוצאות עבור "{query}"</div>
+                  }}>
+                    <div style={{ marginBottom: 6 }}>לא נמצאה תחנה בשם הזה — נסו שם של תחנה, או בחרו מהמפה</div>
+                    <a href="/map" style={{ color: color, fontWeight: 600 }}>פתחו את המפה</a>
+                  </div>
                 )}
               </div>
 
@@ -471,14 +474,21 @@ const content = STATION_CONTENT[stationName];
                 </div>
               )}
 
-              <button onClick={handlePlan} className="btn-primary-s" style={{
-                width: "100%", background: toStation ? color : t.border,
-                color: toStation ? "#fff" : t.subtle,
-                border: "none", borderRadius: 9,
-                padding: "12px", fontSize: 14, fontWeight: 600,
-                cursor: toStation ? "pointer" : "default",
-                fontFamily: "'Rubik', sans-serif",
-              }}>חפש נסיעה</button>
+              <button
+                onClick={handlePlan}
+                disabled={!toStation}
+                aria-disabled={!toStation}
+                title={!toStation ? "בחרו תחנת יעד כדי לחפש נסיעה" : undefined}
+                className="btn-primary-s"
+                style={{
+                  width: "100%", background: toStation ? color : t.border,
+                  color: toStation ? "#fff" : t.subtle,
+                  border: "none", borderRadius: 9,
+                  padding: "12px", fontSize: 14, fontWeight: 600,
+                  cursor: toStation ? "pointer" : "not-allowed",
+                  fontFamily: "'Rubik', sans-serif",
+                }}
+              >חפש נסיעה</button>
             </div>
           )}
         </div>

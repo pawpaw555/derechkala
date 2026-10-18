@@ -13,9 +13,15 @@ export default function MapClient() {
   const router = useRouter();
   const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
   const [nearestStation, setNearestStation] = useState<Station | null>(null);
+  const [locError, setLocError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
-  const getLocation = () => {
-    if (!navigator.geolocation) return;
+  const DENIED_MSG = "הגישה למיקום חסומה בדפדפן. כדי לאפשר: היכנסו להגדרות האתר בדפדפן ואפשרו גישה למיקום, או בחרו תחנה מהרשימה למטה.";
+  const RETRY_MSG = "לא הצלחנו לאתר את המיקום. נסו שוב, או בחרו תחנה מהרשימה למטה.";
+
+  const locate = () => {
+    setLocating(true);
+    setLocError(null);
     navigator.geolocation.getCurrentPosition(
       pos => {
         const lat = pos.coords.latitude;
@@ -28,23 +34,47 @@ export default function MapClient() {
         });
         setUserLoc({ lat, lng });
         setNearestStation(best);
+        setLocating(false);
       },
-      () => {},
+      err => {
+        setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
+        setLocating(false);
+      },
       { timeout: 10000, enableHighAccuracy: false }
     );
+  };
+
+  const getLocation = async () => {
+    if (!navigator.geolocation) {
+      setLocError(RETRY_MSG);
+      return;
+    }
+    // If permission is already denied the request never prompts and never
+    // resolves visibly, so explain up front instead of firing it.
+    try {
+      const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+      if (status?.state === "denied") {
+        setLocError(DENIED_MSG);
+        return;
+      }
+    } catch {
+      // Permissions API unavailable — fall through to getCurrentPosition.
+    }
+    locate();
   };
 
   return (
     <>
       <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <button onClick={getLocation} style={{
+        <button onClick={getLocation} disabled={locating} aria-busy={locating} style={{
           background: "#f0faf5",
           border: "1px solid #3a906088",
           borderRadius: 10, padding: "10px 18px",
           color: "#3a9060", fontSize: 14, fontWeight: 600,
-          cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+          cursor: locating ? "progress" : "pointer", fontFamily: "'Rubik', sans-serif",
+          opacity: locating ? 0.7 : 1,
         }}>
-          מצא את התחנה הקרובה אליי
+          {locating ? "מאתר..." : "מצא את התחנה הקרובה אליי"}
         </button>
         <p style={{ fontSize: 12, color: t.muted, marginTop: 6 }}>
           אפשרו גישה למיקום כדי לראות איזו תחנה הכי קרובה אליכם.
@@ -58,6 +88,16 @@ export default function MapClient() {
           </span>
         )}
       </div>
+
+      {locError && (
+        <div role="alert" style={{
+          marginBottom: 16, padding: "12px 14px",
+          background: t.card, border: "1px solid #b0405055",
+          borderRadius: 10, fontSize: 13, lineHeight: 1.7, color: t.text,
+        }}>
+          {locError}
+        </div>
+      )}
 
       <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${t.border}`, marginBottom: 24, boxShadow: t.shadow }}>
         <Map

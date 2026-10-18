@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Station } from "./data";
 
 type Props = {
@@ -15,6 +15,7 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
+  const [locError, setLocError] = useState<string | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelectStation;
@@ -107,9 +108,14 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
       <button
         onClick={() => {
           if (!navigator.geolocation) { onUserLocation(32.025, 34.790); return; }
+          setLocError(null);
           navigator.geolocation.getCurrentPosition(
-            pos => onUserLocation(pos.coords.latitude, pos.coords.longitude),
-            () => {},
+            pos => { setLocError(null); onUserLocation(pos.coords.latitude, pos.coords.longitude); },
+            err => setLocError(
+              err.code === err.PERMISSION_DENIED
+                ? "הגישה למיקום חסומה בדפדפן"
+                : "לא הצלחנו לאתר את המיקום"
+            ),
             { timeout: 8000 }
           );
         }}
@@ -125,6 +131,18 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
       >
         ⊙ המיקום שלי
       </button>
+      {locError && (
+        <div role="alert" style={{
+          position: "absolute", bottom: 56, left: 16, right: 16,
+          background: "#0e0e11ee", border: "1px solid #b0405088",
+          borderRadius: 8, padding: "8px 12px",
+          color: "#fff", fontSize: 12, lineHeight: 1.6,
+          fontFamily: "'Rubik', sans-serif", direction: "rtl",
+          zIndex: 1000,
+        }}>
+          {locError}
+        </div>
+      )}
     </div>
   );
 }
