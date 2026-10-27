@@ -254,15 +254,21 @@ export function getDayType(date: Date): DayType {
   if (day === 5) return "friday";
   return "weekday";
 }
+// שעות לפי לוח הזמנים הרשמי של דנקל (שירות R1):
+// א'–ה' 05:30 עד חצות, שישי וערבי חג 05:30 עד 15:40, מוצ"ש מ-19:45.
+export const FRIDAY_LAST_MINS = 15 * 60 + 40;
+export const SATURDAY_NIGHT_FIRST_MINS = 19 * 60 + 45;
+export const SERVICE_FIRST_MINS = 5 * 60 + 30;
+
 export function isOperating(date: Date): boolean {
   const dayType = getDayType(date);
   const mins = date.getHours() * 60 + date.getMinutes();
-  if (dayType === "saturday") return false;
-  if (dayType === "friday") return mins >= 5 * 60 + 30 && mins <= 17 * 60 + 10;
-  return mins >= 5 * 60 + 30;
+  if (dayType === "saturday") return mins >= SATURDAY_NIGHT_FIRST_MINS;
+  if (dayType === "friday") return mins >= SERVICE_FIRST_MINS && mins <= FRIDAY_LAST_MINS;
+  return mins >= SERVICE_FIRST_MINS;
 }
 export function isSaturdayNight(date: Date): boolean {
-  return date.getDay() === 6 && date.getHours() >= 21;
+  return date.getDay() === 6 && date.getHours() * 60 + date.getMinutes() >= SATURDAY_NIGHT_FIRST_MINS;
 }
 export function getFrequencyMins(date: Date): number {
   const hour = date.getHours();
@@ -274,13 +280,13 @@ export function getNextDepartures(date: Date, count: number = 3): {
   minsFromNow: number;
   label: string;
 }[] {
-  if (date.getDay() === 6 && date.getHours() < 21) return [];
+  if (date.getDay() === 6 && date.getHours() * 60 + date.getMinutes() < SATURDAY_NIGHT_FIRST_MINS) return [];
   if (date.getDay() === 5) {
     const mins = date.getHours() * 60 + date.getMinutes();
-    if (mins > 17 * 60 + 10) return [];
+    if (mins > FRIDAY_LAST_MINS) return [];
   }
   const currentMins = date.getHours() * 60 + date.getMinutes();
-  if (currentMins < 5 * 60 + 30 && !isSaturdayNight(date)) return [];
+  if (currentMins < SERVICE_FIRST_MINS && !isSaturdayNight(date)) return [];
   const frequency = getFrequencyMins(date);
   const departures = [];
   const firstOffset = Math.random() * frequency;

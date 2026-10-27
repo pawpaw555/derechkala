@@ -8,8 +8,8 @@ const SCHEDULE = {
     name: "קו אדום",
     color: "#b04050",
     weekday: { first: "05:30", last: "00:00" },
-    friday: { first: "05:30", last: "17:10" },
-    saturday: { first: "21:00", last: "00:00" },
+    friday: { first: "05:30", last: "15:40" },
+    saturday: { first: "19:45", last: "00:00" },
   },
 };
 
@@ -27,8 +27,7 @@ function timeToMins(time: string) {
 
 function isOperating(date: Date, dayType: string, schedule: typeof SCHEDULE.red) {
   if (dayType === "saturday") {
-    const hour = date.getHours();
-    return hour >= 21;
+    return date.getHours() * 60 + date.getMinutes() >= 19 * 60 + 45;
   }
   const now = date.getHours() * 60 + date.getMinutes();
   const hours = schedule[dayType as keyof typeof schedule] as { first: string; last: string };
@@ -101,7 +100,7 @@ export default function HoursPage() {
           </div>
           <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>
             {isShabat
-              ? "השירות מתחדש במוצאי שבת מהשעה 21:00."
+              ? "השירות מתחדש במוצאי שבת מהשעה 19:45."
               : operating
               ? `השירות פעיל עד ${SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] && (SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] as any).last}.`
               : "בדקו את לוח הזמנים השבועי למטה."}
@@ -113,9 +112,9 @@ export default function HoursPage() {
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
           {[
             { label: "ראשון עד חמישי", sub: "ימי חול", first: "05:30", last: "00:00", key: "weekday" },
-            { label: "ערב שבת (שישי)", sub: "ובערבי חג", first: "05:30", last: "17:10", key: "friday" },
+            { label: "ערב שבת (שישי)", sub: "ובערבי חג", first: "05:30", last: "15:40", key: "friday" },
             { label: "שבת", sub: "לא פועל", first: "—", last: "—", key: "shabat" },
-            { label: "מוצאי שבת", sub: "ומוצאי חג", first: "21:00", last: "00:00", key: "saturday" },
+            { label: "מוצאי שבת", sub: "ומוצאי חג", first: "19:45", last: "00:00", key: "saturday" },
           ].map((row, i, arr) => (
             <div key={row.label} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -168,11 +167,11 @@ export default function HoursPage() {
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 10, fontWeight: 600, letterSpacing: "0.04em" }}>שאלות נפוצות</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
           {[
-            { q: "האם הרכבת הקלה פועלת בשבת?", a: "לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה 21:00." },
-            { q: "עד מתי פועלת הרכבת הקלה בשישי?", a: "בערב שבת ובערבי חג השירות מסתיים בשעה 17:10. חשוב לתכנן את הנסיעה מראש." },
-            { q: "מתי מתחיל השירות בבוקר?", a: "בימי חול ובשישי השירות מתחיל ב-05:30. במוצאי שבת ומוצאי חג השירות מתחיל ב-21:00." },
+            { q: "האם הרכבת הקלה פועלת בשבת?", a: "לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה 19:45." },
+            { q: "עד מתי פועלת הרכבת הקלה בשישי?", a: "בערב שבת ובערבי חג הרכבת האחרונה יוצאת ב-15:40. חשוב לתכנן את הנסיעה מראש." },
+            { q: "מתי מתחיל השירות בבוקר?", a: "בימי חול ובשישי השירות מתחיל ב-05:30. במוצאי שבת ומוצאי חג השירות מתחיל ב-19:45." },
             { q: "כל כמה זמן יש רכבת?", a: "בשעות העומס (07:00–09:00 ו-16:00–19:00) רכבת כל 3.5 דקות. בשעות הרגילות רכבת כל 6 דקות." },
-            { q: "האם יש שינויים בחגים?", a: "כן. בערבי חג השירות מסתיים מוקדם (כמו ערב שבת), ובמוצאי חג השירות מתחדש בשעה 21:00. מומלץ לבדוק באתר הרשמי של דנקל לפני חג." },
+            { q: "האם יש שינויים בחגים?", a: "כן. בערבי חג השירות מסתיים מוקדם (כמו ערב שבת), ובמוצאי חג השירות מתחדש בשעה 19:45. מומלץ לבדוק באתר הרשמי של דנקל לפני חג." },
           ].map(({ q, a }, i) => (
             <details key={i} style={{
               background: t.card, border: `1px solid ${t.border}`,
