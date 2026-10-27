@@ -73,3 +73,5 @@ Key rules:
 - `package.json` — dev uses webpack flag
 - `netlify.toml` — Netlify build config
 - `seo-data/gsc/` — Google Search Console exports (local only, untracked)
+
+**עדכון 11.09.2026:** seo-data/ נמצאת ב-git מאז קומיט e603bbb. השורה שטוענת אחרת אינה נכונה. המצב העדכני ביותר: audit-full-2026-09-11-v3.md
