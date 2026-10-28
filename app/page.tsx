@@ -1,15 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, Station, STATIONS, searchAll, Landmark, getNextDepartures, findNearestStation } from "./lib/data";
+import { findRoute, Station, STATIONS, searchAll, Landmark, getNextDepartures } from "./lib/data";
 import { SITE_NAME } from "./lib/SiteComponents";
+import { useNearestStation } from "./lib/useNearestStation";
+import NearestStationFinder from "./lib/NearestStationFinder";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
 const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
-const DENIED_MSG = "הדפדפן חוסם גישה למיקום. הקלידו שם תחנה בשדה שלמעלה, או מצאו תחנה קרובה בעמוד המפה.";
-const RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הקלידו שם תחנה בשדה שלמעלה, או מצאו תחנה קרובה בעמוד המפה.";
 
 type Theme = {
   bg: string; card: string; card2: string; border: string;
@@ -159,14 +159,13 @@ export default function Home() {
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
-  const [userLoc, setUserLoc] = useState<{lat: number; lng: number} | null>(null);
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [customDay, setCustomDay] = useState(new Date().getDay());
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
-  const [locError, setLocError] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
+  const finder = useNearestStation();
+  const { locError, locating } = finder;
 
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
@@ -277,40 +276,9 @@ export default function Home() {
     }, 2000 + Math.random() * 1000);
   };
 
-  const locate = () => {
-    setLocating(true);
-    setLocError(null);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        handleFromSelectStation(findNearestStation(pos.coords.latitude, pos.coords.longitude));
-        setLocating(false);
-      },
-      err => {
-        setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
-        setLocating(false);
-      },
-      { timeout: 15000, enableHighAccuracy: false, maximumAge: 300000 }
-    );
-  };
-
-  const getLocation = async () => {
-    if (!navigator.geolocation) {
-      setLocError(RETRY_MSG);
-      return;
-    }
-    // An already-denied permission never prompts and never resolves visibly,
-    // so explain up front instead of firing a request that cannot succeed.
-    try {
-      const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
-      if (status?.state === "denied") {
-        setLocError(DENIED_MSG);
-        return;
-      }
-    } catch {
-      // Permissions API unavailable — fall through to getCurrentPosition.
-    }
-    locate();
-  };
+  // הלוגיקה המשותפת יושבת ב-useNearestStation, כדי שעמוד הבית ועמוד
+  // המפה יתנהגו אותו דבר ולא יתפצלו שוב.
+  const getLocation = () => finder.requestLocation(s => handleFromSelectStation(s));
 
   return (
     <main style={{
@@ -573,7 +541,6 @@ export default function Home() {
                   userLoc={null}
                   fromStation={fromStation}
                   toStation={toStation}
-                  onUserLocation={() => {}}
                   onSelectStation={() => {}}
                 />
               </div>
@@ -637,12 +604,13 @@ export default function Home() {
               </div>
 
               {locError && (
-                <div role="alert" style={{
-                  padding: "10px 12px",
-                  background: t.card, border: "1px solid #b0405055",
-                  borderRadius: 8, fontSize: 12, lineHeight: 1.7, color: t.text,
-                }}>
-                  {locError}
+                <div style={{ marginTop: 4 }}>
+                  <NearestStationFinder
+                    finder={finder}
+                    hideButton
+                    hideResult
+                    onFound={st => handleFromSelectStation(st)}
+                  />
                 </div>
               )}
 
@@ -682,10 +650,9 @@ export default function Home() {
                   </div>
                   <Map
                     stations={STATIONS}
-                    userLoc={userLoc}
+                    userLoc={finder.userLoc}
                     fromStation={fromStation}
                     toStation={toStation}
-                    onUserLocation={(lat, lng) => setUserLoc({ lat, lng })}
                     onSelectStation={(s) => { handleToSelectStation(s); setShowMap(false); }}
                   />
                 </div>

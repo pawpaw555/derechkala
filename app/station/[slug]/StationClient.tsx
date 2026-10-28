@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures, getRelatedStations } from "../../lib/data";
+import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
+import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
+import NearestStationFinder from "../../lib/NearestStationFinder";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
 
@@ -32,6 +34,32 @@ export default function StationClient({ stationName, station }: Props) {
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
   const [loading, setLoading] = useState(false);
   const [departures, setDepartures] = useState<{mins: number; time?: string; label: string}[]>([]);
+  const finder = useNearestStation();
+  const [routeHere, setRouteHere] = useState<{ key: string; metres: number } | null>(null);
+
+  // המרחק הרלוונטי בעמוד תחנה הוא עד התחנה הזאת, לא עד התחנה הקרובה ביותר.
+  // נמדד בדרכים כמו בשאר האתר; המרחק האווירי הוא רק גשר עד שהמסלול חוזר.
+  // התוצאה נשמרת עם המפתח שחושב עבורו, כדי שערך ישן לא יוצג אחרי שהמיקום
+  // השתנה — בלי לאפס state בתוך האפקט, שמייצר רינדור מדורג.
+  const { lat: userLat, lng: userLng } = finder.userLoc ?? { lat: null, lng: null };
+  const routeKey = station && userLat !== null && userLng !== null
+    ? `${station.name}|${userLat},${userLng}`
+    : null;
+
+  useEffect(() => {
+    if (!station || userLat === null || userLng === null) return;
+    const key = `${station.name}|${userLat},${userLng}`;
+    let cancelled = false;
+    fetchFootRoute({ lat: userLat, lng: userLng }, station)
+      .then(r => { if (!cancelled && r) setRouteHere({ key, metres: r.metres }); });
+    return () => { cancelled = true; };
+  }, [station, userLat, userLng]);
+
+  const routeMetresHere = routeHere && routeHere.key === routeKey ? routeHere.metres : null;
+  const toHere = station && finder.userLoc
+    ? (routeMetresHere ?? distanceMetres(finder.userLoc, station))
+    : null;
+  const walkableHere = toHere !== null && toHere <= 2500;
 
   const color = station?.lineColor || "#b04050";
 const content = STATION_CONTENT[stationName];
@@ -281,7 +309,7 @@ const content = STATION_CONTENT[stationName];
 
               {/* Map */}
               <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-                <Map stations={STATIONS} userLoc={null} fromStation={STATIONS.find(s => s.name === stationName) || null} toStation={STATIONS.find(s => s.name === toStation) || null} onUserLocation={() => {}} onSelectStation={() => {}} />
+                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === stationName) || null} toStation={STATIONS.find(s => s.name === toStation) || null} onSelectStation={() => {}} />
               </div>
 {(() => {
                 const s = STATIONS.find(st => st.name === toStation);
@@ -565,9 +593,30 @@ const content = STATION_CONTENT[stationName];
         {station && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>איך מגיעים לתחנה</h2>
-            <NavigationLinks station={station} />
+
+            {toHere !== null ? (
+              <div style={{
+                marginBottom: 12, padding: "11px 13px", borderRadius: 10,
+                background: t.resultBg, border: `1px solid ${t.border}`,
+                fontSize: 13, color: t.text,
+              }}>
+                מהמיקום שלך: <strong>{formatDistance(toHere)}</strong>
+                {walkableHere ? ` · כ-${walkMinutes(toHere)} דק׳ הליכה` : " — רחוק מכדי ללכת"}
+              </div>
+            ) : (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: t.muted, marginBottom: 10, lineHeight: 1.6 }}>
+                  כדי לראות את המרחק וזמן ההליכה עד התחנה, אתרו את מיקומכם או הקלידו אותו.
+                </div>
+                <NearestStationFinder finder={finder} hideResult buttonLabel="אתרו את המיקום שלי" />
+              </div>
+            )}
+
+            <NavigationLinks station={station} from={finder.userLoc} transitFirst={toHere !== null && !walkableHere} />
             <div style={{ fontSize: 11, color: t.muted, marginTop: 10, lineHeight: 1.6 }}>
-              הניווט נפתח באפליקציית המפות במכשיר שלך, ממיקומך הנוכחי.
+              {finder.userLoc
+                ? "הניווט נפתח באפליקציית המפות במכשיר שלך, מהמיקום שאיתרנו."
+                : "הניווט נפתח באפליקציית המפות במכשיר שלך, ממיקומך הנוכחי."}
             </div>
           </div>
         )}

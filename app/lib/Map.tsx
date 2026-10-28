@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "./data";
 
 type Props = {
   stations: Station[];
   userLoc?: { lat: number; lng: number } | null;
   onSelectStation: (station: Station) => void;
-  onUserLocation: (lat: number, lng: number) => void;
   fromStation?: Station | null;
   toStation?: Station | null;
   /** מסלול הליכה לציור על המפה, כזוגות [lat, lng]. */
@@ -38,11 +37,14 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
     </div>`;
 }
 
-export default function Map({ stations, userLoc, onSelectStation, onUserLocation, fromStation, toStation, route }: Props) {
+// איתור המיקום אינו יושב כאן אלא ב-useNearestStation, והממשק שלו ב-
+// NearestStationFinder. קודם לכן היה כאן כפתור "המיקום שלי" עם מימוש משלו:
+// timeout קצר יותר, בלי בדיקת הרשאה, בלי קוד שגיאה לדיווח, ועם קואורדינטה
+// קבועה בתל אביב כשה-API חסר — כלומר האתר הצהיר בשקט שהמשתמש בתל אביב.
+export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
-  const [locError, setLocError] = useState<string | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelectStation;
@@ -140,44 +142,6 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid #22222a" }}>
       <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
-      <button
-        onClick={() => {
-          if (!navigator.geolocation) { onUserLocation(32.025, 34.790); return; }
-          setLocError(null);
-          navigator.geolocation.getCurrentPosition(
-            pos => { setLocError(null); onUserLocation(pos.coords.latitude, pos.coords.longitude); },
-            err => setLocError(
-              err.code === err.PERMISSION_DENIED
-                ? "הגישה למיקום חסומה בדפדפן"
-                : "לא הצלחנו לאתר את המיקום"
-            ),
-            { timeout: 8000 }
-          );
-        }}
-        style={{
-          position: "absolute", bottom: 16, left: 16,
-          background: "#0e0e11dd", border: "1px solid #3366ee44",
-          borderRadius: 8, padding: "8px 12px",
-          color: "#4488ee", fontSize: 12, cursor: "pointer",
-          fontFamily: "'Heebo', sans-serif",
-          display: "flex", alignItems: "center", gap: 6,
-          zIndex: 1000, boxShadow: "0 2px 8px #00000088",
-        }}
-      >
-        ⊙ המיקום שלי
-      </button>
-      {locError && (
-        <div role="alert" style={{
-          position: "absolute", bottom: 56, left: 16, right: 16,
-          background: "#0e0e11ee", border: "1px solid #b0405088",
-          borderRadius: 8, padding: "8px 12px",
-          color: "#fff", fontSize: 12, lineHeight: 1.6,
-          fontFamily: "'Rubik', sans-serif", direction: "rtl",
-          zIndex: 1000,
-        }}>
-          {locError}
-        </div>
-      )}
     </div>
   );
 }

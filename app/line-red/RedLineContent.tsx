@@ -1,12 +1,15 @@
 "use client";
 import { useTheme } from "../lib/useTheme";
 import { STATIONS } from "../lib/data";
+import { useNearestStation } from "../lib/useNearestStation";
+import NearestStationFinder from "../lib/NearestStationFinder";
 
 const cities = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
 export default function RedLineContent() {
   const { t } = useTheme();
   const redStations = STATIONS.filter(s => s.lineId === "red");
+  const finder = useNearestStation();
 
   return (
     <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px", background: t.bg, minHeight: "80vh" }}>
@@ -74,6 +77,17 @@ export default function RedLineContent() {
             <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Nearest station — אותו פיצ'ר שבעמוד המפה ובעמוד הבית */}
+      <div style={{
+        background: t.card, border: `1px solid ${t.border}`,
+        borderRadius: 12, padding: 18, marginBottom: 20,
+      }}>
+        <h2 style={{ fontSize: 13, color: t.muted, marginBottom: 12, fontWeight: 600, letterSpacing: "0.04em" }}>
+          איזו תחנה קרובה אליכם?
+        </h2>
+        <NearestStationFinder finder={finder} />
       </div>
 
       {/* Station list by city */}
