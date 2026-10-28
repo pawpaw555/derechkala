@@ -19,6 +19,7 @@ export default function MapClient() {
   const [route, setRoute] = useState<[number, number][] | null>(null);
   const [routeMetres, setRouteMetres] = useState<number | null>(null);
   const [approx, setApprox] = useState(false);
+  const [diag, setDiag] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [recent, setRecent] = useState<{ label: string; lat: number; lng: number } | null>(null);
@@ -173,6 +174,11 @@ export default function MapClient() {
       },
       err => {
         setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
+        setDiag(
+          `קוד ${err.code}` +
+          (err.code === 1 ? " — הרשאה נדחתה" : err.code === 2 ? " — המיקום אינו זמין" : err.code === 3 ? " — פג הזמן" : "") +
+          ` · ${navigator.userAgent.slice(0, 90)}`
+        );
         setLocating(false);
         focusSearch();
       },
@@ -191,6 +197,7 @@ export default function MapClient() {
       const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
       if (status?.state === "denied") {
         setLocError(DENIED_MSG);
+        setDiag(`הרשאה חסומה מראש · ${navigator.userAgent.slice(0, 90)}`);
         focusSearch();
         return;
       }
@@ -353,6 +360,19 @@ export default function MapClient() {
               <div style={{ marginTop: 10, color: t.text }}>
                 ואם זה נשמע מסובך — פשוט הקלידו את שם המקום בשדה למעלה. זו הדרך המהירה ביותר, והיא עובדת תמיד.
               </div>
+              {diag && (
+                <div style={{
+                  marginTop: 12, padding: "8px 10px", borderRadius: 8,
+                  background: t.resultBg, border: `1px solid ${t.border}`,
+                  fontSize: 11, color: t.subtle, direction: "ltr", textAlign: "left",
+                  wordBreak: "break-all", fontFamily: "monospace",
+                }}>
+                  <div style={{ direction: "rtl", textAlign: "right", marginBottom: 4, fontFamily: "'Rubik', sans-serif" }}>
+                    פרטים טכניים (לדיווח תקלה):
+                  </div>
+                  {diag}
+                </div>
+              )}
             </div>
           </details>
         </div>
