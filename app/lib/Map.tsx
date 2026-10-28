@@ -9,6 +9,8 @@ type Props = {
   onUserLocation: (lat: number, lng: number) => void;
   fromStation?: Station | null;
   toStation?: Station | null;
+  /** מסלול הליכה לציור על המפה, כזוגות [lat, lng]. */
+  route?: [number, number][] | null;
 };
 
 // כרטיס תחנה אחיד — משמש גם ללחיצה על סמן וגם ללחיצה על רקע המפה.
@@ -36,7 +38,7 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
     </div>`;
 }
 
-export default function Map({ stations, userLoc, onSelectStation, onUserLocation, fromStation, toStation }: Props) {
+export default function Map({ stations, userLoc, onSelectStation, onUserLocation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
@@ -108,6 +110,12 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
           .openOn(map);
       });
 
+      // מסלול הליכה ממיקום המשתמש לתחנה
+      if (route && route.length > 1) {
+        L.polyline(route, { color: "#2563eb", weight: 5, opacity: 0.85, dashArray: "1 8", lineCap: "round" }).addTo(map);
+        map.fitBounds(L.latLngBounds(route), { padding: [40, 40] });
+      }
+
       // User location
       if (userLoc) {
         const userIcon = L.divIcon({
@@ -127,7 +135,7 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [userLoc]);
+  }, [userLoc, route]);
 
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid #22222a" }}>

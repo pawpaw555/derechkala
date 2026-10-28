@@ -289,7 +289,7 @@ export default function Home() {
         setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
         setLocating(false);
       },
-      { timeout: 10000, enableHighAccuracy: false }
+      { timeout: 15000, enableHighAccuracy: false, maximumAge: 300000 }
     );
   };
 

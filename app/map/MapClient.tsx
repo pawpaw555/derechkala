@@ -16,6 +16,8 @@ export default function MapClient() {
   const [nearestStation, setNearestStation] = useState<Station | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [route, setRoute] = useState<[number, number][] | null>(null);
+  const [routeMetres, setRouteMetres] = useState<number | null>(null);
 
   const [place, setPlace] = useState("");
   const [placeResults, setPlaceResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
@@ -38,16 +40,24 @@ export default function MapClient() {
     try {
       const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8`);
       const d = await r.json();
+      const wantedNumber = (q.match(/\d+/) || [])[0] || null;
       const hits = (d.features || [])
         .filter((f: any) => f.properties?.countrycode === "IL")
         .map((f: any) => {
           const p = f.properties;
+          // מספר הבית הוא מה שהופך "בן גוריון" ל"בן גוריון 52". בלעדיו
+          // התוצאה נראית כללית גם כשהקואורדינטה מדויקת.
+          const street = [p.street || p.name, p.housenumber].filter(Boolean).join(" ");
+          const label = [street, p.district, p.city].filter(Boolean).join(" · ");
           return {
-            label: [p.name, p.street, p.city].filter(Boolean).join(" · "),
+            label: label || p.name || q,
+            // התאמה מדויקת למספר שהוקלד מנצחת מספר בית כלשהו, שמנצח כתובת כללית.
+            rank: wantedNumber && p.housenumber === wantedNumber ? 2 : p.housenumber ? 1 : 0,
             lat: f.geometry.coordinates[1],
             lng: f.geometry.coordinates[0],
           };
         })
+        .sort((a: any, b: any) => b.rank - a.rank)
         .slice(0, 5);
       if (hits.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
       setPlaceResults(hits);
@@ -57,12 +67,38 @@ export default function MapClient() {
     setSearching(false);
   };
 
+  // מסלול הליכה אמיתי לפי דרכים, מ-OSRM על נתוני OpenStreetMap, ללא מפתח.
+  // המרחק שלו מדויק; משך הזמן שהוא מחזיר אינו קצב הליכה ולכן אינו בשימוש.
+  const loadRoute = async (from: { lat: number; lng: number }, to: Station) => {
+    setRoute(null);
+    setRouteMetres(null);
+    try {
+      const r = await fetch(
+        `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`
+      );
+      const d = await r.json();
+      const g = d?.routes?.[0];
+      if (g?.geometry?.coordinates?.length) {
+        setRoute(g.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]));
+        setRouteMetres(g.distance);
+      }
+    } catch {
+      // בלי מסלול המפה עדיין מציגה את שתי הנקודות; לא מציגים שגיאה.
+    }
+  };
+
+  const setLocationAndFindStation = (lat: number, lng: number) => {
+    const s = findNearestStation(lat, lng);
+    setUserLoc({ lat, lng });
+    setNearestStation(s);
+    setLocError(null);
+    loadRoute({ lat, lng }, s);
+  };
+
   const pickPlace = (p: { label: string; lat: number; lng: number }) => {
-    setUserLoc({ lat: p.lat, lng: p.lng });
-    setNearestStation(findNearestStation(p.lat, p.lng));
     setPlaceResults([]);
     setPlace(p.label);
-    setLocError(null);
+    setLocationAndFindStation(p.lat, p.lng);
   };
 
   const locate = () => {
@@ -70,17 +106,14 @@ export default function MapClient() {
     setLocError(null);
     navigator.geolocation.getCurrentPosition(
       pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setUserLoc({ lat, lng });
-        setNearestStation(findNearestStation(lat, lng));
+        setLocationAndFindStation(pos.coords.latitude, pos.coords.longitude);
         setLocating(false);
       },
       err => {
         setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
         setLocating(false);
       },
-      { timeout: 10000, enableHighAccuracy: false }
+      { timeout: 15000, enableHighAccuracy: false, maximumAge: 300000 }
     );
   };
 
@@ -178,7 +211,7 @@ export default function MapClient() {
             </Link>
             <span style={{ fontSize: 12, color: t.muted }}>
               {nearestStation.city}
-              {userLoc ? ` · ${formatDistance(distanceMetres(userLoc, nearestStation))} · כ-${walkMinutes(distanceMetres(userLoc, nearestStation))} דק׳ הליכה` : ""}
+              {userLoc ? ` · ${formatDistance(routeMetres ?? distanceMetres(userLoc, nearestStation))} · כ-${walkMinutes(routeMetres ?? distanceMetres(userLoc, nearestStation))} דק׳ הליכה${routeMetres ? " (לפי מסלול)" : ""}` : ""}
             </span>
           </div>
           <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>איך מגיעים לשם</div>
@@ -202,7 +235,8 @@ export default function MapClient() {
           userLoc={userLoc}
           fromStation={null}
           toStation={null}
-          onUserLocation={(lat, lng) => setUserLoc({ lat, lng })}
+          route={route}
+          onUserLocation={(lat, lng) => setLocationAndFindStation(lat, lng)}
           onSelectStation={(s) => router.push(`/station/${encodeURIComponent(s.name)}`)}
         />
       </div>
