@@ -36,8 +36,8 @@ export default function MapClient() {
   const [searching, setSearching] = useState(false);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
 
-  const DENIED_MSG = "הדפדפן חוסם גישה למיקום. הקלידו איפה אתם בשדה שלמטה — זה ייקח שתי שניות ויעבוד תמיד. (לפתיחת GPS: סמל המנעול שליד הכתובת, ובמק גם הגדרות המערכת ← פרטיות ← שירותי מיקום.)";
-  const RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הקלידו איפה אתם בשדה שלמטה — זה ייקח שתי שניות ויעבוד תמיד.";
+  const DENIED_MSG = "הדפדפן חוסם גישה למיקום. הדרך המהירה: הקלידו איפה אתם בשדה שלמעלה.";
+  const RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הדרך המהירה: הקלידו איפה אתם בשדה שלמעלה.";
 
   // חיפוש מקום לפי שם, למי שה-GPS שלו אינו זמין. Photon מבוסס OpenStreetMap,
   // ללא מפתח. הפרמטר lang אינו תומך בעברית ולכן אינו נשלח — השמות חוזרים
@@ -324,22 +324,37 @@ export default function MapClient() {
           borderRadius: 10, fontSize: 13, lineHeight: 1.7, color: t.text,
         }}>
           <div style={{ marginBottom: 10 }}>{locError}</div>
-          <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.7 }}>
-            <strong style={{ color: t.text }}>רוצים דיוק מלא?</strong>{" "}
-            פתחו את גוגל מפות, לחצו לחיצה ארוכה על המיקום שלכם, העתיקו את הקואורדינטות והדביקו אותן בשדה החיפוש.
-            האתר יזהה אותן לבד.
-          </div>
-          <a
-            href="https://www.google.com/maps"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-block", marginTop: 10,
-              background: t.resultBg, border: `1px solid ${t.border}`,
-              borderRadius: 8, padding: "8px 12px",
-              fontSize: 12, fontWeight: 600, color: t.text, textDecoration: "none",
-            }}
-          >🗺️ פתחו את גוגל מפות בכרטיסייה חדשה</a>
+          <details style={{ fontSize: 12, color: t.muted, lineHeight: 1.8 }}>
+            <summary style={{ cursor: "pointer", color: t.text, fontWeight: 600, marginBottom: 6 }}>
+              איך מפעילים את איתור המיקום?
+            </summary>
+            <div style={{ marginTop: 8 }}>
+              <strong style={{ color: t.text }}>באייפון או אנדרואיד:</strong> בדרך כלל יופיע חלון שמבקש רשות —
+              אשרו אותו. אם לא הופיע, היכנסו להגדרות המכשיר ← הדפדפן שלכם ← מיקום, ואפשרו.
+              <div style={{ marginTop: 10 }}>
+                <strong style={{ color: t.text }}>במחשב מק עם כרום:</strong> צריך לאשר בשני מקומות.
+                <div style={{ marginTop: 6 }}>
+                  1. בתפריט אפל ← הגדרות מערכת ← פרטיות ואבטחה ← שירותי מיקום ← הדליקו את Google Chrome.
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  2. סגרו את כרום לגמרי ופתחו מחדש, ואז נסו שוב כאן.
+                </div>
+                <div style={{ marginTop: 6, color: t.subtle }}>
+                  בלי שלב 1, כרום אינו יכול אפילו להציג את חלון הבקשה — ולכן נראה כאילו לא קורה כלום.
+                </div>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <strong style={{ color: t.text }}>אם אפליקציית גוגל מפות כן יודעת איפה אתם:</strong>
+                <div style={{ marginTop: 6 }}>
+                  פתחו אותה, לחצו על הנקודה הכחולה של המיקום שלכם, גררו את הכרטיס התחתון כלפי מעלה,
+                  והעתיקו את שורת הקואורדינטות. הדביקו אותה כאן בשדה החיפוש — האתר יזהה אותה לבד.
+                </div>
+              </div>
+              <div style={{ marginTop: 10, color: t.text }}>
+                ואם זה נשמע מסובך — פשוט הקלידו את שם המקום בשדה למעלה. זו הדרך המהירה ביותר, והיא עובדת תמיד.
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
