@@ -221,6 +221,29 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
 const M_PER_DEG_LAT = 110_900;
 const M_PER_DEG_LNG = 94_400;
 
+// מרחק אמיתי במטרים בין שתי נקודות (haversine).
+export function distanceMetres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371000;
+  const rad = (x: number) => (x * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+export function formatDistance(metres: number): string {
+  return metres < 1000
+    ? `${Math.round(metres / 10) * 10} מ׳`
+    : `${(metres / 1000).toFixed(1)} ק״מ`;
+}
+
+// קצב הליכה ממוצע 80 מ' לדקה, מעוגל כלפי מעלה למינימום דקה.
+export function walkMinutes(metres: number): number {
+  return Math.max(1, Math.round(metres / 80));
+}
+
 export function findNearestStation(lat: number, lng: number): Station {
   let best = STATIONS[0];
   let bestDist = Infinity;

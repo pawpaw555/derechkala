@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station } from "./data";
+import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "./data";
 
 type Props = {
   stations: Station[];
@@ -79,6 +79,32 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
           onSelectRef.current(s);
           marker.openPopup();
         });
+      });
+
+      // לחיצה על רקע המפה הייתה קליק מת — 53% מהקליקים בעמוד.
+      // עכשיו היא עונה על השאלה שנשאלה בפועל: איזו תחנה קרובה לנקודה הזאת.
+      map.on("click", (e: any) => {
+        const s = findNearestStation(e.latlng.lat, e.latlng.lng);
+        const metres = distanceMetres({ lat: e.latlng.lat, lng: e.latlng.lng }, s);
+        const dist = formatDistance(metres);
+        const walkMins = walkMinutes(metres);
+        L.popup({ maxWidth: 230 })
+          .setLatLng(e.latlng)
+          .setContent(`
+            <div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:170px;padding:2px;">
+              <div style="font-size:11px;color:#666;margin-bottom:4px;">התחנה הקרובה לנקודה שבחרת</div>
+              <div style="font-weight:700;font-size:15px;margin-bottom:2px;">${s.name}</div>
+              <div style="font-size:11px;color:#666;margin-bottom:8px;">${s.city} · ${dist} · כ-${walkMins} דק׳ הליכה</div>
+              <a href="/station/${encodeURIComponent(s.name)}"
+                 style="display:block;text-align:center;background:${s.lineColor};color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
+                 פרטי התחנה</a>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
+                 target="_blank" rel="noopener noreferrer"
+                 style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
+                 🚶 ניווט לתחנה</a>
+            </div>
+          `)
+          .openOn(map);
       });
 
       // User location

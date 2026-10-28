@@ -4,6 +4,7 @@ import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures, g
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
+import NavigationLinks from "../../lib/NavigationLinks";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
 
@@ -556,6 +557,17 @@ const content = STATION_CONTENT[stationName];
                   <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>{content.nextStation} →</div>
                 </a>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* How to get here */}
+        {station && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>איך מגיעים לתחנה</h2>
+            <NavigationLinks station={station} />
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 10, lineHeight: 1.6 }}>
+              הניווט נפתח באפליקציית המפות במכשיר שלך, ממיקומך הנוכחי.
             </div>
           </div>
         )}

@@ -2,7 +2,8 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { STATIONS, Station, findNearestStation } from "../lib/data";
+import { STATIONS, Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "../lib/data";
+import NavigationLinks from "../lib/NavigationLinks";
 import { useTheme } from "../lib/useTheme";
 import { useRouter } from "next/navigation";
 
@@ -73,15 +74,27 @@ export default function MapClient() {
         <p style={{ fontSize: 12, color: t.muted, marginTop: 6 }}>
           אפשרו גישה למיקום כדי לראות איזו תחנה הכי קרובה אליכם.
         </p>
-        {nearestStation && (
-          <span style={{ fontSize: 14, color: t.text }}>
-            התחנה הקרובה אליך:{' '}
-            <Link href={`/station/${encodeURIComponent(nearestStation.name)}`} style={{ color: "#b04050", fontWeight: 600 }}>
+      </div>
+
+      {nearestStation && (
+        <div style={{
+          marginBottom: 16, padding: "14px 16px",
+          background: t.card, border: "1px solid #3a906055", borderRadius: 12,
+        }}>
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>התחנה הקרובה אליך</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+            <Link href={`/station/${encodeURIComponent(nearestStation.name)}`} style={{ color: "#b04050", fontWeight: 700, fontSize: 18 }}>
               {nearestStation.name}
             </Link>
-          </span>
-        )}
-      </div>
+            <span style={{ fontSize: 12, color: t.muted }}>
+              {nearestStation.city}
+              {userLoc ? ` · ${formatDistance(distanceMetres(userLoc, nearestStation))} · כ-${walkMinutes(distanceMetres(userLoc, nearestStation))} דק׳ הליכה` : ""}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>איך מגיעים לשם</div>
+          <NavigationLinks station={nearestStation} from={userLoc} />
+        </div>
+      )}
 
       {locError && (
         <div role="alert" style={{
