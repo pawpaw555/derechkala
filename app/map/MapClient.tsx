@@ -17,8 +17,53 @@ export default function MapClient() {
   const [locError, setLocError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
-  const DENIED_MSG = "הגישה למיקום חסומה בדפדפן. כדי לאפשר: היכנסו להגדרות האתר בדפדפן ואפשרו גישה למיקום, או בחרו תחנה מהרשימה למטה.";
-  const RETRY_MSG = "לא הצלחנו לאתר את המיקום. נסו שוב, או בחרו תחנה מהרשימה למטה.";
+  const [place, setPlace] = useState("");
+  const [placeResults, setPlaceResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [placeMsg, setPlaceMsg] = useState<string | null>(null);
+
+  const DENIED_MSG = "הגישה למיקום חסומה. בכרום: לחצו על סמל המנעול שליד הכתובת ואפשרו מיקום. במק ייתכן שצריך גם לאפשר לכרום גישה למיקום בהגדרות המערכת. אפשר גם להקליד כתובת בשדה למטה.";
+  const RETRY_MSG = "לא הצלחנו לאתר את המיקום — ייתכן שהדפדפן חסום מגישה למיקום ברמת המערכת. הקלידו כתובת או מקום בשדה למטה, ונמצא את התחנה הקרובה.";
+
+  // חיפוש מקום לפי שם, למי שה-GPS שלו אינו זמין. Photon מבוסס OpenStreetMap,
+  // ללא מפתח. הפרמטר lang אינו תומך בעברית ולכן אינו נשלח — השמות חוזרים
+  // בעברית ממילא.
+  const searchPlace = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = place.trim();
+    if (q.length < 2) return;
+    setSearching(true);
+    setPlaceMsg(null);
+    setPlaceResults([]);
+    try {
+      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8`);
+      const d = await r.json();
+      const hits = (d.features || [])
+        .filter((f: any) => f.properties?.countrycode === "IL")
+        .map((f: any) => {
+          const p = f.properties;
+          return {
+            label: [p.name, p.street, p.city].filter(Boolean).join(" · "),
+            lat: f.geometry.coordinates[1],
+            lng: f.geometry.coordinates[0],
+          };
+        })
+        .slice(0, 5);
+      if (hits.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
+      setPlaceResults(hits);
+    } catch {
+      setPlaceMsg("החיפוש לא זמין כרגע. אפשר ללחוץ על המפה במקום שבו אתם נמצאים.");
+    }
+    setSearching(false);
+  };
+
+  const pickPlace = (p: { label: string; lat: number; lng: number }) => {
+    setUserLoc({ lat: p.lat, lng: p.lng });
+    setNearestStation(findNearestStation(p.lat, p.lng));
+    setPlaceResults([]);
+    setPlace(p.label);
+    setLocError(null);
+  };
 
   const locate = () => {
     setLocating(true);
@@ -72,9 +117,54 @@ export default function MapClient() {
           {locating ? "מאתר..." : "מצא את התחנה הקרובה אליי"}
         </button>
         <p style={{ fontSize: 12, color: t.muted, marginTop: 6 }}>
-          אפשרו גישה למיקום כדי לראות איזו תחנה הכי קרובה אליכם.
+          או הקלידו כתובת למטה, או לחצו על המפה במקום שבו אתם נמצאים.
         </p>
       </div>
+
+      {/* חיפוש מקום — החלופה ל-GPS כשהוא חסום או לא זמין */}
+      <form onSubmit={searchPlace} style={{ marginBottom: 12, position: "relative" }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={place}
+            onChange={e => setPlace(e.target.value)}
+            placeholder="איפה אתם? רחוב, עיר או מקום מוכר"
+            aria-label="חיפוש מקום"
+            style={{
+              flex: 1, background: t.inputBg, border: `1.5px solid ${t.border}`,
+              borderRadius: 9, padding: "11px 14px", color: t.text,
+              fontSize: 14, outline: "none", fontFamily: "'Rubik', sans-serif", direction: "rtl",
+            }}
+          />
+          <button type="submit" disabled={searching || place.trim().length < 2} style={{
+            background: searching || place.trim().length < 2 ? t.border : "#b04050",
+            color: searching || place.trim().length < 2 ? t.subtle : "#fff",
+            border: "none", borderRadius: 9, padding: "11px 18px",
+            fontSize: 14, fontWeight: 600, fontFamily: "'Rubik', sans-serif",
+            cursor: searching || place.trim().length < 2 ? "not-allowed" : "pointer",
+          }}>{searching ? "מחפש..." : "חפש"}</button>
+        </div>
+
+        {placeResults.length > 0 && (
+          <div style={{
+            position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 500,
+            background: t.card, border: `1px solid ${t.border}`,
+            borderRadius: 9, boxShadow: t.shadow, overflow: "hidden",
+          }}>
+            {placeResults.map(p => (
+              <button key={`${p.lat},${p.lng}`} type="button" onClick={() => pickPlace(p)} style={{
+                display: "block", width: "100%", textAlign: "right",
+                background: "transparent", border: "none",
+                borderBottom: `1px solid ${t.border}`, padding: "11px 14px",
+                fontSize: 13, color: t.text, cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+              }}>{p.label}</button>
+            ))}
+          </div>
+        )}
+
+        {placeMsg && (
+          <div style={{ fontSize: 12, color: t.muted, marginTop: 8 }}>{placeMsg}</div>
+        )}
+      </form>
 
       {nearestStation && (
         <div style={{

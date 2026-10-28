@@ -11,6 +11,31 @@ type Props = {
   toStation?: Station | null;
 };
 
+// כרטיס תחנה אחיד — משמש גם ללחיצה על סמן וגם ללחיצה על רקע המפה.
+// כשנמסרת נקודת מוצא, מוצגים גם מרחק וזמן הליכה ממנה.
+function stationPopup(s: Station, from?: { lat: number; lng: number }) {
+  const near = s.nearbyPlaces.slice(0, 2).join(" · ");
+  let meta = s.city;
+  if (from) {
+    const m = distanceMetres(from, s);
+    meta += ` · ${formatDistance(m)} · כ-${walkMinutes(m)} דק׳ הליכה`;
+  }
+  return `
+    <div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:180px;padding:2px;">
+      ${from ? `<div style="font-size:11px;color:#777;margin-bottom:4px;">התחנה הקרובה לנקודה שבחרת</div>` : ""}
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px;">${s.name}</div>
+      <div style="font-size:11px;color:#666;margin-bottom:${near ? 4 : 8}px;">${meta}</div>
+      ${near ? `<div style="font-size:11px;color:#888;margin-bottom:8px;">📍 ${near}</div>` : ""}
+      <a href="/station/${encodeURIComponent(s.name)}"
+         style="display:block;text-align:center;background:${s.lineColor};color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
+         פרטי התחנה</a>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
+         target="_blank" rel="noopener noreferrer"
+         style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
+         🚶 ניווט לתחנה</a>
+    </div>`;
+}
+
 export default function Map({ stations, userLoc, onSelectStation, onUserLocation, fromStation, toStation }: Props) {
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,44 +91,20 @@ export default function Map({ stations, userLoc, onSelectStation, onUserLocation
 
         const marker = L.marker([s.lat, s.lng], { icon })
           .addTo(map)
-          .bindPopup(`
-            <div style="font-family:'Heebo',sans-serif;direction:rtl;text-align:right;min-width:140px;padding:4px;">
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px;">${s.name}</div>
-              <div style="font-size:11px;color:${s.lineColor};margin-bottom:3px;">${s.lineName}</div>
-              <div style="font-size:11px;color:#666;margin-bottom:6px;">${s.city}</div>
-              ${s.nearbyPlaces.length > 0 ? `<div style="font-size:10px;color:#888;">📍 ${s.nearbyPlaces.slice(0, 2).join(", ")}</div>` : ""}
-            </div>
-          `, { maxWidth: 200 });
+          .bindPopup(stationPopup(s), { maxWidth: 240 });
 
-        marker.on("click", () => {
-          onSelectRef.current(s);
-          marker.openPopup();
-        });
+        // לחיצה על סמן פותחת את הכרטיס בלבד. קודם לכן היא גם ניווטה מיד
+        // לעמוד התחנה, כך שהכרטיס נעלם לפני שהספיקו לקרוא אותו.
+        marker.on("click", () => marker.openPopup());
       });
 
       // לחיצה על רקע המפה הייתה קליק מת — 53% מהקליקים בעמוד.
       // עכשיו היא עונה על השאלה שנשאלה בפועל: איזו תחנה קרובה לנקודה הזאת.
       map.on("click", (e: any) => {
         const s = findNearestStation(e.latlng.lat, e.latlng.lng);
-        const metres = distanceMetres({ lat: e.latlng.lat, lng: e.latlng.lng }, s);
-        const dist = formatDistance(metres);
-        const walkMins = walkMinutes(metres);
-        L.popup({ maxWidth: 230 })
+        L.popup({ maxWidth: 240 })
           .setLatLng(e.latlng)
-          .setContent(`
-            <div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:170px;padding:2px;">
-              <div style="font-size:11px;color:#666;margin-bottom:4px;">התחנה הקרובה לנקודה שבחרת</div>
-              <div style="font-weight:700;font-size:15px;margin-bottom:2px;">${s.name}</div>
-              <div style="font-size:11px;color:#666;margin-bottom:8px;">${s.city} · ${dist} · כ-${walkMins} דק׳ הליכה</div>
-              <a href="/station/${encodeURIComponent(s.name)}"
-                 style="display:block;text-align:center;background:${s.lineColor};color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
-                 פרטי התחנה</a>
-              <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
-                 target="_blank" rel="noopener noreferrer"
-                 style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
-                 🚶 ניווט לתחנה</a>
-            </div>
-          `)
+          .setContent(stationPopup(s, { lat: e.latlng.lat, lng: e.latlng.lng }))
           .openOn(map);
       });
 
