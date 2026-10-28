@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Station, distanceMetres, formatDistance, walkMinutes } from "./data";
 import { useTheme } from "./useTheme";
+import { detectPlatform } from "./useNearestStation";
 import NavigationLinks from "./NavigationLinks";
 
 type Finder = ReturnType<typeof import("./useNearestStation").useNearestStation>;
@@ -38,6 +39,10 @@ export default function NearestStationFinder({
 
   const metres = userLoc && station ? (routeMetres ?? distanceMetres(userLoc, station)) : null;
   const walkable = metres !== null && metres <= 2500;
+
+  // נקרא רק בתוך בלוק השגיאה, שמופיע אחרי פעולת משתמש ולכן תמיד בצד הלקוח.
+  // קריאה ל-navigator בזמן רינדור ראשוני הייתה יוצרת פער מול השרת.
+  const platform = locError ? detectPlatform() : "other";
 
   return (
     <div>
@@ -119,16 +124,42 @@ export default function NearestStationFinder({
               איך מפעילים את איתור המיקום?
             </summary>
             <div style={{ marginTop: 8 }}>
-              <strong style={{ color: t.text }}>בטלפון:</strong> בדרך כלל יופיע חלון שמבקש רשות — אשרו אותו.
-              אם לא הופיע, היכנסו להגדרות המכשיר ← הדפדפן שלכם ← מיקום, ואפשרו.
-              <div style={{ marginTop: 10 }}>
-                <strong style={{ color: t.text }}>במק עם כרום:</strong> תפריט אפל ← הגדרות מערכת ← פרטיות ואבטחה
-                ← שירותי מיקום ← הדליקו את Google Chrome, ואז סגרו ופתחו מחדש את כרום.
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <strong style={{ color: t.text }}>אם אפליקציית גוגל מפות יודעת איפה אתם:</strong> לחצו על
-                הנקודה הכחולה, גררו את הכרטיס התחתון מעלה, והעתיקו את שורת הקואורדינטות לשדה החיפוש כאן.
-              </div>
+              {platform === "ios" && (
+                <>
+                  <strong style={{ color: t.text }}>באייפון או באייפד:</strong> הגדרות ← פרטיות ואבטחה
+                  ← שירותי מיקום. ודאו שהמתג העליון דלוק, ואז בחרו את הדפדפן שלכם
+                  (<span style={{ direction: "ltr", display: "inline-block" }}>Safari Websites</span> או
+                  {" "}<span style={{ direction: "ltr", display: "inline-block" }}>Chrome</span>)
+                  ← בזמן השימוש באפליקציה.
+                  <div style={{ marginTop: 10 }}>
+                    שימו לב: תחת הגדרות ← Safari אין סעיף מיקום. הוא יושב רק תחת שירותי מיקום.
+                  </div>
+                </>
+              )}
+              {platform === "android" && (
+                <>
+                  <strong style={{ color: t.text }}>באנדרואיד:</strong> בדרך כלל יופיע חלון שמבקש רשות —
+                  אשרו אותו. אם לא הופיע: הגדרות המכשיר ← אפליקציות ← הדפדפן שלכם ← הרשאות ← מיקום ← אפשרו.
+                </>
+              )}
+              {platform === "mac" && (
+                <>
+                  <strong style={{ color: t.text }}>במק:</strong> תפריט אפל ← הגדרות מערכת ← פרטיות ואבטחה
+                  ← שירותי מיקום ← הדליקו את הדפדפן שלכם, ואז סגרו ופתחו אותו מחדש.
+                </>
+              )}
+              {platform === "other" && (
+                <>
+                  <strong style={{ color: t.text }}>במחשב:</strong> לחצו על הסמל שמשמאל לכתובת האתר
+                  בשורת הכתובת ← הרשאות ← מיקום ← אפשרו, ואז רעננו את העמוד.
+                </>
+              )}
+              {(platform === "ios" || platform === "android") && (
+                <div style={{ marginTop: 10 }}>
+                  <strong style={{ color: t.text }}>אם אפליקציית גוגל מפות יודעת איפה אתם:</strong> לחצו על
+                  הנקודה הכחולה, גררו את הכרטיס התחתון מעלה, והעתיקו את שורת הקואורדינטות לשדה החיפוש כאן.
+                </div>
+              )}
               {diag && (
                 <div style={{
                   marginTop: 12, padding: "8px 10px", borderRadius: 8,

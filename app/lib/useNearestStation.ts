@@ -7,6 +7,23 @@ export type Place = { label: string; lat: number; lng: number };
 export const LOC_DENIED_MSG = "הדפדפן חוסם גישה למיקום. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
 export const LOC_RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
 
+export type Platform = "ios" | "android" | "mac" | "other";
+
+/**
+ * המסלול להפעלת שירותי מיקום שונה לגמרי בין המערכות, והוראה למערכת הלא
+ * נכונה שולחת את המשתמש למסך שאין בו מה שהוא מחפש. באייפון, למשל, אין
+ * "מיקום" תחת הגדרות ← Safari — הוא יושב תחת שירותי מיקום.
+ */
+export function detectPlatform(): Platform {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  // iPadOS 13 ומעלה מדווח על עצמו כ-Macintosh; מספר נקודות המגע מפריד ביניהם.
+  if (/iPhone|iPod/.test(ua) || (/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  if (/Macintosh/.test(ua)) return "mac";
+  return "other";
+}
+
 // Google Maps אינו יכול להחזיר מיקום לאתר אחר — זה מודל האבטחה של הדפדפן.
 // מה שכן אפשר: להדביק משם. מזהים קואורדינטות גולמיות וגם קישורי מפות נפוצים.
 export function parseCoords(v: string): { lat: number; lng: number } | null {
@@ -165,6 +182,10 @@ export function useNearestStation() {
   const describeError = (code: number) =>
     code === 1 ? " — הרשאה נדחתה" : code === 2 ? " — המיקום אינו זמין" : code === 3 ? " — פג הזמן" : "";
 
+  // ה-UA נחתך קודם ב-90 תווים, בדיוק לפני החלק שמזהה את הדפדפן: באייפון
+  // הכל עד AppleWebKit זהה בספארי ובכרום, וה-CriOS/Safari מגיע אחריו.
+  const describeDevice = () => `${detectPlatform()} · ${navigator.userAgent.slice(0, 200)}`;
+
   const locate = (onFound?: (s: Station) => void) => {
     if (!navigator.geolocation) { setLocError(LOC_RETRY_MSG); focusSearch(); return; }
     setLocating(true);
@@ -177,7 +198,7 @@ export function useNearestStation() {
       },
       err => {
         setLocError(err.code === 1 ? LOC_DENIED_MSG : LOC_RETRY_MSG);
-        setDiag(`קוד ${err.code}${describeError(err.code)} · ${navigator.userAgent.slice(0, 90)}`);
+        setDiag(`קוד ${err.code}${describeError(err.code)} · ${describeDevice()}`);
         setLocating(false);
         focusSearch();
       },
@@ -190,7 +211,7 @@ export function useNearestStation() {
       const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
       if (status?.state === "denied") {
         setLocError(LOC_DENIED_MSG);
-        setDiag(`הרשאה חסומה מראש · ${navigator.userAgent.slice(0, 90)}`);
+        setDiag(`הרשאה חסומה מראש · ${describeDevice()}`);
         focusSearch();
         return;
       }
