@@ -124,11 +124,41 @@ export default function MapClient() {
     try { localStorage.setItem("derechkala:lastPlace", JSON.stringify(p)); } catch {}
   };
 
+  // Google Maps אינו יכול להחזיר מיקום לאתר אחר — זה מודל האבטחה של
+  // הדפדפן. מה שכן אפשר: להדביק משם. מזהים קואורדינטות גולמיות וגם
+  // קישורי מפות נפוצים, כדי שהדבקה פשוט תעבוד.
+  const parseCoords = (v: string): { lat: number; lng: number } | null => {
+    const patterns = [
+      /@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,        // /maps/@32.08,34.78,15z
+      /[?&]q=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,   // ?q=32.08,34.78
+      /[?&]ll=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,  // ?ll=32.08,34.78
+      /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,       // place URLs
+      /^\s*(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})\s*$/, // הדבקה ישירה
+    ];
+    for (const re of patterns) {
+      const m = v.match(re);
+      if (m) {
+        const lat = Number(m[1]), lng = Number(m[2]);
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+      }
+    }
+    return null;
+  };
+
   // חיפוש תוך כדי הקלדה. השהיה קצרה כדי לא לשלוח בקשה על כל תו.
   const onType = (v: string) => {
     setPlace(v);
     setPlaceMsg(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const c = parseCoords(v);
+    if (c) {
+      setPlaceResults([]);
+      setPlaceMsg("זוהו קואורדינטות — מחפש את התחנה הקרובה אליהן.");
+      setLocationAndFindStation(c.lat, c.lng, false);
+      return;
+    }
+
     if (v.trim().length < 3) { setPlaceResults([]); return; }
     debounceRef.current = setTimeout(() => searchPlace(v), 350);
   };
@@ -293,7 +323,23 @@ export default function MapClient() {
           background: t.card, border: "1px solid #b0405055",
           borderRadius: 10, fontSize: 13, lineHeight: 1.7, color: t.text,
         }}>
-          {locError}
+          <div style={{ marginBottom: 10 }}>{locError}</div>
+          <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.7 }}>
+            <strong style={{ color: t.text }}>רוצים דיוק מלא?</strong>{" "}
+            פתחו את גוגל מפות, לחצו לחיצה ארוכה על המיקום שלכם, העתיקו את הקואורדינטות והדביקו אותן בשדה החיפוש.
+            האתר יזהה אותן לבד.
+          </div>
+          <a
+            href="https://www.google.com/maps"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-block", marginTop: 10,
+              background: t.resultBg, border: `1px solid ${t.border}`,
+              borderRadius: 8, padding: "8px 12px",
+              fontSize: 12, fontWeight: 600, color: t.text, textDecoration: "none",
+            }}
+          >🗺️ פתחו את גוגל מפות בכרטיסייה חדשה</a>
         </div>
       )}
 
