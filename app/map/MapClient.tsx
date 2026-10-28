@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { STATIONS, Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "../lib/data";
@@ -19,21 +19,32 @@ export default function MapClient() {
   const [route, setRoute] = useState<[number, number][] | null>(null);
   const [routeMetres, setRouteMetres] = useState<number | null>(null);
   const [approx, setApprox] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [recent, setRecent] = useState<{ label: string; lat: number; lng: number } | null>(null);
+
+  // המקום האחרון שנבחר נשמר מקומית בלבד, כדי שלא צריך להקליד אותו שוב.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("derechkala:lastPlace");
+      if (raw) setRecent(JSON.parse(raw));
+    } catch {}
+  }, []);
 
   const [place, setPlace] = useState("");
   const [placeResults, setPlaceResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
   const [searching, setSearching] = useState(false);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
 
-  const DENIED_MSG = "הגישה למיקום חסומה. בכרום: לחצו על סמל המנעול שליד הכתובת ואפשרו מיקום. במק ייתכן שצריך גם לאפשר לכרום גישה למיקום בהגדרות המערכת. אפשר גם להקליד כתובת בשדה למטה.";
-  const RETRY_MSG = "לא הצלחנו לאתר את המיקום — ייתכן שהדפדפן חסום מגישה למיקום ברמת המערכת. הקלידו כתובת או מקום בשדה למטה, ונמצא את התחנה הקרובה.";
+  const DENIED_MSG = "הדפדפן חוסם גישה למיקום. הקלידו איפה אתם בשדה שלמטה — זה ייקח שתי שניות ויעבוד תמיד. (לפתיחת GPS: סמל המנעול שליד הכתובת, ובמק גם הגדרות המערכת ← פרטיות ← שירותי מיקום.)";
+  const RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הקלידו איפה אתם בשדה שלמטה — זה ייקח שתי שניות ויעבוד תמיד.";
 
   // חיפוש מקום לפי שם, למי שה-GPS שלו אינו זמין. Photon מבוסס OpenStreetMap,
   // ללא מפתח. הפרמטר lang אינו תומך בעברית ולכן אינו נשלח — השמות חוזרים
   // בעברית ממילא.
-  const searchPlace = async (e?: React.FormEvent) => {
+  const searchPlace = async (raw?: string, e?: React.FormEvent) => {
     e?.preventDefault();
-    const q = place.trim();
+    const q = (raw ?? place).trim();
     if (q.length < 2) return;
     setSearching(true);
     setPlaceMsg(null);
@@ -97,28 +108,29 @@ export default function MapClient() {
     loadRoute({ lat, lng }, s);
   };
 
-  // נפילה אוטומטית כש-GPS אינו זמין: מיקום משוער לפי כתובת האינטרנט.
-  // רמת דיוק של עיר בלבד, ולכן מסומן למשתמש כמשוער.
-  const locateByIp = async (): Promise<boolean> => {
-    for (const url of ["https://ipwho.is/", "https://get.geojs.io/v1/ip/geo.json"]) {
-      try {
-        const d = await (await fetch(url)).json();
-        const lat = Number(d.latitude), lng = Number(d.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0) {
-          setLocationAndFindStation(lat, lng, true);
-          return true;
-        }
-      } catch {
-        // ממשיכים לשירות הבא
-      }
-    }
-    return false;
+  // זיהוי לפי כתובת IP נוסה ונמחק: בישראל הוא מצביע על ספק האינטרנט ולא
+  // על המשתמש, והציב משתמש בעיר אחרת בתל אביב בביטחון מלא. תשובה שגויה
+  // שנראית ודאית גרועה מהיעדר תשובה.
+  const focusSearch = () => {
+    searchRef.current?.focus();
+    searchRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   };
 
   const pickPlace = (p: { label: string; lat: number; lng: number }) => {
     setPlaceResults([]);
     setPlace(p.label);
     setLocationAndFindStation(p.lat, p.lng, false);
+    setRecent(p);
+    try { localStorage.setItem("derechkala:lastPlace", JSON.stringify(p)); } catch {}
+  };
+
+  // חיפוש תוך כדי הקלדה. השהיה קצרה כדי לא לשלוח בקשה על כל תו.
+  const onType = (v: string) => {
+    setPlace(v);
+    setPlaceMsg(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (v.trim().length < 3) { setPlaceResults([]); return; }
+    debounceRef.current = setTimeout(() => searchPlace(v), 350);
   };
 
   const locate = () => {
@@ -129,10 +141,10 @@ export default function MapClient() {
         setLocationAndFindStation(pos.coords.latitude, pos.coords.longitude);
         setLocating(false);
       },
-      async err => {
-        const ok = await locateByIp();
-        if (!ok) setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
+      err => {
+        setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
         setLocating(false);
+        focusSearch();
       },
       { timeout: 15000, enableHighAccuracy: false, maximumAge: 300000 }
     );
@@ -148,10 +160,8 @@ export default function MapClient() {
     try {
       const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
       if (status?.state === "denied") {
-        setLocating(true);
-        const ok = await locateByIp();
-        setLocating(false);
-        if (!ok) setLocError(DENIED_MSG);
+        setLocError(DENIED_MSG);
+        focusSearch();
         return;
       }
     } catch {
@@ -179,27 +189,35 @@ export default function MapClient() {
       </div>
 
       {/* חיפוש מקום — החלופה ל-GPS כשהוא חסום או לא זמין */}
-      <form onSubmit={searchPlace} style={{ marginBottom: 12, position: "relative" }}>
+      <form onSubmit={e => searchPlace(place, e)} style={{ marginBottom: 12, position: "relative" }}>
         <div style={{ display: "flex", gap: 8 }}>
           <input
+            ref={searchRef}
             value={place}
-            onChange={e => setPlace(e.target.value)}
-            placeholder="איפה אתם? רחוב, עיר או מקום מוכר"
+            onChange={e => onType(e.target.value)}
+            placeholder="איפה אתם? התחילו להקליד רחוב, עיר או מקום"
             aria-label="חיפוש מקום"
+            autoComplete="off"
             style={{
               flex: 1, background: t.inputBg, border: `1.5px solid ${t.border}`,
               borderRadius: 9, padding: "11px 14px", color: t.text,
               fontSize: 14, outline: "none", fontFamily: "'Rubik', sans-serif", direction: "rtl",
             }}
           />
-          <button type="submit" disabled={searching || place.trim().length < 2} style={{
-            background: searching || place.trim().length < 2 ? t.border : "#b04050",
-            color: searching || place.trim().length < 2 ? t.subtle : "#fff",
-            border: "none", borderRadius: 9, padding: "11px 18px",
-            fontSize: 14, fontWeight: 600, fontFamily: "'Rubik', sans-serif",
-            cursor: searching || place.trim().length < 2 ? "not-allowed" : "pointer",
-          }}>{searching ? "מחפש..." : "חפש"}</button>
+          {searching && (
+            <span style={{ alignSelf: "center", fontSize: 12, color: t.muted, whiteSpace: "nowrap" }}>מחפש…</span>
+          )}
         </div>
+
+        {recent && !place && (
+          <button type="button" onClick={() => pickPlace(recent)} style={{
+            marginTop: 8, background: t.resultBg, border: `1px solid ${t.border}`,
+            borderRadius: 8, padding: "8px 12px", fontSize: 12, color: t.text,
+            cursor: "pointer", fontFamily: "'Rubik', sans-serif", textAlign: "right",
+          }}>
+            ↩ המקום האחרון שלך: <strong>{recent.label}</strong>
+          </button>
+        )}
 
         {placeResults.length > 0 && (
           <div style={{
@@ -237,7 +255,13 @@ export default function MapClient() {
             </Link>
             <span style={{ fontSize: 12, color: t.muted }}>
               {nearestStation.city}
-              {userLoc ? ` · ${formatDistance(routeMetres ?? distanceMetres(userLoc, nearestStation))} · כ-${walkMinutes(routeMetres ?? distanceMetres(userLoc, nearestStation))} דק׳ הליכה${routeMetres ? " (לפי מסלול)" : ""}` : ""}
+              {userLoc && (() => {
+                const m = routeMetres ?? distanceMetres(userLoc, nearestStation);
+                // זמן הליכה מוצג רק כשהליכה היא באמת אפשרות. "131 דק׳ הליכה"
+                // אינו מידע שימושי למי שנמצא בעיר אחרת.
+                const walkable = m <= 2500;
+                return ` · ${formatDistance(m)}${walkable ? ` · כ-${walkMinutes(m)} דק׳ הליכה` : ""}`;
+              })()}
             </span>
           </div>
           {approx && (
@@ -250,8 +274,16 @@ export default function MapClient() {
               אם זו אינה התחנה הנכונה — הקלידו כתובת מדויקת למעלה, או לחצו על המפה במקום שבו אתם נמצאים.
             </div>
           )}
-          <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>איך מגיעים לשם</div>
-          <NavigationLinks station={nearestStation} from={userLoc} />
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>
+            {userLoc && (routeMetres ?? distanceMetres(userLoc, nearestStation)) > 2500
+              ? "רחוק מכדי ללכת — איך מגיעים לשם"
+              : "איך מגיעים לשם"}
+          </div>
+          <NavigationLinks
+            station={nearestStation}
+            from={userLoc}
+            transitFirst={!!userLoc && (routeMetres ?? distanceMetres(userLoc, nearestStation)) > 2500}
+          />
         </div>
       )}
 

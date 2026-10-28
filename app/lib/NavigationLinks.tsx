@@ -26,15 +26,21 @@ export default function NavigationLinks({
   station,
   from,
   compact,
+  transitFirst,
 }: {
   station: Station;
   from?: { lat: number; lng: number } | null;
   compact?: boolean;
+  /** במרחקים גדולים הליכה אינה רלוונטית — תחבורה ציבורית מוצגת ראשונה. */
+  transitFirst?: boolean;
 }) {
   const { t } = useTheme();
+  const modes = transitFirst
+    ? [...MODES].sort((a, b) => Number(b.mode === "transit") - Number(a.mode === "transit"))
+    : MODES;
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {MODES.map(({ mode, label, icon }) => (
+      {modes.map(({ mode, label, icon }) => (
         <a
           key={mode}
           href={dirUrl(station, mode, from)}
