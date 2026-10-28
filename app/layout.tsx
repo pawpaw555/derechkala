@@ -28,8 +28,11 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl">
       <head>
-        <link rel="icon" type="image/png" href="/favicon.png" />
-        <link rel="apple-touch-icon" href="/favicon.png" />
+        {/* favicon.png הוא תמונת המקור ב-1254×1254 ומשקל 348KB. הוא הוגש
+            בכל טעינת עמוד כדי לצייר אייקון של 32 פיקסלים, והיה צרכן הרוחב
+            הגדול ביותר באתר. הגרסאות שלהלן נגזרו ממנו ב-sips. */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
