@@ -18,6 +18,7 @@ export default function MapClient() {
   const [locating, setLocating] = useState(false);
   const [route, setRoute] = useState<[number, number][] | null>(null);
   const [routeMetres, setRouteMetres] = useState<number | null>(null);
+  const [approx, setApprox] = useState(false);
 
   const [place, setPlace] = useState("");
   const [placeResults, setPlaceResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
@@ -87,18 +88,37 @@ export default function MapClient() {
     }
   };
 
-  const setLocationAndFindStation = (lat: number, lng: number) => {
+  const setLocationAndFindStation = (lat: number, lng: number, approximate = false) => {
     const s = findNearestStation(lat, lng);
     setUserLoc({ lat, lng });
     setNearestStation(s);
+    setApprox(approximate);
     setLocError(null);
     loadRoute({ lat, lng }, s);
+  };
+
+  // נפילה אוטומטית כש-GPS אינו זמין: מיקום משוער לפי כתובת האינטרנט.
+  // רמת דיוק של עיר בלבד, ולכן מסומן למשתמש כמשוער.
+  const locateByIp = async (): Promise<boolean> => {
+    for (const url of ["https://ipwho.is/", "https://get.geojs.io/v1/ip/geo.json"]) {
+      try {
+        const d = await (await fetch(url)).json();
+        const lat = Number(d.latitude), lng = Number(d.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0) {
+          setLocationAndFindStation(lat, lng, true);
+          return true;
+        }
+      } catch {
+        // ממשיכים לשירות הבא
+      }
+    }
+    return false;
   };
 
   const pickPlace = (p: { label: string; lat: number; lng: number }) => {
     setPlaceResults([]);
     setPlace(p.label);
-    setLocationAndFindStation(p.lat, p.lng);
+    setLocationAndFindStation(p.lat, p.lng, false);
   };
 
   const locate = () => {
@@ -109,8 +129,9 @@ export default function MapClient() {
         setLocationAndFindStation(pos.coords.latitude, pos.coords.longitude);
         setLocating(false);
       },
-      err => {
-        setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
+      async err => {
+        const ok = await locateByIp();
+        if (!ok) setLocError(err.code === err.PERMISSION_DENIED ? DENIED_MSG : RETRY_MSG);
         setLocating(false);
       },
       { timeout: 15000, enableHighAccuracy: false, maximumAge: 300000 }
@@ -127,7 +148,10 @@ export default function MapClient() {
     try {
       const status = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
       if (status?.state === "denied") {
-        setLocError(DENIED_MSG);
+        setLocating(true);
+        const ok = await locateByIp();
+        setLocating(false);
+        if (!ok) setLocError(DENIED_MSG);
         return;
       }
     } catch {
@@ -204,7 +228,9 @@ export default function MapClient() {
           marginBottom: 16, padding: "14px 16px",
           background: t.card, border: "1px solid #3a906055", borderRadius: 12,
         }}>
-          <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>התחנה הקרובה אליך</div>
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>
+            {approx ? "התחנה הקרובה למיקום המשוער שלך" : "התחנה הקרובה אליך"}
+          </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
             <Link href={`/station/${encodeURIComponent(nearestStation.name)}`} style={{ color: "#b04050", fontWeight: 700, fontSize: 18 }}>
               {nearestStation.name}
@@ -214,6 +240,16 @@ export default function MapClient() {
               {userLoc ? ` · ${formatDistance(routeMetres ?? distanceMetres(userLoc, nearestStation))} · כ-${walkMinutes(routeMetres ?? distanceMetres(userLoc, nearestStation))} דק׳ הליכה${routeMetres ? " (לפי מסלול)" : ""}` : ""}
             </span>
           </div>
+          {approx && (
+            <div style={{
+              fontSize: 11, color: t.muted, lineHeight: 1.6,
+              background: t.resultBg, border: `1px solid ${t.border}`,
+              borderRadius: 8, padding: "8px 10px", marginBottom: 10,
+            }}>
+              המיקום נקבע לפי כתובת האינטרנט ולא לפי GPS, ולכן הוא ברמת אזור בלבד.
+              אם זו אינה התחנה הנכונה — הקלידו כתובת מדויקת למעלה, או לחצו על המפה במקום שבו אתם נמצאים.
+            </div>
+          )}
           <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>איך מגיעים לשם</div>
           <NavigationLinks station={nearestStation} from={userLoc} />
         </div>
