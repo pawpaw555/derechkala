@@ -2,7 +2,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { STATIONS, Station } from "../lib/data";
+import { STATIONS, Station, findNearestStation } from "../lib/data";
 import { useTheme } from "../lib/useTheme";
 import { useRouter } from "next/navigation";
 
@@ -26,14 +26,8 @@ export default function MapClient() {
       pos => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        let best = STATIONS[0];
-        let bestDist = Infinity;
-        STATIONS.forEach(s => {
-          const d = Math.hypot(s.lat - lat, s.lng - lng);
-          if (d < bestDist) { bestDist = d; best = s; }
-        });
         setUserLoc({ lat, lng });
-        setNearestStation(best);
+        setNearestStation(findNearestStation(lat, lng));
         setLocating(false);
       },
       err => {

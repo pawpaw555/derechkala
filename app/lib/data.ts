@@ -23,16 +23,16 @@ export const STATIONS: Station[] = [
   { name: "קרול", lat: 32.0917, lng: 34.8772, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב קרול, פתח תקווה", nearbyPlaces: ["גלריית הציפור הכחולה", "פארק תמר בורנשטיין"] },
   { name: "דנקנר", lat: 32.0910, lng: 34.8718, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב דנקנר, פתח תקווה", nearbyPlaces: ["פארק יד לבנים", "מוזיאון האדם והסביבה"] },
   { name: "בילינסון", lat: 32.0915, lng: 34.8664, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "בית חולים בילינסון, פתח תקווה", nearbyPlaces: ["מרכז רפואי רבין", "בית חולים שניידר"] },
-  { name: "שחם", lat: 32.0921, lng: 34.8600, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שחם, פתח תקווה", nearbyPlaces: ["מגדלי בסר", "B.S.R סיטי"] },
+  { name: "שחם", lat: 32.0919, lng: 34.8614, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שחם, פתח תקווה", nearbyPlaces: ["מגדלי בסר", "B.S.R סיטי"] },
   { name: "שנקר", lat: 32.0926, lng: 34.8536, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שנקר, פתח תקווה", nearbyPlaces: ["מכללת שנקר", "פארקטק קריית אריה"] },
   { name: "קריית אריה", lat: 32.1062, lng: 34.8617, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "קריית אריה, פתח תקווה", nearbyPlaces: ["אצטדיון שלמה ביטוח", "מסלול ירקון פתח תקווה"] },
   // ── קו אדום — בני ברק ───────────────────────────────
   { name: "גשר אם המושבות", lat: 32.0993, lng: 34.8464, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "גשר אם המושבות, בני ברק", nearbyPlaces: ["אזור תעשייה קריית אריה", "שכונת קריית הרצוג"] },
-  { name: "אהרונוביץ'", lat: 32.0960, lng: 34.8347, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "רחוב אהרונוביץ', בני ברק", nearbyPlaces: ["לשכת האוכלוסין", "מגדלי שקל"] },
+  { name: "אהרונוביץ'", lat: 32.0927, lng: 34.8382, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "רחוב אהרונוביץ', בני ברק", nearbyPlaces: ["לשכת האוכלוסין", "מגדלי שקל"] },
   // ── קו אדום — רמת גן ────────────────────────────────
   { name: "בן גוריון", lat: 32.0908, lng: 34.8229, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "שדרות בן גוריון, רמת גן", nearbyPlaces: ["בית המשפט לעניינים מקומיים", "מגדלי B.S.R"] },
   { name: "ביאליק", lat: 32.0864, lng: 34.8115, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "רחוב ביאליק, רמת גן", nearbyPlaces: ["קניון ביאליק", "כיכר רמב\"ם"] },
-  { name: "אבא הלל", lat: 32.0828, lng: 34.8019, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "רחוב אבא הלל, רמת גן", nearbyPlaces: ["בורסת היהלומים", "מגדל משה אביב"] },
+  { name: "אבא הלל", lat: 32.0829, lng: 34.8030, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "רחוב אבא הלל, רמת גן", nearbyPlaces: ["בורסת היהלומים", "מגדל משה אביב"] },
   // ── קו אדום — תל אביב ───────────────────────────────
   { name: "ארלוזורוב", lat: 32.0815, lng: 34.7962, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב ארלוזורוב, תל אביב", nearbyPlaces: ["תחנת רכבת סבידור מרכז", "מסוף 2000"] },
   { name: "שאול המלך", lat: 32.0766, lng: 34.7920, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "שדרות שאול המלך, תל אביב", nearbyPlaces: ["מרכז עזריאלי", "בית חולים איכילוב"] },
@@ -215,6 +215,22 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
     arrivalTime: fmt(arrTime),
   };
 }
+// ── Nearest station ──────────────────────────────────────────────
+// מעלת אורך קצרה ממעלת רוחב בקו הרוחב של גוש דן (32°), ולכן אי אפשר
+// להשוות הפרשי מעלות ישירות. הפונקציה ממירה למטרים לפני ההשוואה.
+const M_PER_DEG_LAT = 110_900;
+const M_PER_DEG_LNG = 94_400;
+
+export function findNearestStation(lat: number, lng: number): Station {
+  let best = STATIONS[0];
+  let bestDist = Infinity;
+  for (const s of STATIONS) {
+    const d = Math.hypot((s.lat - lat) * M_PER_DEG_LAT, (s.lng - lng) * M_PER_DEG_LNG);
+    if (d < bestDist) { bestDist = d; best = s; }
+  }
+  return best;
+}
+
 // ── Related stations (internal linking) ──────────────────────────
 // Other stations in the same city, excluding the station itself and its
 // line neighbours (those already get their own links). Tops up from the
