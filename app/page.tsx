@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, isNoService, Station, STATIONS, Landmark, getNextDepartures } from "./lib/data";
+import { findRoute, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew } from "./lib/data";
 import { searchCombined, PlaceHit } from "./lib/places";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
@@ -303,7 +303,17 @@ export default function Home() {
     setResult(null);
   };
 
+  // מי שמקליד את שם התחנה במלואו ולא מקיש על השורה ברשימה — דפוס נפוץ
+  // בנייד, כי הטקסט כבר נראה נכון — נתקל בכפתור שלא עושה כלום ובלי הסבר.
+  // שם מלא ומדויק נחשב מעכשיו לבחירה.
+  const resolveStation = (selected: Station | null, typed: string) =>
+    selected ?? STATIONS.find(s => normalizeHebrew(s.name) === normalizeHebrew(typed)) ?? null;
+  const fromReady = resolveStation(fromStation, fromQuery);
+  const toReady = resolveStation(toStation, toQuery);
+
   const handlePlan = () => {
+    const fromStation = fromReady;
+    const toStation = toReady;
     if (!fromStation || !toStation) return;
     setLoading(true);
     setResult(null);
@@ -816,15 +826,20 @@ export default function Home() {
                 </div>
               )}
 
-              <button onClick={handlePlan} className="btn-primary" style={{
-            background: fromStation && toStation ? fromStation.lineColor : t.border,
-            color: fromStation && toStation ? "#fff" : t.subtle,
-            border: "none", borderRadius: 10, padding: "14px",
-            fontSize: 15, fontWeight: 600,
-            cursor: fromStation && toStation ? "pointer" : "default",
-            fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
-          }}>
-                חפש נסיעה
+              <button
+                onClick={handlePlan}
+                disabled={!fromReady || !toReady}
+                className="btn-primary"
+                style={{
+                  background: fromReady && toReady ? fromReady.lineColor : t.card2,
+                  color: fromReady && toReady ? "#fff" : t.muted,
+                  border: `1px solid ${fromReady && toReady ? "transparent" : t.border}`,
+                  borderRadius: 10, padding: "14px",
+                  fontSize: 15, fontWeight: 600,
+                  cursor: fromReady && toReady ? "pointer" : "not-allowed",
+                  fontFamily: "'Rubik', sans-serif", transition: "background 0.2s",
+                }}>
+                {fromReady && toReady ? "חפש נסיעה" : "בחרו תחנת מוצא ותחנת יעד"}
               </button>
             </>
           )}

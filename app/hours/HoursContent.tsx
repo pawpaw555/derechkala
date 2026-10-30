@@ -45,18 +45,25 @@ function minsUntilClose(date: Date, dayType: string, schedule: typeof SCHEDULE.r
 
 export default function HoursContent() {
   const { t } = useTheme();
-  const [now, setNow] = useState(new Date());
+  // העמוד נבנה סטטית, ולכן new Date() בזמן רינדור הוא שעת הבנייה — העמוד
+  // הגיש "פועלת עכשיו" לפי שעון של לפני ימים, וגם יצר פער מול הלקוח.
+  // מתחילים ריק ומעדכנים אחרי העלייה, כך שהשעה היא תמיד של המשתמש.
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(id);
+    const update = () => setNow(new Date());
+    const first = setTimeout(update, 0);
+    const id = setInterval(update, 60000);
+    return () => { clearTimeout(first); clearInterval(id); };
   }, []);
 
-  const dayType = getDayType(now);
-  const currentTime = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const ready = now !== null;
+  const clock = now ?? new Date(0);
+  const dayType = getDayType(clock);
+  const currentTime = ready ? clock.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "";
   const dayLabel = { weekday: "יום חול", friday: "ערב שבת", saturday: "שבת" }[dayType];
-  const operating = isOperating(now, dayType, SCHEDULE.red);
-  const isShabat = dayType === "saturday" && now.getHours() < 21;
+  const operating = ready && isOperating(clock, dayType, SCHEDULE.red);
+  const isShabat = ready && dayType === "saturday" && clock.getHours() < 21;
 
   return (
     <main style={{
@@ -80,17 +87,19 @@ export default function HoursContent() {
           שעות פעילות הרכבת הקלה
         </h1>
         <p style={{ fontSize: 13, color: t.muted, marginBottom: 24 }}>
-          {dayLabel} · {currentTime}
+          {ready ? `${dayLabel} · ${currentTime}` : "\u00A0"}
         </p>
 
         {/* Is it operating today? */}
         <div style={{
-          background: isShabat ? "#fdf0f0" : operating ? "#f0faf5" : "#fdf0f0",
-          border: `1px solid ${isShabat ? "#c0404044" : operating ? "#3a906044" : "#c0404044"}`,
+          background: !ready ? "#f4f4f8" : isShabat ? "#fdf0f0" : operating ? "#f0faf5" : "#fdf0f0",
+          border: `1px solid ${!ready ? "#d0d0dc" : isShabat ? "#c0404044" : operating ? "#3a906044" : "#c0404044"}`,
           borderRadius: 14, padding: "18px 20px", marginBottom: 20,
         }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: isShabat ? "#c04040" : operating ? "#3a9060" : "#c04040", marginBottom: 6 }}>
-            {isShabat
+          <div style={{ fontSize: 18, fontWeight: 700, color: !ready ? "#444458" : isShabat ? "#c04040" : operating ? "#3a9060" : "#c04040", marginBottom: 6 }}>
+            {!ready
+              ? "בודק את השעה שלך…"
+              : isShabat
               ? "הרכבת הקלה לא פועלת בשבת"
               : operating
               ? "הרכבת הקלה פועלת עכשיו"
@@ -98,8 +107,12 @@ export default function HoursContent() {
               ? "הרכבת הקלה תחזור לפעול בעוד זמן מה"
               : "הרכבת הקלה לא פועלת כרגע"}
           </div>
-          <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>
-            {isShabat
+          {/* רקע הכרטיס קבוע בהיר, ולכן הטקסט חייב להיות כהה קבוע. קודם
+              לכן הוא השתמש ב-t.muted, שבמצב כהה בהיר — ויצא 1.9:1. */}
+          <div style={{ fontSize: 13, color: "#444458", lineHeight: 1.7 }}>
+            {!ready
+              ? "השעה נקראת מהדפדפן שלך."
+              : isShabat
               ? "השירות מתחדש במוצאי שבת מהשעה 19:45."
               : operating
               ? `השירות פעיל עד ${SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] && (SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] as any).last}.`
