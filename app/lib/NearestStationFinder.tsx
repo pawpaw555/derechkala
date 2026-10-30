@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Station, distanceMetres, formatDistance, walkMinutes } from "./data";
 import { useTheme } from "./useTheme";
-import { detectPlatform } from "./useNearestStation";
+import { detectPlatform, walkEstimate } from "./useNearestStation";
 import NavigationLinks from "./NavigationLinks";
 
 type Finder = ReturnType<typeof import("./useNearestStation").useNearestStation>;
@@ -37,22 +37,12 @@ export default function NearestStationFinder({
     searchRef, onType, pick, requestLocation,
   } = finder;
 
-  // OSRM אמין במרחקים בינוניים, אבל בקטעים קצרים הוא מחזיר לפעמים עקיפה
-  // של פי 7-8 כשאחת הנקודות אינה מחוברת לרשת ההולכי רגל שלו: 91 מ' אוויריים
-  // מתחנת אבא הלל למגדל משה אביב חזרו כ-624 מ' דרך. יחס כזה אינו הליכה
-  // עירונית אמיתית. כשהוא מופיע, המרחק האווירי מוצג ובלי זמן הליכה — כי
-  // מהאוויר הזמן יוצא נמוך מדי, וקישורי הניווט ייתנו את התשובה האמיתית.
+  // הכלל עצמו יושב ב-walkEstimate, משותף עם עמוד התחנה.
   const airMetres = userLoc && station ? distanceMetres(userLoc, station) : null;
-  // התקלה שמדדתי מופיעה רק בקטעים קצרים, שם נקודה שאינה מחוברת לרשת כופה
-  // עקיפה: 91 מ' ← 624, 256 מ' ← 2018. בקילומטר יחס של 3 הוא בדרך כלל
-  // מחסום אמיתי — מסילה או כביש מהיר — ואז המסלול נכון ויש להציג אותו.
-  const SHORT_HOP_M = 400;
-  const roadPlausible =
-    routeMetres != null && airMetres != null &&
-    (airMetres >= SHORT_HOP_M || routeMetres <= airMetres * 3);
-  const metres = roadPlausible ? routeMetres : airMetres;
+  const est = walkEstimate(airMetres, routeMetres ?? null);
+  const metres = est.metres;
   const walkable = metres !== null && metres <= 2500;
-  const showWalkTime = walkable && (routeMetres == null || roadPlausible);
+  const showWalkTime = walkable && est.trustTime;
 
   // נקרא רק בתוך בלוק השגיאה, שמופיע אחרי פעולת משתמש ולכן תמיד בצד הלקוח.
   // קריאה ל-navigator בזמן רינדור ראשוני הייתה יוצרת פער מול השרת.

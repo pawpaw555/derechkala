@@ -5,7 +5,7 @@ import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stat
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
-import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
+import { useNearestStation, fetchFootRoute, walkEstimate } from "../../lib/useNearestStation";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
@@ -60,10 +60,13 @@ export default function StationClient({ stationName, station }: Props) {
   }, [station, userLat, userLng]);
 
   const routeMetresHere = routeHere && routeHere.key === routeKey ? routeHere.metres : null;
-  const toHere = station && finder.userLoc
-    ? (routeMetresHere ?? distanceMetres(finder.userLoc, station))
-    : null;
+  // אותו כלל כמו בפאנל התחנה הקרובה. קודם לכן כאן הוזן מספר OSRM הגולמי,
+  // כך שמי שחיפש מקום שאינו מחובר לרשת ההליכה קיבל זמן מנופח פי כמה.
+  const airHere = station && finder.userLoc ? distanceMetres(finder.userLoc, station) : null;
+  const estHere = walkEstimate(airHere, routeMetresHere);
+  const toHere = estHere.metres;
   const walkableHere = toHere !== null && toHere <= 2500;
+  const showWalkHere = walkableHere && estHere.trustTime;
 
   const color = station?.lineColor || "#b04050";
 const content = STATION_CONTENT[stationName];
@@ -632,7 +635,7 @@ const content = STATION_CONTENT[stationName];
                 fontSize: 13, color: t.text,
               }}>
                 מהמיקום שלך: <strong>{formatDistance(toHere)}</strong>
-                {walkableHere ? ` · כ-${walkMinutes(toHere)} דק׳ הליכה` : " — רחוק מכדי ללכת"}
+                {showWalkHere ? ` · כ-${walkMinutes(toHere)} דק׳ הליכה` : walkableHere ? "" : " — רחוק מכדי ללכת"}
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>
