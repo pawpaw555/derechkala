@@ -205,6 +205,50 @@ export function searchAll(query: string): {
     .slice(0, 5);
   return { stations, landmarks };
 }
+/**
+ * הקו האדום אינו שרשרת אחת אלא Y. אומת מול יחסי המסלול ב-OSM:
+ * relation 2224880 (R1, 32 תחנות) עובר באהרונוביץ' → שנקר → שחם → פתח
+ * תקווה, ו-relation 16224901 (R2, 27 תחנות) עובר קריית אריה → גשר אם
+ * המושבות → אהרונוביץ'. אהרונוביץ' היא הצומת.
+ *
+ * קודם לכן המרחק נמדד לפי הפרש מיקומים במערך STATIONS, שהוא שטוח. נסיעה
+ * מקריית אריה לתחנה המרכזית בפתח תקווה דווחה כ-7 תחנות ישיר, בעוד שבפועל
+ * היא 9 תחנות עם החלפה.
+ */
+const JUNCTION = "אהרונוביץ'";
+/** מהצומת צפונה לכיוון פתח תקווה (שירות R1). */
+const BRANCH_PT = ["שנקר", "שחם", "בילינסון", "דנקנר", "קרול", "פינסקר", "תחנה מרכזית פתח תקווה"];
+/** מהצומת צפונה לכיוון קריית אריה (שירות R2/R3). */
+const BRANCH_KA = ["גשר אם המושבות", "קריית אריה"];
+
+type Leg = { branch: "pt" | "ka" | "trunk"; index: number };
+
+function locate(name: string): Leg | null {
+  const pt = BRANCH_PT.indexOf(name);
+  if (pt >= 0) return { branch: "pt", index: pt };
+  const ka = BRANCH_KA.indexOf(name);
+  if (ka >= 0) return { branch: "ka", index: ka };
+  const trunk = STATIONS.filter(s => s.lineId === "red")
+    .map(s => s.name)
+    .filter(n => !BRANCH_PT.includes(n) && !BRANCH_KA.includes(n));
+  const t = trunk.indexOf(name);
+  return t >= 0 ? { branch: "trunk", index: t } : null;
+}
+
+/** מספר התחנות בין שתיים, ואם נדרשת החלפה בצומת. */
+export function countStops(fromName: string, toName: string): { stops: number; change: string | null } | null {
+  const a = locate(fromName), b = locate(toName);
+  if (!a || !b) return null;
+  if (a.branch === b.branch) return { stops: Math.abs(a.index - b.index), change: null };
+  // ענף מול ענף — חייבים לעבור דרך הצומת ולהחליף שירות.
+  if (a.branch !== "trunk" && b.branch !== "trunk")
+    return { stops: a.index + 1 + b.index + 1, change: JUNCTION };
+  // ענף מול הגזע: הצומת היא תחנה 0 בגזע.
+  const branchLeg = a.branch === "trunk" ? b : a;
+  const trunkLeg = a.branch === "trunk" ? a : b;
+  return { stops: branchLeg.index + 1 + trunkLeg.index, change: null };
+}
+
 export function findRoute(fromName: string, toName: string, nextMins?: number, baseDate?: Date): {
   stops: number;
   mins: number;
@@ -219,10 +263,9 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   const from = STATIONS.find(s => s.name === fromName);
   const to = STATIONS.find(s => s.name === toName);
   if (!from || !to) return null;
-  const lineStations = STATIONS.filter(s => s.lineId === "red");
-  const fi = lineStations.findIndex(s => s.name === fromName);
-  const ti = lineStations.findIndex(s => s.name === toName);
-  const stops = Math.abs(ti - fi);
+  const counted = countStops(fromName, toName);
+  if (!counted) return null;
+  const stops = counted.stops;
   // קודם לכן היו כאן שתי הגרלות: תוספת של 0 עד 3 דקות לזמן הנסיעה, ועוד
   // 1 עד 5 דקות המתנה כשלא נמסרה. אותו חיפוש החזיר תשובה אחרת בכל פעם,
   // והמספרים התגלגלו מחדש בכל רינדור.
@@ -247,7 +290,8 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
     stops,
     mins: travelMins,
     next,
-    direct: true,
+    direct: counted.change === null,
+    change: counted.change ?? undefined,
     lineName: "קו אדום",
     lineColor: "#b04050",
     departureTime: fmt(depTime),

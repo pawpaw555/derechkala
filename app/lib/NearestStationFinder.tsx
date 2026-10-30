@@ -32,7 +32,7 @@ export default function NearestStationFinder({
 }) {
   const { t } = useTheme();
   const {
-    userLoc, station, routeMetres, locError, locating, diag,
+    userLoc, station, routeMetres, accuracy, locError, locating, diag,
     place, results, searching, placeMsg, recent,
     searchRef, onType, pick, requestLocation,
   } = finder;
@@ -43,6 +43,9 @@ export default function NearestStationFinder({
   const metres = est.metres;
   const walkable = metres !== null && metres <= 2500;
   const showWalkTime = walkable && est.trustTime;
+  // כשרדיוס השגיאה גדול מהמרחק עצמו, "התחנה הקרובה" היא ניחוש. אומרים
+  // את זה במקום להציג מספר שנראה ודאי.
+  const vague = accuracy !== null && metres !== null && accuracy > Math.max(300, metres);
 
   // נקרא רק בתוך בלוק השגיאה, שמופיע אחרי פעולת משתמש ולכן תמיד בצד הלקוח.
   // קריאה ל-navigator בזמן רינדור ראשוני הייתה יוצרת פער מול השרת.
@@ -187,7 +190,9 @@ export default function NearestStationFinder({
           marginBottom: 12, padding: "14px 16px",
           background: t.card, border: "1px solid #3a906055", borderRadius: 12,
         }}>
-          <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>התחנה הקרובה אליך</div>
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>
+            {vague ? "ככל הנראה התחנה הקרובה אליך" : "התחנה הקרובה אליך"}
+          </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
             {resultHref ? (
               <Link href={`/station/${encodeURIComponent(station.name)}`} style={{ color: "#b04050", fontWeight: 700, fontSize: 18 }}>
@@ -204,6 +209,11 @@ export default function NearestStationFinder({
           <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>
             {metres !== null && !walkable ? "רחוק מכדי ללכת — איך מגיעים לשם" : "איך מגיעים לשם"}
           </div>
+          {vague && (
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, lineHeight: 1.6 }}>
+              הדפדפן דיווח על מיקום משוער ברדיוס של כ-{formatDistance(accuracy!)}. אם זו אינה התחנה הנכונה, הקלידו איפה אתם.
+            </div>
+          )}
           <NavigationLinks station={station} from={userLoc} transitFirst={metres !== null && !walkable} />
         </div>
       )}

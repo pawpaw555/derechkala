@@ -559,6 +559,15 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                {result.change && (
+                  <div style={{
+                    borderTop: `1px solid ${t.border}`, padding: "10px 14px",
+                    fontSize: 12, color: t.text, lineHeight: 1.6, textAlign: "right",
+                  }}>
+                    <strong>נדרשת החלפה בתחנת {result.change}.</strong> הקו מתפצל שם: שירות אחד ממשיך
+                    לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
+                  </div>
+                )}
               </div>
 
               {useCustomTime && (

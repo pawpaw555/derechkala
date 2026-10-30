@@ -125,6 +125,8 @@ export function useNearestStation() {
   const [locError, setLocError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [diag, setDiag] = useState<string | null>(null);
+  /** רדיוס אי-הוודאות שהדפדפן דיווח עליו, במטרים. */
+  const [accuracy, setAccuracy] = useState<number | null>(null);
 
   const [place, setPlace] = useState("");
   const [results, setResults] = useState<Place[]>([]);
@@ -133,6 +135,9 @@ export function useNearestStation() {
   const [recent, setRecent] = useState<Place | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
+  // כל שינוי מיקום מפעיל בקשת מסלול. בלי מונה, תשובה איטית של בקשה ישנה
+  // דורסת תשובה חדשה יותר, והפאנל מציג מרחק למקום אחר ממה שעל המסך.
+  const routeSeq = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -143,9 +148,11 @@ export function useNearestStation() {
   }, []);
 
   const loadRoute = async (from: { lat: number; lng: number }, to: Station) => {
+    const seq = ++routeSeq.current;
     setRoute(null);
     setRouteMetres(null);
     const r = await fetchFootRoute(from, to);
+    if (seq !== routeSeq.current) return;
     if (r) {
       setRoute(r.coords);
       setRouteMetres(r.metres);
@@ -248,6 +255,7 @@ export function useNearestStation() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const c = parseCoords(v);
     if (c) {
+      setAccuracy(null);
       setResults([]);
       setPlaceMsg("זוהו קואורדינטות — מחפש את התחנה הקרובה אליהן.");
       applyLocation(c.lat, c.lng);
@@ -258,6 +266,7 @@ export function useNearestStation() {
   };
 
   const pick = (p: Place) => {
+    setAccuracy(null);
     setResults([]);
     setPlace(p.label);
     setRecent(p);
@@ -278,6 +287,10 @@ export function useNearestStation() {
     setLocError(null);
     navigator.geolocation.getCurrentPosition(
       pos => {
+        // enableHighAccuracy כבוי, ולכן דפדפן בלי סריקת WiFi שימושית נופל
+        // לאיכון רשת שרדיוס השגיאה שלו יכול להיות קילומטרים. בלי לקרוא
+        // את accuracy, מיקום כזה הוצג כתחנה קרובה ודאית עם מרחק מדויק.
+        setAccuracy(typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null);
         const s = applyLocation(pos.coords.latitude, pos.coords.longitude);
         setLocating(false);
         onFound?.(s);
@@ -308,7 +321,7 @@ export function useNearestStation() {
   };
 
   return {
-    userLoc, station, route, routeMetres,
+    userLoc, station, route, routeMetres, accuracy,
     locError, locating, diag,
     place, results, searching, placeMsg, recent,
     searchRef, onType, search, pick, requestLocation, applyLocation,
