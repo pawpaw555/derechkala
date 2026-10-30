@@ -8,8 +8,15 @@ export type StationContent = {
   pois: { name: string; type: string }[];
   nameFact: string;
   bestFor: string;
-  previousStation: string | null;
-  nextStation: string | null;
+  /**
+   * הקו אינו שרשרת אחת. אהרונוביץ' היא צומת: R1 ממשיך ממנה לשנקר ומשם
+   * לפתח תקווה, ו-R2/R3 ממשיכים לגשר אם המושבות ולקריית אריה. אומת מול
+   * יחסי המסלול ב-OSM — relation 2224880 (32 תחנות, בלי קריית אריה ובלי
+   * גשר אם המושבות) ו-relation 16224901 (27 תחנות, בלי שנקר ובלי שחם).
+   * לכן ערך יחיד אינו מספיק בצומת.
+   */
+  previousStation: string | string[] | null;
+  nextStation: string | string[] | null;
 };
 
 // Shown on every station page. Single source for both the rendered
@@ -152,7 +159,7 @@ export const STATION_CONTENT: Record<string, StationContent> = {
     nameFact: "התחנה נקראת על שם רחוב אריה שנקר. אריה שנקר היה מראשי התעשייה העברית, ועל שמו נקראו גם הרחוב וגם אזור התעסוקה קריית אריה הסמוך.",
     bestFor: "פארקטק, Y סנטר, גישה למשרדים, צומת גבעת שמואל, מתחמי תעסוקה",
     previousStation: "שחם",
-    nextStation: "קריית אריה",
+    nextStation: "אהרונוביץ'",
   },
   "קריית אריה": {
     name: "קריית אריה",
@@ -169,7 +176,7 @@ export const STATION_CONTENT: Record<string, StationContent> = {
     ],
     nameFact: "התחנה נקראת על שם אזור קריית אריה, שנקרא לזכרו של התעשיין אריה שנקר. האזור הפך לאחד ממרכזי התעסוקה הבולטים בפתח תקווה.",
     bestFor: "רכבת ישראל, חנה וסע, אצטדיון שלמה ביטוח, קריית אריה, מסוף אוטובוסים",
-    previousStation: "שנקר",
+    previousStation: null,
     nextStation: "גשר אם המושבות",
   },
   "גשר אם המושבות": {
@@ -205,7 +212,7 @@ export const STATION_CONTENT: Record<string, StationContent> = {
     ],
     nameFact: "התחנה נקראת על שם רחוב אהרונוביץ', שנקרא לזכר ראובן אהרונוביץ', ראש העיר השלישי של בני ברק. במשך שנים הרחוב היה מוכר גם כחלק מרחוב השומר הוותיק.",
     bestFor: "משרד הפנים בני ברק, קניון בני ברק, טרם, החלפת קווים, שירותים ציבוריים",
-    previousStation: "גשר אם המושבות",
+    previousStation: ["שנקר", "גשר אם המושבות"],
     nextStation: "בן גוריון",
   },
   "בן גוריון": {

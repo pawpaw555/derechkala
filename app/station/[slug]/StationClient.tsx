@@ -20,6 +20,10 @@ type SearchResults = {
   landmarks: (Landmark & { station: Station | undefined })[];
 };
 
+/** שכנה אחת או כמה: אהרונוביץ' היא צומת ולכן יש לה שתי תחנות קודמות. */
+const asList = (v: string | string[] | null | undefined): string[] =>
+  v == null ? [] : Array.isArray(v) ? v : [v];
+
 export default function StationClient({ stationName, station }: Props) {
   const { t } = useTheme();
   const [query, setQuery] = useState("");
@@ -63,7 +67,7 @@ export default function StationClient({ stationName, station }: Props) {
 
   const color = station?.lineColor || "#b04050";
 const content = STATION_CONTENT[stationName];
-  const related = getRelatedStations(stationName, [content?.previousStation ?? null, content?.nextStation ?? null]);
+  const related = getRelatedStations(stationName, [...asList(content?.previousStation), ...asList(content?.nextStation)]);
   // nearbyPlaces overlaps content.pois for most stations; only show what pois don't already cover.
   const poiNames = content?.pois.map(p => p.name) ?? [];
   const ownNearby = (station?.nearbyPlaces ?? []).filter(
@@ -576,29 +580,34 @@ const content = STATION_CONTENT[stationName];
         )}
 
         {/* Prev/Next stations */}
-        {content && (content.previousStation || content.nextStation) && (
+        {content && (asList(content.previousStation).length > 0 || asList(content.nextStation).length > 0) && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 12, fontWeight: 500, letterSpacing: "0.04em" }}>תחנות סמוכות בקו</h2>
-            <div style={{ display: "flex", gap: 10 }}>
-              {content.previousStation && (
-                <a href={`/station/${encodeURIComponent(content.previousStation)}`} style={{
-                  flex: 1, background: t.resultBg, border: `1px solid ${t.border}`,
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {asList(content.previousStation).map(n => (
+                <a key={"prev:" + n} href={`/station/${encodeURIComponent(n)}`} style={{
+                  flex: "1 1 40%", background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 9, padding: "12px 14px", textAlign: "right", textDecoration: "none",
                 }}>
                   <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>תחנה קודמת</div>
-                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>← {content.previousStation}</div>
+                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>← {n}</div>
                 </a>
-              )}
-              {content.nextStation && (
-                <a href={`/station/${encodeURIComponent(content.nextStation)}`} style={{
-                  flex: 1, background: t.resultBg, border: `1px solid ${t.border}`,
+              ))}
+              {asList(content.nextStation).map(n => (
+                <a key={"next:" + n} href={`/station/${encodeURIComponent(n)}`} style={{
+                  flex: "1 1 40%", background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 9, padding: "12px 14px", textAlign: "left", textDecoration: "none",
                 }}>
                   <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>תחנה הבאה</div>
-                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>{content.nextStation} →</div>
+                  <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>{n} →</div>
                 </a>
-              )}
+              ))}
             </div>
+            {asList(content.previousStation).length + asList(content.nextStation).length > 2 && (
+              <div style={{ fontSize: 11, color: t.muted, marginTop: 10, lineHeight: 1.6 }}>
+                זו תחנת צומת. הקו מתפצל כאן בין השירות לפתח תקווה לבין השירות לקריית אריה.
+              </div>
+            )}
           </div>
         )}
 
