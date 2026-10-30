@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "./data";
 import { PLACES } from "./places";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
-import type { Marker } from "leaflet";
+import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
 
 type Props = {
   stations: Station[];
@@ -61,29 +61,46 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
 const LABEL_ZOOM = 14;
 
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
+  /** השכבות תלויות הזום, כדי שאפשר יהיה לסנכרן אותן גם אחרי בנייה מחדש. */
+  const zoomLayersRef = useRef<Marker[]>([]);
+  const markersRef = useRef<Marker[]>([]);
+  const overlayRef = useRef<Layer[]>([]);
+  /** מסנכרן את השכבות תלויות הזום. ב-ref ולא על אובייקט המפה. */
+  const syncRef = useRef<() => void>(() => {});
+  // אפקט א' יוצר את המפה אחרי await, ולכן אפקטים ב' ו-ג' רצים לפניו
+  // ורואים mapRef ריק. בלי הדגל הזה הם חזרו מוקדם ולא רצו שוב, והמפה
+  // נשארה בלי 34 סמני התחנות ובלי התוויות שלהן.
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelectStation;
   }, [onSelectStation]);
 
+  // ── אפקט א: המפה עצמה, פעם אחת ──────────────────────────────
+  // קודם לכן הכל ישב באפקט אחד שתלוי ב-[userLoc, route], והניקוי שלו קרא
+  // ל-map.remove(). בחירת מקום משנה את שניהם — userLoc, ואז route מתאפס,
+  // ואז route חוזר מ-OSRM — כלומר המפה נהרסה ונבנתה שלוש פעמים, ובכל פעם
+  // הזום והמיקום של המשתמש אבדו. זה ביטל את תוויות התחנות, שמופיעות רק
+  // מזום 14 ומעלה.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    let cancelled = false;
 
     (async () => {
       const L = await import("leaflet");
+      if (cancelled || !containerRef.current) return;
+      if ((containerRef.current as unknown as { _leaflet_id?: number })._leaflet_id) return;
 
-      if ((containerRef.current as any)._leaflet_id) return;
-      const map = L.map(containerRef.current!).setView([32.055, 34.790], 11);
+      const map = L.map(containerRef.current).setView([32.055, 34.790], 11);
       mapRef.current = map;
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      // Draw line paths
       const lineGroups: Record<string, [number, number][]> = { red: [], green: [], purple: [] };
       stations.forEach(s => lineGroups[s.lineId]?.push([s.lat, s.lng]));
       const lineColors: Record<string, string> = { red: "#b04050", green: "#3a9060", purple: "#6a52a8" };
@@ -93,61 +110,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         }
       });
 
-      // Station markers — clicking directly selects the station
-      stations.forEach(s => {
-        const isFrom = fromStation?.name === s.name;
-        const isTo = toStation?.name === s.name;
-        const size = isFrom || isTo ? 16 : 10;
-
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="
-            width:${size}px;height:${size}px;border-radius:50%;
-            background:${s.lineColor};
-            border:2px solid ${isFrom ? "#5aa880" : isTo ? "#aa4858" : "#0e0e11"};
-            box-shadow:0 0 ${isFrom || isTo ? 8 : 4}px ${s.lineColor}88;
-            cursor:pointer;
-          "></div>`,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        });
-
-        const marker = L.marker([s.lat, s.lng], { icon })
-          .addTo(map)
-          .bindPopup(stationPopup(s), { maxWidth: 240 });
-
-        marker.on("click", () => {
-          if (onSelectRef.current) onSelectRef.current(s);
-          else marker.openPopup();
-        });
-      });
-
-      // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים
-      // ועוברים נקודה-נקודה בחיפוש תחנה; בזום שבו הם כבר נמצאים יש מקום
-      // לשמות, ובזום ההתחלתי אין — לכן התצוגה תלוית זום ולא קבועה.
-      // התווית לחיצה בדיוק כמו הנקודה: היא גדולה יותר ולכן קלה יותר לפגיעה,
-      // ומשתמש שרואה שם מצפה שהשם עצמו יהיה הלחיץ.
-      const labels: Marker[] = [];
-      stations.forEach(s => {
-        labels.push(
-          L.marker([s.lat, s.lng], {
-            icon: L.divIcon({
-              className: "",
-              html: `<div style="
-                position:absolute;right:10px;top:-9px;white-space:nowrap;
-                font-family:'Rubik',sans-serif;font-size:11px;font-weight:600;
-                color:#1a1a22;background:#ffffffdd;border-radius:4px;
-                padding:2px 6px;box-shadow:0 1px 3px #00000022;direction:rtl;
-                cursor:pointer;
-              ">${s.name}</div>`,
-              iconSize: [0, 0],
-            }),
-          }).bindPopup(stationPopup(s), { maxWidth: 240 })
-        );
-      });
-
-      // נקודות עניין: מה שאנשים מחפשים כשהם יודעים לאיזה אזור הם רוצים
-      // אבל לא באיזו תחנה לרדת. כל קואורדינטה כאן אומתה מול מקור חיצוני.
+      // נקודות עניין אינן תלויות במוצא או ביעד, ולכן נבנות כאן פעם אחת.
       const poiLayer: Marker[] = [];
       PLACES.forEach(p => {
         const st = stations.find(x => x.name === p.stationName);
@@ -192,18 +155,19 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           }).bindPopup(poiPopup, { maxWidth: 220 })
         );
       });
+      zoomLayersRef.current = poiLayer;
 
-      const syncZoomLayers = () => {
+      const sync = () => {
         const on = map.getZoom() >= LABEL_ZOOM;
-        labels.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
-        poiLayer.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
+        zoomLayersRef.current.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
       };
-      map.on("zoomend", syncZoomLayers);
-      syncZoomLayers();
+      syncRef.current = sync;
+      map.on("zoomend", sync);
+      sync();
 
       // לחיצה על רקע המפה הייתה קליק מת — 53% מהקליקים בעמוד.
       // עכשיו היא עונה על השאלה שנשאלה בפועל: איזו תחנה קרובה לנקודה הזאת.
-      map.on("click", (e: any) => {
+      map.on("click", (e: LeafletMouseEvent) => {
         const s = findNearestStation(e.latlng.lat, e.latlng.lng);
         L.popup({ maxWidth: 240 })
           .setLatLng(e.latlng)
@@ -211,32 +175,133 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           .openOn(map);
       });
 
-      // מסלול הליכה ממיקום המשתמש לתחנה
-      if (route && route.length > 1) {
-        L.polyline(route, { color: "#2563eb", weight: 5, opacity: 0.85, dashArray: "1 8", lineCap: "round" }).addTo(map);
-        map.fitBounds(L.latLngBounds(route), { padding: [40, 40] });
-      }
-
-      // User location
-      if (userLoc) {
-        const userIcon = L.divIcon({
-          className: "",
-          html: `<div style="width:16px;height:16px;border-radius:50%;background:#4488ee;border:3px solid white;box-shadow:0 0 8px #4488ee88;"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
-        });
-        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon })
-          .addTo(map)
-          .bindPopup(`<div style="font-family:'Heebo',sans-serif;direction:rtl;">📍 המיקום שלך</div>`);
-        map.setView([userLoc.lat, userLoc.lng], 14);
-      }
+      setMapReady(true);
     })();
 
     return () => {
+      cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
+      zoomLayersRef.current = [];
+      markersRef.current = [];
+      overlayRef.current = [];
+      setMapReady(false);
     };
-  }, [userLoc, route]);
+  }, [stations]);
+
+  // ── אפקט ב: סמני התחנות והתוויות, כשמוצא או יעד משתנים ───────
+  // גודל הסמן וצבע המסגרת תלויים ב-fromStation/toStation. קודם לכן הם
+  // נקראו באפקט שלא היה תלוי בהם, ולכן הודגשה התחנה הישנה.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+
+    (async () => {
+      const L = await import("leaflet");
+      if (cancelled || !mapRef.current) return;
+
+      markersRef.current.forEach(m => map.removeLayer(m));
+      zoomLayersRef.current = zoomLayersRef.current.filter(l => !markersRef.current.includes(l));
+      markersRef.current = [];
+
+      const labels: Marker[] = [];
+      stations.forEach(s => {
+        const isFrom = fromStation?.name === s.name;
+        const isTo = toStation?.name === s.name;
+        const size = isFrom || isTo ? 16 : 10;
+
+        const marker = L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="
+              width:${size}px;height:${size}px;border-radius:50%;
+              background:${s.lineColor};
+              border:2px solid ${isFrom ? "#5aa880" : isTo ? "#aa4858" : "#0e0e11"};
+              box-shadow:0 0 ${isFrom || isTo ? 8 : 4}px ${s.lineColor}88;
+              cursor:pointer;
+            "></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+          }),
+        })
+          .addTo(map)
+          .bindPopup(stationPopup(s), { maxWidth: 240 });
+
+        marker.on("click", () => {
+          if (onSelectRef.current) onSelectRef.current(s);
+          else marker.openPopup();
+        });
+        markersRef.current.push(marker);
+
+        // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים
+        // ועוברים נקודה-נקודה בחיפוש תחנה; בזום שבו הם כבר נמצאים יש מקום
+        // לשמות, ובזום ההתחלתי אין. התווית לחיצה בדיוק כמו הנקודה.
+        const label = L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="
+              position:absolute;right:10px;top:-9px;white-space:nowrap;
+              font-family:'Rubik',sans-serif;font-size:11px;font-weight:600;
+              color:#1a1a22;background:#ffffffdd;border-radius:4px;
+              padding:2px 6px;box-shadow:0 1px 3px #00000022;direction:rtl;
+              cursor:pointer;
+            ">${s.name}</div>`,
+            iconSize: [0, 0],
+          }),
+        }).bindPopup(stationPopup(s), { maxWidth: 240 });
+        labels.push(label);
+        markersRef.current.push(label);
+      });
+
+      zoomLayersRef.current = [...zoomLayersRef.current, ...labels];
+      syncRef.current();
+    })();
+
+    return () => { cancelled = true; };
+  }, [mapReady, stations, fromStation?.name, toStation?.name]);
+
+  // ── אפקט ג: מיקום המשתמש והמסלול ─────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+
+    (async () => {
+      const L = await import("leaflet");
+      if (cancelled || !mapRef.current) return;
+
+      overlayRef.current.forEach(l => map.removeLayer(l));
+      overlayRef.current = [];
+
+      if (userLoc) {
+        const dot = L.marker([userLoc.lat, userLoc.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="width:16px;height:16px;border-radius:50%;background:#4488ee;border:3px solid white;box-shadow:0 0 8px #4488ee88;"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          }),
+        })
+          .addTo(map)
+          .bindPopup(`<div style="font-family:'Rubik',sans-serif;direction:rtl;">📍 המיקום שלך</div>`);
+        overlayRef.current.push(dot);
+      }
+
+      if (route && route.length > 1) {
+        const line = L.polyline(route, { color: "#2563eb", weight: 5, opacity: 0.85, dashArray: "1 8", lineCap: "round" }).addTo(map);
+        overlayRef.current.push(line);
+        // קודם לכן fitBounds רץ ומיד אחריו setView על מיקום המשתמש, כך
+        // שהקצה הרחוק של המסלול נדחף מחוץ למסך. כשיש מסלול הוא קובע.
+        map.fitBounds(L.latLngBounds(route), { padding: [40, 40] });
+      } else if (userLoc) {
+        map.setView([userLoc.lat, userLoc.lng], Math.max(map.getZoom(), 14));
+      }
+      syncRef.current();
+    })();
+
+    return () => { cancelled = true; };
+  }, [mapReady, userLoc, route]);
 
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid #22222a" }}>
