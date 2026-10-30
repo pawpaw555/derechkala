@@ -158,7 +158,7 @@ export default function HoursContent() {
             <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>קו ירוק וקו סגול</span>
           </div>
           <p style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>
-            שני הקווים נמצאים בבנייה ואינם פעילים. הקו הסגול צפוי לפתיחה יולי 2028, הקו הירוק דצמבר 2028.
+            שני הקווים נמצאים בבנייה ואינם פעילים. הקו הסגול צפוי לפתיחה יולי 2028, והחלק הדרומי של הקו הירוק דצמבר 2028.
           </p>
         </div>
 

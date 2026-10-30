@@ -155,6 +155,21 @@ export const LANDMARKS: Landmark[] = [
   { name: "ניסבאום 7", stationName: "העמל", walkMins: 1, lineId: "red" },
   { name: "מנחם בגין 4 בת ים", stationName: "הקוממיות", walkMins: 1, lineId: "red" },
 ];
+/**
+ * מקלדת עברית ותיקון אוטומטי באייפון מייצרים גרש (U+05F3) וגרשיים
+ * (U+05F4) טיפוגרפיים, בעוד שמות התחנות בקובץ כתובים באפוסטרוף ובמרכאות
+ * של ASCII. בלי הנרמול הזה ארבע תחנות — ז'בוטינסקי, אהרונוביץ', הבעש"ט
+ * וכ"ט בנובמבר — החזירו אפס תוצאות למי שהקליד אותן כרגיל.
+ */
+export function normalizeHebrew(s: string): string {
+  return s
+    .replace(/[\u05F3\u2018\u2019\u02BC\u00B4]/g, "'")
+    .replace(/[\u05F4\u201C\u201D]/g, '"')
+    .replace(/[\u05B0-\u05C7]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function searchAll(query: string): {
   stations: Station[];
   landmarks: (Landmark & { station: Station | undefined })[];
@@ -162,10 +177,11 @@ export function searchAll(query: string): {
   if (query.length < 2) return { stations: [], landmarks: [] };
   // "תחנת שנקר" הוא ניסוח טבעי לחיפוש תחנה, אבל אף תחנה לא נקראת כך.
   // בלי הקילוף הזה החיפוש החזיר נקודת ציון ולא את התחנה שהתבקשה.
-  const q = query.trim().replace(/^תחנת\s+/, "");
+  const q = normalizeHebrew(query).replace(/^תחנת\s+/, "");
+  const norm = (x: string) => normalizeHebrew(x);
   const seen = new Map<string, Landmark & { station: Station | undefined }>();
   LANDMARKS
-    .filter(l => l.name.includes(q))
+    .filter(l => norm(l.name).includes(q))
     .forEach(l => {
       const existing = seen.get(l.name);
       if (!existing || l.walkMins < existing.walkMins) {
@@ -177,13 +193,14 @@ export function searchAll(query: string): {
   // empty stations array, which hid a station from a search for its own name
   // whenever a landmark shared the string (e.g. "יוספטל", "רוטשילד").
   const rank = (s: Station) => {
-    if (s.name === q) return 0;
-    if (s.name.startsWith(q)) return 1;
-    if (s.name.includes(q)) return 2;
+    const n = norm(s.name);
+    if (n === q) return 0;
+    if (n.startsWith(q)) return 1;
+    if (n.includes(q)) return 2;
     return 3;
   };
   const stations = STATIONS
-    .filter(s => s.name.includes(q) || s.city.includes(q))
+    .filter(s => norm(s.name).includes(q) || norm(s.city).includes(q))
     .sort((a, b) => rank(a) - rank(b))
     .slice(0, 5);
   return { stations, landmarks };

@@ -1,4 +1,4 @@
-import { STATIONS, LANDMARKS, Station, distanceMetres, formatDistance, searchAll } from "./data";
+import { STATIONS, LANDMARKS, Station, distanceMetres, formatDistance, searchAll, normalizeHebrew } from "./data";
 
 /**
  * מקומות שאפשר לחפש לפי האזור, לא לפי שם התחנה.
@@ -213,10 +213,10 @@ function aliasHit(alias: string, q: string): boolean {
 }
 
 export function searchPlaces(query: string, limit = 4): PlaceHit[] {
-  const q = query.trim();
+  const q = normalizeHebrew(query);
   if (q.length < 2) return [];
   return PLACES
-    .filter(p => p.name.includes(q) || p.aliases?.some(a => aliasHit(a, q)))
+    .filter(p => normalizeHebrew(p.name).includes(q) || p.aliases?.some(a => aliasHit(normalizeHebrew(a), q)))
     .map(describePlace)
     .sort((a, b) => (a.metres ?? Infinity) - (b.metres ?? Infinity))
     .slice(0, limit);
