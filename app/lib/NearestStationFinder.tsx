@@ -37,8 +37,16 @@ export default function NearestStationFinder({
     searchRef, onType, pick, requestLocation,
   } = finder;
 
-  const metres = userLoc && station ? (routeMetres ?? distanceMetres(userLoc, station)) : null;
+  // OSRM אמין במרחקים בינוניים, אבל בקטעים קצרים הוא מחזיר לפעמים עקיפה
+  // של פי 7-8 כשאחת הנקודות אינה מחוברת לרשת ההולכי רגל שלו: 91 מ' אוויריים
+  // מתחנת אבא הלל למגדל משה אביב חזרו כ-624 מ' דרך. יחס כזה אינו הליכה
+  // עירונית אמיתית. כשהוא מופיע, המרחק האווירי מוצג ובלי זמן הליכה — כי
+  // מהאוויר הזמן יוצא נמוך מדי, וקישורי הניווט ייתנו את התשובה האמיתית.
+  const airMetres = userLoc && station ? distanceMetres(userLoc, station) : null;
+  const roadPlausible = routeMetres != null && airMetres != null && routeMetres <= airMetres * 3;
+  const metres = roadPlausible ? routeMetres : airMetres;
   const walkable = metres !== null && metres <= 2500;
+  const showWalkTime = walkable && (routeMetres == null || roadPlausible);
 
   // נקרא רק בתוך בלוק השגיאה, שמופיע אחרי פעולת משתמש ולכן תמיד בצד הלקוח.
   // קריאה ל-navigator בזמן רינדור ראשוני הייתה יוצרת פער מול השרת.
@@ -194,7 +202,7 @@ export default function NearestStationFinder({
             )}
             <span style={{ fontSize: 12, color: t.muted }}>
               {station.city}
-              {metres !== null && ` · ${formatDistance(metres)}${walkable ? ` · כ-${walkMinutes(metres)} דק׳ הליכה` : ""}`}
+              {metres !== null && ` · ${formatDistance(metres)}${showWalkTime ? ` · כ-${walkMinutes(metres)} דק׳ הליכה` : ""}`}
             </span>
           </div>
           <div style={{ fontSize: 12, color: t.muted, marginBottom: 10 }}>
