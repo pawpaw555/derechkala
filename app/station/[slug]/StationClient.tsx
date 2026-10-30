@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, searchAll, findRoute, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
+import { Station, Landmark, findRoute, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
 import { useNearestStation, fetchFootRoute, walkEstimate } from "../../lib/useNearestStation";
+import { searchCombined, PlaceHit } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
@@ -16,6 +17,8 @@ type Props = {
 };
 
 type SearchResults = {
+  places: PlaceHit[];
+  stationsFirst?: boolean;
   stations: Station[];
   landmarks: (Landmark & { station: Station | undefined })[];
 };
@@ -27,7 +30,7 @@ const asList = (v: string | string[] | null | undefined): string[] =>
 export default function StationClient({ stationName, station }: Props) {
   const { t } = useTheme();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({ stations: [], landmarks: [] });
+  const [results, setResults] = useState<SearchResults>({ stations: [], landmarks: [], places: [] });
   const [toStation, setToStation] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [useCustomTime, setUseCustomTime] = useState(false);
@@ -96,14 +99,24 @@ const content = STATION_CONTENT[stationName];
       setToQuery("");
       setResult(null);
     }
-    setResults(val.length >= 2 ? searchAll(val) : { stations: [], landmarks: [] });
+    setResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
   };
 
   const handleSelectStation = (s: Station) => {
     setToStation(s.name);
     setToQuery(s.name);
     setQuery(s.name);
-    setResults({ stations: [], landmarks: [] });
+    setResults({ stations: [], landmarks: [], places: [] });
+  };
+
+  // 22 המקומות המאומתים היו נגישים רק מעמוד הבית ומעמוד המפה. עמוד
+  // התחנה חיפש ב-searchAll, שאינו יודע עליהם, ולכן מי שהקליד "בורסה"
+  // ב-31 עמודי התחנה קיבל כלום.
+  const handleSelectPlace = (p: PlaceHit) => {
+    if (!p.station) return;
+    setToStation(p.station.name);
+    setToQuery(p.name);
+    setResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handleSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
@@ -111,7 +124,7 @@ const content = STATION_CONTENT[stationName];
     setToStation(l.station.name);
     setToQuery(l.name);
     setQuery(l.name);
-    setResults({ stations: [], landmarks: [] });
+    setResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handlePlan = () => {
@@ -144,7 +157,7 @@ const content = STATION_CONTENT[stationName];
     }, 2000 + Math.random() * 1000);
   };
 
-  const hasResults = results.stations.length > 0 || results.landmarks.length > 0;
+  const hasResults = results.stations.length > 0 || results.landmarks.length > 0 || results.places.length > 0;
   const noResults = query.length >= 2 && !hasResults && !toStation && query === query.trim();
 
   return (
@@ -392,7 +405,7 @@ const content = STATION_CONTENT[stationName];
                     position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0,
                     background: t.card, border: `1px solid ${t.border}`,
                     borderRadius: 9, zIndex: 100, boxShadow: t.shadow, overflow: "hidden",
-                  }}>
+                  }}>                    {results.stationsFirst ? (<>
                     {results.stations.map(s => (
                       <button key={s.name} onClick={() => handleSelectStation(s)} className="dropdown-item-s" style={{
                         display: "flex", alignItems: "center", gap: 10,
@@ -409,6 +422,60 @@ const content = STATION_CONTENT[stationName];
                         </div>
                       </button>
                     ))}
+
+                    {results.places.map(p => (
+                      <button key={"place:" + p.name} onClick={() => handleSelectPlace(p)} className="dropdown-item-s" style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        width: "100%", background: "transparent",
+                        border: "none", borderBottom: `1px solid ${t.border}`,
+                        padding: "11px 14px", cursor: "pointer",
+                      }}>
+                        <div style={{ width: 9, height: 9, borderRadius: 3, background: p.station?.lineColor || "#888", flexShrink: 0, transform: "rotate(45deg)" }} />
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                          <div style={{ fontSize: 13, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
+                            {p.name}
+                            <span style={{ fontSize: 10, color: t.subtle, fontWeight: 400, marginRight: 6 }}>{p.kind}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>{p.context}</div>
+                        </div>
+                      </button>
+                    ))}
+                    </>) : (<>
+
+                    {results.places.map(p => (
+                      <button key={"place:" + p.name} onClick={() => handleSelectPlace(p)} className="dropdown-item-s" style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        width: "100%", background: "transparent",
+                        border: "none", borderBottom: `1px solid ${t.border}`,
+                        padding: "11px 14px", cursor: "pointer",
+                      }}>
+                        <div style={{ width: 9, height: 9, borderRadius: 3, background: p.station?.lineColor || "#888", flexShrink: 0, transform: "rotate(45deg)" }} />
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                          <div style={{ fontSize: 13, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
+                            {p.name}
+                            <span style={{ fontSize: 10, color: t.subtle, fontWeight: 400, marginRight: 6 }}>{p.kind}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>{p.context}</div>
+                        </div>
+                      </button>
+                    ))}
+                    {results.stations.map(s => (
+                      <button key={s.name} onClick={() => handleSelectStation(s)} className="dropdown-item-s" style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        width: "100%", background: "transparent",
+                        border: "none", borderBottom: `1px solid ${t.border}`,
+                        padding: "11px 14px", cursor: "pointer",
+                      }}>
+                        <div style={{ width: 9, height: 9, borderRadius: "50%", background: s.lineColor, flexShrink: 0, marginTop: 2 }} />
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                          <div style={{ fontSize: 13, color: t.text, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>{s.name}</div>
+                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
+                            {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                    </>)}
                     {results.landmarks.map(l => (
                       <button key={l.name} onClick={() => handleSelectLandmark(l)} className="dropdown-item-s" style={{
                         display: "flex", alignItems: "center", gap: 10,

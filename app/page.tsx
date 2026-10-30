@@ -23,6 +23,8 @@ type Theme = {
 
 type SearchResults = {
   places: PlaceHit[];
+  /** כשהוקלד שם תחנה במדויק, התחנות מוצגות לפני המקומות. */
+  stationsFirst?: boolean;
   stations: Station[];
   landmarks: (Landmark & { station: Station | undefined })[];
 };
@@ -42,9 +44,56 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
       position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 100,
       background: t.card, border: `1px solid ${t.border}`,
       borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
-    }}>
-      {/* אזורים קודם: מי שמחפש "בורסה" מחפש אזור, לא תחנה בשם הזה.
-          כל שורה נושאת את המרחק מהתחנה, כדי שלא תוצג תחנה בלי הקשר. */}
+    }}>      {/* כשהוקלד שם תחנה במדויק היא התשובה, ולכן היא קודמת. אחרת
+          אזורים קודמים, כי מי שמקליד "בורסה" מחפש אזור ולא תחנה. */}
+      {results.stationsFirst ? (<>
+      {results.stations.map(s => (
+        <button
+          key={s.lineId + s.name}
+          onClick={() => onSelectStation(s)}
+          className="dropdown-item"
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+          width: "100%", background: "transparent",
+          border: "none", borderBottom: `1px solid ${t.border}`,
+          padding: "11px 14px", cursor: "pointer",
+        }}>
+          <div style={{ width: 11, height: 11, borderRadius: "50%", background: s.lineColor, flexShrink: 0 }} />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ fontSize: 13, color: t.text, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>{s.name}</div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
+              {s.city}{s.nearbyPlaces.length > 0 ? ` · ליד ${s.nearbyPlaces[0]}` : ""}
+            </div>
+          </div>
+        </button>
+      ))}
+      {results.places.map(p => (
+        <button
+          key={"place:" + p.name}
+          onClick={() => onSelectPlace(p)}
+          className="dropdown-item"
+          style={{
+            display: "flex", alignItems: "center", gap: 12,
+            width: "100%", background: "transparent",
+            border: "none", borderBottom: `1px solid ${t.border}`,
+            padding: "12px 14px", cursor: "pointer",
+          }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: 3, flexShrink: 0,
+            background: p.station?.lineColor || "#888", transform: "rotate(45deg)",
+          }} />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
+              {p.name}
+              <span style={{ fontSize: 11, color: t.subtle, fontWeight: 400, marginRight: 6 }}>{p.kind}</span>
+            </div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
+              {p.context}
+            </div>
+          </div>
+        </button>
+      ))}
+      </>) : (<>
       {results.places.map(p => (
         <button
           key={"place:" + p.name}
@@ -91,6 +140,7 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
           </div>
         </button>
       ))}
+      </>)}
       {results.landmarks.map((l) => (
         <button
     key={l.name}

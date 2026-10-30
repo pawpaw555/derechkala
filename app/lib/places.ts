@@ -214,7 +214,7 @@ function aliasHit(alias: string, q: string): boolean {
 
 export function searchPlaces(query: string, limit = 4): PlaceHit[] {
   const q = normalizeHebrew(query);
-  if (q.length < 2) return [];
+  if (q.length < 2) return [];  // normalizeHebrew כבר עשה trim
   return PLACES
     .filter(p => normalizeHebrew(p.name).includes(q) || p.aliases?.some(a => aliasHit(normalizeHebrew(a), q)))
     .map(describePlace)
@@ -232,9 +232,15 @@ export function searchCombined(query: string) {
   const base = searchAll(query);
   const places = searchPlaces(query);
   const taken = new Set(places.map(p => p.name));
+  // כשהוקלד שם תחנה במדויק, היא התשובה — לא מקום שבמקרה מכיל את המילה.
+  // "שנקר" הציג את המכללה ברמת גן מעל התחנה ששמה בדיוק כך.
+  const q = normalizeHebrew(query).replace(/^תחנת\s+/, "");
+  const exactStation = base.stations.some(s => normalizeHebrew(s.name) === q);
   return {
     stations: base.stations,
     landmarks: base.landmarks.filter(l => !taken.has(l.name)),
     places,
+    stationsFirst: exactStation,
+    hiddenCount: base.hiddenCount,
   };
 }

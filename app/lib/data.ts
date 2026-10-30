@@ -173,11 +173,15 @@ export function normalizeHebrew(s: string): string {
 export function searchAll(query: string): {
   stations: Station[];
   landmarks: (Landmark & { station: Station | undefined })[];
+  /** כמה תוצאות נחתכו מעבר לחמש — כדי שהממשק יוכל לומר שיש עוד. */
+  hiddenCount: number;
 } {
-  if (query.length < 2) return { stations: [], landmarks: [] };
   // "תחנת שנקר" הוא ניסוח טבעי לחיפוש תחנה, אבל אף תחנה לא נקראת כך.
   // בלי הקילוף הזה החיפוש החזיר נקודת ציון ולא את התחנה שהתבקשה.
   const q = normalizeHebrew(query).replace(/^תחנת\s+/, "");
+  // הבדיקה חייבת לבוא אחרי הנרמול: קודם היא בדקה את המחרוזת הגולמית,
+  // כך ש-"  " עבר אותה והפך למחרוזת ריקה שכל שם מכיל.
+  if (q.length < 2) return { stations: [], landmarks: [], hiddenCount: 0 };
   const norm = (x: string) => normalizeHebrew(x);
   const seen = new Map<string, Landmark & { station: Station | undefined }>();
   LANDMARKS
@@ -188,7 +192,8 @@ export function searchAll(query: string): {
         seen.set(l.name, { ...l, station: STATIONS.find(s => s.name === l.stationName) });
       }
     });
-  const landmarks = Array.from(seen.values()).slice(0, 5);
+  const allLandmarks = Array.from(seen.values());
+  const landmarks = allLandmarks.slice(0, 5);
   // Both lists are always computed. Previously a landmark match returned an
   // empty stations array, which hid a station from a search for its own name
   // whenever a landmark shared the string (e.g. "יוספטל", "רוטשילד").
@@ -199,11 +204,14 @@ export function searchAll(query: string): {
     if (n.includes(q)) return 2;
     return 3;
   };
-  const stations = STATIONS
+  const allStations = STATIONS
     .filter(s => norm(s.name).includes(q) || norm(s.city).includes(q))
-    .sort((a, b) => rank(a) - rank(b))
-    .slice(0, 5);
-  return { stations, landmarks };
+    .sort((a, b) => rank(a) - rank(b));
+  const stations = allStations.slice(0, 5);
+  // חיפוש "בת ים" מחזיר יותר מחמש תחנות, והחיתוך השקט הסתיר חלק מהעיר.
+  // הספירה מאפשרת לממשק לומר שיש עוד.
+  const hiddenCount = (allStations.length - stations.length) + (allLandmarks.length - landmarks.length);
+  return { stations, landmarks, hiddenCount };
 }
 /**
  * הקו האדום אינו שרשרת אחת אלא Y. אומת מול יחסי המסלול ב-OSM:
