@@ -213,6 +213,11 @@ export function searchAll(query: string): {
   const hiddenCount = (allStations.length - stations.length) + (allLandmarks.length - landmarks.length);
   return { stations, landmarks, hiddenCount };
 }
+/** זמן הנסיעה לפי מספר התחנות. מקור יחיד — גם לתכנון קדימה וגם אחורה. */
+export function travelMinutes(stops: number): number {
+  return stops * 2;
+}
+
 /**
  * הקו האדום אינו שרשרת אחת אלא Y. אומת מול יחסי המסלול ב-OSM:
  * relation 2224880 (R1, 32 תחנות) עובר באהרונוביץ' → שנקר → שחם → פתח
@@ -277,7 +282,7 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   // קודם לכן היו כאן שתי הגרלות: תוספת של 0 עד 3 דקות לזמן הנסיעה, ועוד
   // 1 עד 5 דקות המתנה כשלא נמסרה. אותו חיפוש החזיר תשובה אחרת בכל פעם,
   // והמספרים התגלגלו מחדש בכל רינדור.
-  const travelMins = stops * 2;
+  const travelMins = travelMinutes(stops);
   const base = baseDate ?? new Date();
   // כשהקורא לא מסר זמן המתנה זה אומר שלא נמצאה יציאה — שואלים ישירות
   // במקום להניח אפס. בלי זה, ב-23:58 הרשימה אמרה "אין יציאות" והכרטיס
@@ -470,4 +475,43 @@ export function getNextDepartures(date: Date, count: number = 3): {
 /** מבדיל בין תוצאת מסלול להודעת "אין שירות". */
 export function isNoService(r: unknown): r is NoService {
   return !!r && typeof r === "object" && "noService" in (r as object);
+}
+
+/**
+ * תכנון לפי שעת הגעה מבוקשת.
+ *
+ * קודם לכן כל קורא חישב זאת בעצמו: הפחית `stops * 2 + 2` משעת ההגעה ולקח
+ * את היציאה הראשונה אחרי הנקודה הזו. שתי טעויות. ראשית, ספירת התחנות
+ * נעשתה לפי הפרש מיקומים במערך השטוח, שמתעלם מהענף. שנית, ה-2 הקבוע לא
+ * מכסה את ההמתנה לרכבת: findRoute מוסיפה אותה אחר כך, ולכן ההגעה יצאה
+ * `מבוקש − 2 + המתנה` — עד שלוש דקות אחרי מה שהמשתמש ביקש.
+ *
+ * כאן מחפשים אחורה מרווח מלא ובוחרים את היציאה המאוחרת ביותר שעדיין
+ * מגיעה בזמן, כך שזהו בדיוק ההפך של התכנון קדימה.
+ */
+export function findRouteByArrival(
+  fromName: string,
+  toName: string,
+  arriveBy: Date
+): ReturnType<typeof findRoute> {
+  const counted = countStops(fromName, toName);
+  if (!counted) return null;
+  const travel = travelMinutes(counted.stops);
+  const headway = getFrequencyMins(arriveBy);
+  const searchFrom = new Date(arriveBy.getTime() - (travel + headway + 2) * 60 * 1000);
+
+  const candidates = getNextDepartures(searchFrom, 8);
+  const inTime = candidates.filter(
+    d => searchFrom.getTime() + (d.minsFromNow + travel) * 60 * 1000 <= arriveBy.getTime()
+  );
+  if (!inTime.length) {
+    return {
+      noService: true,
+      reason: candidates.length
+        ? `אין רכבת שמגיעה עד ${hhmm(arriveBy.getHours() * 60 + arriveBy.getMinutes())}. הנסיעה אורכת כ-${travel} דקות, והרכבת הקרובה יוצאת מאוחר מדי.`
+        : describeNoService(searchFrom),
+    };
+  }
+  const chosen = inTime[inTime.length - 1];
+  return findRoute(fromName, toName, chosen.minsFromNow, searchFrom);
 }

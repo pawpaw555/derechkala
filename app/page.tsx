@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew } from "./lib/data";
 import { searchCombined, PlaceHit } from "./lib/places";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
@@ -229,6 +229,14 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
   );
 }
 
+/** שעה בפורמט HH:MM על אותו יום, כדי לעגן את רשימת היציאות לרכבת שנבחרה. */
+function instantFromTime(sameDay: Date, hhmm: string): Date {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(sameDay.getTime());
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 export default function Home() {
   const [dark, setDark] = useState(false);
   const [swapSpinning, setSwapSpinning] = useState(false);
@@ -246,6 +254,9 @@ export default function Home() {
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
+  // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
+  // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
+  const [planInstant, setPlanInstant] = useState<Date | null>(null);
   const finder = useNearestStation();
   const { locError, locating } = finder;
 
@@ -375,17 +386,17 @@ export default function Home() {
     }
 
     setTimeout(() => {
+      // שני הענפים עוברים דרך פונקציה אחת כל אחד, כדי שהחישוב לא ישוכפל
+      // ויתפצל. הנקודה שנבחרה נשמרת, כי רשימת "עזיבות הבאות" מתחת לכרטיס
+      // בנתה את עצמה משעת ההגעה המבוקשת וסתרה אותו.
       if (useCustomTime && timeMode === "arrival") {
-        const fromIdx = STATIONS.findIndex(s => s.name === fromStation.name);
-        const toIdx = STATIONS.findIndex(s => s.name === toStation.name);
-        const stops = Math.abs(toIdx - fromIdx);
-        const estimatedTravelMins = stops * 2 + 2;
-        const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
-        const departures = getNextDepartures(departureDate, 1);
-        setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, departureDate));
+        const r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
+        setResult(r);
+        setPlanInstant(r && !isNoService(r) && r.departureTime ? instantFromTime(baseDate, r.departureTime) : baseDate);
       } else {
         const departures = getNextDepartures(baseDate, 1);
         setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
+        setPlanInstant(baseDate);
       }
       setLoading(false);
     }, 2000 + Math.random() * 1000);
@@ -630,12 +641,10 @@ export default function Home() {
               )}
 
               {(() => {
-                const baseDate = new Date();
-                if (useCustomTime) {
-                  baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
-                  baseDate.setHours(customHour, customMinute, 0, 0);
-                }
-                const deps = getNextDepartures(baseDate, 3);
+                // הרשימה מתעגנת לשעת היציאה שנבחרה, לא לשעה שהמשתמש
+                // הקליד. במצב הגעה אלה שתי נקודות שונות, והרשימה הציגה
+                // רכבות אחרות מאלה שבכרטיס שמעליה.
+                const deps = getNextDepartures(planInstant ?? new Date(), 3);
                 if (deps.length === 0) return (
                   <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, textAlign: "center", color: t.muted, fontSize: 13 }}>
                     הרכבת אינה פועלת כעת

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, findRoute, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -27,6 +27,14 @@ type SearchResults = {
 const asList = (v: string | string[] | null | undefined): string[] =>
   v == null ? [] : Array.isArray(v) ? v : [v];
 
+/** שעה בפורמט HH:MM על אותו יום, כדי לעגן את רשימת היציאות לרכבת שנבחרה. */
+function instantFromTime(sameDay: Date, hhmm: string): Date {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(sameDay.getTime());
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 export default function StationClient({ stationName, station }: Props) {
   const { t } = useTheme();
   const [query, setQuery] = useState("");
@@ -35,12 +43,14 @@ export default function StationClient({ stationName, station }: Props) {
   const [toQuery, setToQuery] = useState("");
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
+  // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
+  // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
+  const [planInstant, setPlanInstant] = useState<Date | null>(null);
   const [customDay, setCustomDay] = useState(1);
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
   const [loading, setLoading] = useState(false);
-  const [departures, setDepartures] = useState<{mins: number; time?: string; label: string}[]>([]);
   const finder = useNearestStation();
   const [routeHere, setRouteHere] = useState<{ key: string; metres: number } | null>(null);
 
@@ -79,18 +89,9 @@ const content = STATION_CONTENT[stationName];
   const ownNearby = (station?.nearbyPlaces ?? []).filter(
     p => !poiNames.some(n => n.includes(p) || p.includes(n))
   );
-  useEffect(() => {
-    const now = new Date();
-    const deps = getNextDepartures(now, 3);
-    setDepartures(deps.map(d => ({ mins: d.minsFromNow, time: d.time, label: d.label })));
-
-    // Refresh every minute
-    const id = setInterval(() => {
-      const updated = getNextDepartures(new Date(), 3);
-      setDepartures(updated.map(d => ({ mins: d.minsFromNow, time: d.time, label: d.label })));
-    }, 60000);
-    return () => clearInterval(id);
-  }, [station]);
+  // הוסר: טיימר של 60 שניות שחישב את היציאות הבאות ושמר אותן ב-state
+  // שאיש לא קרא. עמוד התחנה אינו מציג רשימת יציאות, ולכן כל עמוד תחנה
+  // פתוח הריץ חישוב וגרם לרינדור מחדש פעם בדקה ללא שום פלט.
 
   const handleSearch = (val: string) => {
     setQuery(val);
@@ -144,14 +145,13 @@ const content = STATION_CONTENT[stationName];
 
     setTimeout(() => {
       if (useCustomTime && timeMode === "arrival") {
-        const stops = Math.abs(STATIONS.findIndex(s => s.name === toStation) - STATIONS.findIndex(s => s.name === stationName));
-        const estimatedTravelMins = stops * 2 + 2;
-        const departureDate = new Date(baseDate.getTime() - estimatedTravelMins * 60 * 1000);
-        const departures = getNextDepartures(departureDate, 1);
-        setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, departureDate));
+        const r = findRouteByArrival(stationName, toStation, baseDate);
+        setResult(r);
+        setPlanInstant(r && !isNoService(r) && r.departureTime ? instantFromTime(baseDate, r.departureTime) : baseDate);
       } else {
         const departures = getNextDepartures(baseDate, 1);
         setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, baseDate));
+        setPlanInstant(baseDate);
       }
       setLoading(false);
     }, 2000 + Math.random() * 1000);
