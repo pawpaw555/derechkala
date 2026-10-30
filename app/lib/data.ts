@@ -206,12 +206,21 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   const fi = lineStations.findIndex(s => s.name === fromName);
   const ti = lineStations.findIndex(s => s.name === toName);
   const stops = Math.abs(ti - fi);
-  const travelMins = stops * 2 + Math.round(Math.random() * 3);
-  const next = nextMins ?? Math.round(Math.random() * 4) + 1;
+  // קודם לכן היו כאן שתי הגרלות: תוספת של 0 עד 3 דקות לזמן הנסיעה, ועוד
+  // 1 עד 5 דקות המתנה כשלא נמסרה. אותו חיפוש החזיר תשובה אחרת בכל פעם,
+  // והמספרים התגלגלו מחדש בכל רינדור.
+  const travelMins = stops * 2;
   const base = baseDate ?? new Date();
-  const depTime = baseDate
-    ? new Date(base.getTime())
-    : new Date(base.getTime() + next * 60 * 1000);
+  // כשהקורא לא מסר זמן המתנה זה אומר שלא נמצאה יציאה — שואלים ישירות
+  // במקום להניח אפס. בלי זה, ב-23:58 הרשימה אמרה "אין יציאות" והכרטיס
+  // אמר "יציאה 23:58" באותו מסך.
+  const nextFound = nextMins ?? getNextDepartures(base, 1)[0]?.minsFromNow;
+  if (nextFound === undefined) return { noService: true, reason: describeNoService(base) };
+  const next = nextFound;
+  // שעת היציאה היא של הרכבת, לא של רגע הלחיצה. קודם לכן כש-baseDate נמסר —
+  // ושני הקוראים תמיד מוסרים אותו — ההמתנה נזרקה, והכרטיס הציג "יציאה 09:00"
+  // מעל רשימה שאמרה שהרכבת הראשונה ב-09:04.
+  const depTime = new Date(base.getTime() + next * 60 * 1000);
   // שעת היציאה היא הנקודה שקובעת, לא השעה שבה נלחץ הכפתור: בערב שבת
   // ב-15:38 הרכבת הבאה בעוד 4 דקות כבר מעבר לרכבת האחרונה.
   if (!isOperating(depTime)) return { noService: true, reason: describeNoService(depTime) };
@@ -331,7 +340,9 @@ function describeNoService(date: Date): string {
     return `בערב שבת הרכבת האחרונה יוצאת ב-${hhmm(FRIDAY_LAST_MINS)}. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
   if (mins < SERVICE_FIRST_MINS)
     return `הרכבת מתחילה לפעול ב-${hhmm(SERVICE_FIRST_MINS)}.`;
-  return "הרכבת אינה פועלת בשעה שנבחרה.";
+  // נשארנו בתוך שעות השירות אבל אין עוד יציאה היום — כלומר הרכבת
+  // האחרונה כבר יצאה, והבאה היא כבר מחר.
+  return `הרכבת האחרונה להיום כבר יצאה. השירות מתחדש מחר ב-${hhmm(SERVICE_FIRST_MINS)}.`;
 }
 
 export function isOperating(date: Date): boolean {
@@ -363,7 +374,12 @@ export function getNextDepartures(date: Date, count: number = 3): {
   if (currentMins < SERVICE_FIRST_MINS && !isSaturdayNight(date)) return [];
   const frequency = getFrequencyMins(date);
   const departures = [];
-  const firstOffset = Math.random() * frequency;
+  // הרכבות נעות בתדירות קבועה מתחילת השירות. גזירת ההיסט מהשעון נותנת
+  // אותה תשובה לאותה דקה, במקום ההגרלה שהייתה כאן וייצרה זמנים שונים
+  // בכל טעינה מחדש של אותו עמוד.
+  const cadenceStart = isSaturdayNight(date) ? SATURDAY_NIGHT_FIRST_MINS : SERVICE_FIRST_MINS;
+  const elapsed = currentMins - cadenceStart;
+  const firstOffset = elapsed < 0 ? -elapsed : (frequency - (elapsed % frequency)) % frequency;
   for (let i = 0; i < count; i++) {
     const offsetMins = firstOffset + i * frequency;
     const depDate = new Date(date.getTime() + offsetMins * 60 * 1000);
