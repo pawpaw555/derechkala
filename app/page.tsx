@@ -202,11 +202,18 @@ export default function Home() {
   useEffect(() => {
     const saved = localStorage.getItem("dankal_theme");
     if (saved === "dark") setDark(true);
+    // עמוד התחנה מקשר לכאן בשני הכיוונים: מי שמחפש תחנת מוצא ומי שמחפש
+    // תחנת יעד. קודם לכן רק ?from= נקרא, ולכן לא היה אפשר להגיע לתחנה.
     const params = new URLSearchParams(window.location.search);
     const from = params.get("from");
     if (from) {
       const station = STATIONS.find(s => s.name === decodeURIComponent(from));
       if (station) handleFromSelectStation(station);
+    }
+    const to = params.get("to");
+    if (to) {
+      const station = STATIONS.find(s => s.name === decodeURIComponent(to));
+      if (station) handleToSelectStation(station);
     }
   }, []);
 

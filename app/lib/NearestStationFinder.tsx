@@ -43,7 +43,13 @@ export default function NearestStationFinder({
   // עירונית אמיתית. כשהוא מופיע, המרחק האווירי מוצג ובלי זמן הליכה — כי
   // מהאוויר הזמן יוצא נמוך מדי, וקישורי הניווט ייתנו את התשובה האמיתית.
   const airMetres = userLoc && station ? distanceMetres(userLoc, station) : null;
-  const roadPlausible = routeMetres != null && airMetres != null && routeMetres <= airMetres * 3;
+  // התקלה שמדדתי מופיעה רק בקטעים קצרים, שם נקודה שאינה מחוברת לרשת כופה
+  // עקיפה: 91 מ' ← 624, 256 מ' ← 2018. בקילומטר יחס של 3 הוא בדרך כלל
+  // מחסום אמיתי — מסילה או כביש מהיר — ואז המסלול נכון ויש להציג אותו.
+  const SHORT_HOP_M = 400;
+  const roadPlausible =
+    routeMetres != null && airMetres != null &&
+    (airMetres >= SHORT_HOP_M || routeMetres <= airMetres * 3);
   const metres = roadPlausible ? routeMetres : airMetres;
   const walkable = metres !== null && metres <= 2500;
   const showWalkTime = walkable && (routeMetres == null || roadPlausible);

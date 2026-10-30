@@ -33,6 +33,9 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
       <a href="/station/${encodeURIComponent(s.name)}"
          style="display:block;text-align:center;background:${s.lineColor};color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
          פרטי התחנה</a>
+      <a href="/?to=${encodeURIComponent(s.name)}"
+         style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;margin-bottom:6px;">
+         תכנן נסיעה לכאן</a>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
          target="_blank" rel="noopener noreferrer"
          style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
@@ -115,22 +118,24 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים
       // ועוברים נקודה-נקודה בחיפוש תחנה; בזום שבו הם כבר נמצאים יש מקום
       // לשמות, ובזום ההתחלתי אין — לכן התצוגה תלוית זום ולא קבועה.
+      // התווית לחיצה בדיוק כמו הנקודה: היא גדולה יותר ולכן קלה יותר לפגיעה,
+      // ומשתמש שרואה שם מצפה שהשם עצמו יהיה הלחיץ.
       const labels: Marker[] = [];
       stations.forEach(s => {
         labels.push(
           L.marker([s.lat, s.lng], {
-            interactive: false,
             icon: L.divIcon({
               className: "",
               html: `<div style="
                 position:absolute;right:10px;top:-9px;white-space:nowrap;
                 font-family:'Rubik',sans-serif;font-size:11px;font-weight:600;
                 color:#1a1a22;background:#ffffffdd;border-radius:4px;
-                padding:1px 5px;box-shadow:0 1px 3px #00000022;direction:rtl;
+                padding:2px 6px;box-shadow:0 1px 3px #00000022;direction:rtl;
+                cursor:pointer;
               ">${s.name}</div>`,
               iconSize: [0, 0],
             }),
-          })
+          }).bindPopup(stationPopup(s), { maxWidth: 240 })
         );
       });
 
@@ -140,6 +145,18 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       PLACES.forEach(p => {
         const st = stations.find(x => x.name === p.stationName);
         const m = st ? Math.round(distanceMetres(p, st)) : null;
+        const poiPopup =
+          `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:160px;padding:2px;">
+             <div style="font-weight:700;font-size:14px;">${p.name}</div>
+             <div style="font-size:11px;color:#666;margin-bottom:6px;">${p.kind}</div>
+             <div style="font-size:12px;margin-bottom:8px;">תחנת ${p.stationName}${m !== null ? ` · ${formatDistance(m)}` : ""}</div>
+             <a href="/station/${encodeURIComponent(p.stationName)}"
+                style="display:block;text-align:center;background:#b04050;color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
+                פרטי התחנה</a>
+             <a href="/?to=${encodeURIComponent(p.stationName)}"
+                style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
+                תכנן נסיעה לכאן</a>
+           </div>`;
         poiLayer.push(
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
@@ -151,29 +168,21 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               iconSize: [9, 9],
               iconAnchor: [4.5, 4.5],
             }),
-          }).bindPopup(
-            `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:150px;padding:2px;">
-               <div style="font-weight:700;font-size:14px;">${p.name}</div>
-               <div style="font-size:11px;color:#666;margin-bottom:6px;">${p.kind}</div>
-               <div style="font-size:12px;">תחנת ${p.stationName}${m !== null ? ` · ${formatDistance(m)}` : ""}</div>
-             </div>`,
-            { maxWidth: 220 }
-          )
+          }).bindPopup(poiPopup, { maxWidth: 220 })
         );
         poiLayer.push(
           L.marker([p.lat, p.lng], {
-            interactive: false,
             icon: L.divIcon({
               className: "",
               html: `<div style="
                 position:absolute;right:9px;top:-8px;white-space:nowrap;
                 font-family:'Rubik',sans-serif;font-size:10px;font-weight:500;
                 color:#1d4ed8;background:#eff6ffdd;border-radius:4px;
-                padding:1px 5px;direction:rtl;
+                padding:2px 6px;direction:rtl;cursor:pointer;
               ">${p.name}</div>`,
               iconSize: [0, 0],
             }),
-          })
+          }).bindPopup(poiPopup, { maxWidth: 220 })
         );
       });
 

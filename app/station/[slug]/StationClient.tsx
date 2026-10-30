@@ -214,12 +214,21 @@ const content = STATION_CONTENT[stationName];
                 <span style={{ fontSize: 13, color: color, fontWeight: 500 }}>{station.lineName}</span>
               </a>
             )}
+            {/* שני הכיוונים. קודם לכן היה רק "מכאן", אבל מי שמגיע לעמוד
+                תחנה מחפש לא פעם דווקא את הדרך אליה. */}
             <a href={`/?from=${encodeURIComponent(stationName)}`} style={{
               fontSize: 13, fontWeight: 600, color: "#fff",
               background: color, borderRadius: 8,
               padding: "6px 14px", textDecoration: "none",
             }}>
               תכנן נסיעה מכאן
+            </a>
+            <a href={`/?to=${encodeURIComponent(stationName)}`} style={{
+              fontSize: 13, fontWeight: 600, color: color,
+              background: "transparent", border: `1.5px solid ${color}`,
+              borderRadius: 8, padding: "5px 14px", textDecoration: "none",
+            }}>
+              תכנן נסיעה לכאן
             </a>
           </div>
         </div>

@@ -47,7 +47,7 @@ export default function PrivacyPage() {
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: t.text, marginBottom: 10 }}>עוגיות (Cookies)</h2>
             <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 10 }}>
-              האתר משתמש ב-localStorage של הדפדפן לשמירת העדפת המשתמש בין מצב בהיר לכהה. מידע זה נשמר באופן מקומי על מכשיר המשתמש ואינו מועבר לשום שרת.
+              האתר משתמש ב-localStorage של הדפדפן לשני דברים: העדפת מצב בהיר או כהה, והמקום האחרון שבחרתם בשדה החיפוש — שמו והקואורדינטות שלו — כדי שתוכלו לחזור אליו בלחיצה. שניהם נשמרים על המכשיר שלכם בלבד ואינם מועברים לשום שרת. ניקוי נתוני האתר בדפדפן מוחק אותם.
             </p>
             <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
               בנוסף, שירות Microsoft Clarity מציב עוגיות לצורך זיהוי ביקורים חוזרים וניתוח סטטיסטי. ניתן לחסום עוגיות דרך הגדרות הדפדפן, וחסימה כזו לא תפגע בתפקוד האתר.
@@ -61,11 +61,12 @@ export default function PrivacyPage() {
             </p>
             <ul style={{ fontSize: 14, color: t.muted, lineHeight: 2, paddingRight: 20 }}>
               <li><strong style={{ color: t.text }}>OpenStreetMap</strong> — להצגת מפות אינטראקטיביות. אריחי המפה נטענים משרתי OpenStreetMap. גלישה במפה כפופה למדיניות הפרטיות של OpenStreetMap.</li>
-              <li><strong style={{ color: t.text }}>Leaflet</strong> — ספריית המפות נטענת מ-unpkg CDN. הדפדפן עשוי לשלוח בקשה לשרתי unpkg בעת טעינת המפה.</li>
+              <li><strong style={{ color: t.text }}>Leaflet</strong> — גיליון הסגנון של ספריית המפות נטען מ-unpkg CDN. הוא מוגדר בתבנית הכללית של האתר, ולכן הדפדפן פונה ל-unpkg בכל עמוד — גם בעמודים שאין בהם מפה.</li>
               <li><strong style={{ color: t.text }}>Google Fonts</strong> — גופן Rubik נטען משרתי Google Fonts. הדפדפן עשוי לשלוח בקשה לשרתי Google בעת טעינת העמוד.</li>
               <li><strong style={{ color: t.text }}>Netlify</strong> — האתר מתארח על שרתי Netlify. Netlify עשויה לתעד נתוני גישה בסיסיים כגון כתובת IP לצורכי אבטחה ותפעול.</li>
               <li><strong style={{ color: t.text }}>Microsoft Clarity</strong> — שירות לניתוח התנהגות משתמשים מבית מיקרוסופט. השירות מתעד את אופן השימוש באתר (לחיצות, גלילה ותנועות עכבר) לצורך שיפור הממשק, ומסתיר כברירת מחדל תוכן רגיש. המידע מאוחסן בשרתי מיקרוסופט וכפוף למדיניות הפרטיות של מיקרוסופט.</li>
-              <li><strong style={{ color: t.text }}>Photon (OpenStreetMap)</strong> — חיפוש כתובות ומקומות. הטקסט שהקלדתם בשדה החיפוש נשלח לשרתי Photon כדי להחזיר תוצאות. החיפוש מופעל רק כשאתם לוחצים על כפתור החיפוש.</li>
+              <li><strong style={{ color: t.text }}>Photon (OpenStreetMap)</strong> — חיפוש כתובות ומקומות. אין כפתור חיפוש: הטקסט שאתם מקלידים נשלח לשרתי Photon אוטומטית, כשליש שנייה אחרי שאתם מפסיקים להקליד.</li>
+              <li><strong style={{ color: t.text }}>Nominatim (OpenStreetMap)</strong> — איתור מספר בית, כשהקלדתם מספר ו-Photon לא מצא אותו. במקרה כזה בלבד נשלח אותו טקסט גם לשרתי Nominatim.</li>
               <li><strong style={{ color: t.text }}>OSRM</strong> — חישוב מסלול הליכה. נשלחות שתי נקודות בלבד: נקודת המוצא שבחרתם והתחנה. לא נשלח מידע מזהה.</li>
             </ul>
           </div>

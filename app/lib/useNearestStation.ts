@@ -4,6 +4,19 @@ import { Station, findNearestStation } from "./data";
 
 export type Place = { label: string; lat: number; lng: number };
 
+/** הצורה שאנחנו באמת קוראים מתשובת Photon. */
+type PhotonFeature = {
+  properties?: {
+    countrycode?: string;
+    name?: string;
+    street?: string;
+    housenumber?: string;
+    district?: string;
+    city?: string;
+  };
+  geometry: { coordinates: [number, number] };
+};
+
 export const LOC_DENIED_MSG = "הדפדפן חוסם גישה למיקום. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
 export const LOC_RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
 
@@ -125,6 +138,32 @@ export function useNearestStation() {
     searchRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   };
 
+  /**
+   * Nominatim יודע מספרי בית שחסרים ל-Photon. מדיניות השימוש שלו מגבילה
+   * לפנייה אחת בשנייה, ולכן הוא נקרא רק כשהמשתמש הקליד מספר ו-Photon לא
+   * החזיר אותו — אחרי השהיית ההקלדה, לא בכל תו.
+   */
+  const searchByHouseNumber = async (q: string): Promise<Place[]> => {
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&countrycodes=il&limit=3&accept-language=he&addressdetails=1&q=${encodeURIComponent(q)}`
+      );
+      const rows = await r.json();
+      return (rows || []).map((x: { lat: string; lon: string; address?: Record<string, string>; display_name: string }) => {
+        const a = x.address || {};
+        const street = [a.road, a.house_number].filter(Boolean).join(" ");
+        const city = a.city || a.town || a.village || a.municipality;
+        return {
+          label: [street, a.suburb, city].filter(Boolean).join(" · ") || x.display_name.split(",").slice(0, 3).join(" · "),
+          lat: Number(x.lat),
+          lng: Number(x.lon),
+        };
+      });
+    } catch {
+      return [];
+    }
+  };
+
   const search = async (raw?: string) => {
     const q = (raw ?? place).trim();
     if (q.length < 2) return;
@@ -132,12 +171,17 @@ export function useNearestStation() {
     setPlaceMsg(null);
     setResults([]);
     try {
-      const d = await (await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8`)).json();
+      // lang=default חיוני: בלעדיו Photon מכבד את Accept-Language של הדפדפן,
+      // וגולש ישראלי בכרום באנגלית קיבל "HaLohamim · Neve Ofer · Tel Aviv"
+      // במקום "הלוחמים · נווה עופר · תל אביב".
+      const d = await (await fetch(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=default`
+      )).json();
       const wanted = (q.match(/\d+/) || [])[0] || null;
       const hits: Place[] = (d.features || [])
-        .filter((f: any) => f.properties?.countrycode === "IL")
-        .map((f: any) => {
-          const p = f.properties;
+        .filter((f: PhotonFeature) => f.properties?.countrycode === "IL")
+        .map((f: PhotonFeature) => {
+          const p = f.properties ?? {};
           const street = [p.street || p.name, p.housenumber].filter(Boolean).join(" ");
           return {
             label: [street, p.district, p.city].filter(Boolean).join(" · ") || p.name || q,
@@ -146,10 +190,24 @@ export function useNearestStation() {
             lng: f.geometry.coordinates[0],
           };
         })
-        .sort((a: any, b: any) => b.rank - a.rank)
+        .sort((a: Place & { rank: number }, b: Place & { rank: number }) => b.rank - a.rank)
         .slice(0, 5);
-      if (hits.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
-      setResults(hits);
+
+      // המשתמש ביקש מספר בית ו-Photon לא החזיר אותו — זה המקרה שבו
+      // "הלוחמים 2 תל אביב" החזיר רק את הרחוב בלי הבית.
+      const gotNumber = wanted && (d.features || []).some((f: PhotonFeature) => f.properties?.housenumber === wanted);
+      const extra = wanted && !gotNumber ? await searchByHouseNumber(q) : [];
+
+      const seen = new Set<string>();
+      const merged = [...extra, ...hits].filter(h => {
+        const k = h.label;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }).slice(0, 5);
+
+      if (merged.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
+      setResults(merged);
     } catch {
       setPlaceMsg("החיפוש לא זמין כרגע. אפשר ללחוץ על המפה במקום שבו אתם נמצאים.");
     }
