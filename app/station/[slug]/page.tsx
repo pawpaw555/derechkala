@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import StationClient from "./StationClient";
 import { STATIONS } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ } from "../../lib/stationContent";
@@ -55,12 +56,11 @@ export default async function StationPage({ params }: Props) {
     STATIONS.find(s => encodeURIComponent(s.name) === slug) ||
     STATIONS.find(s => s.name === slug) ||
     null;
-  const stationName = station?.name ?? (() => {
-    try {
-      const once = decodeURIComponent(slug);
-      try { return decodeURIComponent(once); } catch { return once; }
-    } catch { return slug; }
-  })();
+  // כל slug שאינו אחת מ-34 התחנות החזיר 200 עם עמוד תחנה מומצא, שנבנה
+  // סביב השם שחולץ מהכתובת. זה גם מטעה משתמש וגם נותן לגוגל אינסוף
+  // עמודים דקים לאינדוקס.
+  if (!station) notFound();
+  const stationName = station.name;
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",

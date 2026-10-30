@@ -33,7 +33,10 @@ export const STATIONS: Station[] = [
   { name: "גשר אם המושבות", lat: 32.0993, lng: 34.8464, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "גשר אם המושבות, בני ברק", nearbyPlaces: ["אזור תעשייה קריית אריה", "שכונת קריית הרצוג"] },
   { name: "אהרונוביץ'", lat: 32.0927, lng: 34.8382, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "רחוב אהרונוביץ', בני ברק", nearbyPlaces: ["לשכת האוכלוסין", "מגדלי שקל"] },
   // ── קו אדום — רמת גן ────────────────────────────────
-  { name: "בן גוריון", lat: 32.0908, lng: 34.8229, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "שדרות בן גוריון, רמת גן", nearbyPlaces: ["בית המשפט לעניינים מקומיים", "מגדלי B.S.R"] },
+  // העיר אומתה מול שני מקורות: OSM מחזיר "תל גיבורים, בני ברק" לקואורדינטה
+  // הזו, ו-Google מציג "בני ברק" לתחנה. קודם היה כאן "רמת גן", כך שכותרת
+  // העמוד אמרה רמת גן בזמן שגוף העמוד אמר בני ברק.
+  { name: "בן גוריון", lat: 32.0908, lng: 34.8229, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "שדרות בן גוריון, רמת גן", nearbyPlaces: ["בית המשפט לעניינים מקומיים", "מגדלי B.S.R"] },
   { name: "ביאליק", lat: 32.0864, lng: 34.8115, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "רחוב ביאליק, רמת גן", nearbyPlaces: ["קניון ביאליק", "כיכר רמב\"ם"] },
   { name: "אבא הלל", lat: 32.0829, lng: 34.8030, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "רמת גן", address: "רחוב אבא הלל, רמת גן", nearbyPlaces: ["בורסת היהלומים", "מגדל משה אביב"] },
   // ── קו אדום — תל אביב ───────────────────────────────
@@ -157,7 +160,9 @@ export function searchAll(query: string): {
   landmarks: (Landmark & { station: Station | undefined })[];
 } {
   if (query.length < 2) return { stations: [], landmarks: [] };
-  const q = query.trim();
+  // "תחנת שנקר" הוא ניסוח טבעי לחיפוש תחנה, אבל אף תחנה לא נקראת כך.
+  // בלי הקילוף הזה החיפוש החזיר נקודת ציון ולא את התחנה שהתבקשה.
+  const q = query.trim().replace(/^תחנת\s+/, "");
   const seen = new Map<string, Landmark & { station: Station | undefined }>();
   LANDMARKS
     .filter(l => l.name.includes(q))

@@ -338,7 +338,7 @@ const content = STATION_CONTENT[stationName];
 
               {/* Map */}
               <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === stationName) || null} toStation={STATIONS.find(s => s.name === toStation) || null} onSelectStation={() => {}} />
+                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === stationName) || null} toStation={STATIONS.find(s => s.name === toStation) || null} />
               </div>
 {(() => {
                 const s = STATIONS.find(st => st.name === toStation);

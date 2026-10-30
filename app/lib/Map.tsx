@@ -8,7 +8,13 @@ import type { Marker } from "leaflet";
 type Props = {
   stations: Station[];
   userLoc?: { lat: number; lng: number } | null;
-  onSelectStation: (station: Station) => void;
+  /**
+   * כשנמסרת, לחיצה על תחנה בוחרת אותה מיד — זה מה ש"בחר תחנת יעד מהמפה"
+   * צריך. כשלא נמסרת, לחיצה פותחת את הכרטיס בלבד, והקישור שבתוכו מנווט.
+   * קודם לכן הקריאה הוסרה לגמרי כדי לתקן ניווט מיידי ב-/map, וזה הרג גם
+   * את בחירת היעד בעמוד הבית.
+   */
+  onSelectStation?: (station: Station) => void;
   fromStation?: Station | null;
   toStation?: Station | null;
   /** מסלול הליכה לציור על המפה, כזוגות [lat, lng]. */
@@ -110,9 +116,10 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           .addTo(map)
           .bindPopup(stationPopup(s), { maxWidth: 240 });
 
-        // לחיצה על סמן פותחת את הכרטיס בלבד. קודם לכן היא גם ניווטה מיד
-        // לעמוד התחנה, כך שהכרטיס נעלם לפני שהספיקו לקרוא אותו.
-        marker.on("click", () => marker.openPopup());
+        marker.on("click", () => {
+          if (onSelectRef.current) onSelectRef.current(s);
+          else marker.openPopup();
+        });
       });
 
       // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים

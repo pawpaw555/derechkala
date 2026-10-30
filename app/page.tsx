@@ -609,7 +609,6 @@ export default function Home() {
                   userLoc={null}
                   fromStation={fromStation}
                   toStation={toStation}
-                  onSelectStation={() => {}}
                 />
               </div>
 {toStation && toStation.nearbyPlaces.length > 0 && (

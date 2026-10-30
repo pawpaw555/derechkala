@@ -2,7 +2,6 @@
 import dynamic from "next/dynamic";
 import { STATIONS } from "../lib/data";
 import { useTheme } from "../lib/useTheme";
-import { useRouter } from "next/navigation";
 import { useNearestStation } from "../lib/useNearestStation";
 import NearestStationFinder from "../lib/NearestStationFinder";
 
@@ -10,7 +9,6 @@ const Map = dynamic(() => import("../lib/Map"), { ssr: false });
 
 export default function MapClient() {
   const { t } = useTheme();
-  const router = useRouter();
   const finder = useNearestStation();
 
   return (
@@ -24,7 +22,6 @@ export default function MapClient() {
           fromStation={null}
           toStation={null}
           route={finder.route}
-          onSelectStation={(s) => router.push(`/station/${encodeURIComponent(s.name)}`)}
         />
       </div>
     </>

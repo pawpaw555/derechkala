@@ -201,11 +201,22 @@ export function describePlace(p: Place): PlaceHit {
   return { ...p, station, metres, context: parts.join(" · ") };
 }
 
+/**
+ * כינוי נחשב להתאמה אם הוא מכיל את מה שהוקלד, או אם הוא מופיע בשאילתה
+ * כמילה שלמה. הבדיקה הרחבה הקודמת, q.includes(a), התאימה כל כינוי קצר
+ * לכל שאילתה שהכילה אותו כרצף תווים — "תחנת שנקר" החזיר את מכללת שנקר
+ * ברמת גן ולא את התחנה.
+ */
+function aliasHit(alias: string, q: string): boolean {
+  if (alias.includes(q)) return true;
+  return q.split(/[\s,.\u05be"'־]+/).some(w => w === alias);
+}
+
 export function searchPlaces(query: string, limit = 4): PlaceHit[] {
   const q = query.trim();
   if (q.length < 2) return [];
   return PLACES
-    .filter(p => p.name.includes(q) || p.aliases?.some(a => a.includes(q) || q.includes(a)))
+    .filter(p => p.name.includes(q) || p.aliases?.some(a => aliasHit(a, q)))
     .map(describePlace)
     .sort((a, b) => (a.metres ?? Infinity) - (b.metres ?? Infinity))
     .slice(0, limit);
