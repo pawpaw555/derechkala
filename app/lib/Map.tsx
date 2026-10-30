@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "./data";
+import { PLACES } from "./places";
+// ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
+import type { Marker } from "leaflet";
 
 type Props = {
   stations: Station[];
@@ -41,6 +44,13 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
 // NearestStationFinder. קודם לכן היה כאן כפתור "המיקום שלי" עם מימוש משלו:
 // timeout קצר יותר, בלי בדיקת הרשאה, בלי קוד שגיאה לדיווח, ועם קואורדינטה
 // קבועה בתל אביב כשה-API חסר — כלומר האתר הצהיר בשקט שהמשתמש בתל אביב.
+/**
+ * מתחת לסף הזה אי אפשר להציג שמות: בזום 11, שבו כל הקו נכנס למסך,
+ * 34 תוויות דורשות 612 פיקסלים של ערימה והמפה גבוהה 350. נמדד בפועל —
+ * בזום 13 נכנסות 21 מתוך 34, בזום 14 נכנסות 29, ובזום 15 כולן.
+ */
+const LABEL_ZOOM = 14;
+
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,6 +112,79 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         marker.on("click", () => marker.openPopup());
       });
 
+      // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים
+      // ועוברים נקודה-נקודה בחיפוש תחנה; בזום שבו הם כבר נמצאים יש מקום
+      // לשמות, ובזום ההתחלתי אין — לכן התצוגה תלוית זום ולא קבועה.
+      const labels: Marker[] = [];
+      stations.forEach(s => {
+        labels.push(
+          L.marker([s.lat, s.lng], {
+            interactive: false,
+            icon: L.divIcon({
+              className: "",
+              html: `<div style="
+                position:absolute;right:10px;top:-9px;white-space:nowrap;
+                font-family:'Rubik',sans-serif;font-size:11px;font-weight:600;
+                color:#1a1a22;background:#ffffffdd;border-radius:4px;
+                padding:1px 5px;box-shadow:0 1px 3px #00000022;direction:rtl;
+              ">${s.name}</div>`,
+              iconSize: [0, 0],
+            }),
+          })
+        );
+      });
+
+      // נקודות עניין: מה שאנשים מחפשים כשהם יודעים לאיזה אזור הם רוצים
+      // אבל לא באיזו תחנה לרדת. כל קואורדינטה כאן אומתה מול מקור חיצוני.
+      const poiLayer: Marker[] = [];
+      PLACES.forEach(p => {
+        const st = stations.find(x => x.name === p.stationName);
+        const m = st ? Math.round(distanceMetres(p, st)) : null;
+        poiLayer.push(
+          L.marker([p.lat, p.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: `<div style="
+                width:9px;height:9px;background:#2563eb;border:2px solid #fff;
+                transform:rotate(45deg);box-shadow:0 0 4px #2563eb66;cursor:pointer;
+              "></div>`,
+              iconSize: [9, 9],
+              iconAnchor: [4.5, 4.5],
+            }),
+          }).bindPopup(
+            `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:150px;padding:2px;">
+               <div style="font-weight:700;font-size:14px;">${p.name}</div>
+               <div style="font-size:11px;color:#666;margin-bottom:6px;">${p.kind}</div>
+               <div style="font-size:12px;">תחנת ${p.stationName}${m !== null ? ` · ${formatDistance(m)}` : ""}</div>
+             </div>`,
+            { maxWidth: 220 }
+          )
+        );
+        poiLayer.push(
+          L.marker([p.lat, p.lng], {
+            interactive: false,
+            icon: L.divIcon({
+              className: "",
+              html: `<div style="
+                position:absolute;right:9px;top:-8px;white-space:nowrap;
+                font-family:'Rubik',sans-serif;font-size:10px;font-weight:500;
+                color:#1d4ed8;background:#eff6ffdd;border-radius:4px;
+                padding:1px 5px;direction:rtl;
+              ">${p.name}</div>`,
+              iconSize: [0, 0],
+            }),
+          })
+        );
+      });
+
+      const syncZoomLayers = () => {
+        const on = map.getZoom() >= LABEL_ZOOM;
+        labels.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
+        poiLayer.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
+      };
+      map.on("zoomend", syncZoomLayers);
+      syncZoomLayers();
+
       // לחיצה על רקע המפה הייתה קליק מת — 53% מהקליקים בעמוד.
       // עכשיו היא עונה על השאלה שנשאלה בפועל: איזו תחנה קרובה לנקודה הזאת.
       map.on("click", (e: any) => {
@@ -141,6 +224,20 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
 
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid #22222a" }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+        padding: "7px 12px", background: "#f4f4f8", borderBottom: "1px solid #e4e4ec",
+        fontSize: 11, color: "#444458", fontFamily: "'Rubik', sans-serif", direction: "rtl",
+      }}>
+        <span>לחצו על תחנה לפרטים.</span>
+        <span style={{ color: "#777788" }}>התקרבו כדי לראות שמות תחנות ומוקדים באזור.</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: "auto" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
+          תחנה
+          <span style={{ width: 8, height: 8, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block", marginRight: 6 }} />
+          מוקד עניין
+        </span>
+      </div>
       <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
     </div>
   );
