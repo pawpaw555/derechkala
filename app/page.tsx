@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, Station, STATIONS, searchAll, Landmark, getNextDepartures } from "./lib/data";
+import { findRoute, isNoService, Station, STATIONS, Landmark, getNextDepartures } from "./lib/data";
+import { searchCombined, PlaceHit } from "./lib/places";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
@@ -21,17 +22,19 @@ type Theme = {
 };
 
 type SearchResults = {
+  places: PlaceHit[];
   stations: Station[];
   landmarks: (Landmark & { station: Station | undefined })[];
 };
 
-function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
+function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
   results: SearchResults;
   onSelectStation: (s: Station) => void;
   onSelectLandmark: (l: Landmark & { station: Station | undefined }) => void;
+  onSelectPlace: (p: PlaceHit) => void;
   t: Theme;
 }) {
-  const hasResults = results.stations.length > 0 || results.landmarks.length > 0;
+  const hasResults = results.stations.length > 0 || results.landmarks.length > 0 || results.places.length > 0;
   if (!hasResults) return null;
 
   return (
@@ -40,6 +43,34 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
       background: t.card, border: `1px solid ${t.border}`,
       borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
     }}>
+      {/* אזורים קודם: מי שמחפש "בורסה" מחפש אזור, לא תחנה בשם הזה.
+          כל שורה נושאת את המרחק מהתחנה, כדי שלא תוצג תחנה בלי הקשר. */}
+      {results.places.map(p => (
+        <button
+          key={"place:" + p.name}
+          onClick={() => onSelectPlace(p)}
+          className="dropdown-item"
+          style={{
+            display: "flex", alignItems: "center", gap: 12,
+            width: "100%", background: "transparent",
+            border: "none", borderBottom: `1px solid ${t.border}`,
+            padding: "12px 14px", cursor: "pointer",
+          }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: 3, flexShrink: 0,
+            background: p.station?.lineColor || "#888", transform: "rotate(45deg)",
+          }} />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
+              {p.name}
+              <span style={{ fontSize: 11, color: t.subtle, fontWeight: 400, marginRight: 6 }}>{p.kind}</span>
+            </div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
+              {p.context}
+            </div>
+          </div>
+        </button>
+      ))}
       {results.stations.map(s => (
         <button
           key={s.lineId + s.name}
@@ -84,7 +115,7 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, t }: {
   );
 }
 
-function InputField({ label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, t }: {
+function InputField({ label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -93,6 +124,7 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
   results: SearchResults;
   onSelectStation: (s: Station) => void;
   onSelectLandmark: (l: Landmark & { station: Station | undefined }) => void;
+  onSelectPlace: (p: PlaceHit) => void;
   t: Theme;
 }) {
   return (
@@ -120,8 +152,8 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
             background: selected.lineColor, pointerEvents: "none",
           }} />
         )}
-        <SearchDropdown results={results} onSelectStation={onSelectStation} onSelectLandmark={onSelectLandmark} t={t} />
-        {value.length >= 2 && results.stations.length === 0 && results.landmarks.length === 0 && !selected && (
+        <SearchDropdown results={results} onSelectStation={onSelectStation} onSelectLandmark={onSelectLandmark} onSelectPlace={onSelectPlace} t={t} />
+        {value.length >= 2 && results.stations.length === 0 && results.landmarks.length === 0 && results.places.length === 0 && !selected && (
           <div style={{
             position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 100,
             background: t.card, border: `1px solid ${t.border}`,
@@ -152,8 +184,8 @@ export default function Home() {
   const [swapSpinning, setSwapSpinning] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
-  const [fromResults, setFromResults] = useState<SearchResults>({ stations: [], landmarks: [] });
-  const [toResults, setToResults] = useState<SearchResults>({ stations: [], landmarks: [] });
+  const [fromResults, setFromResults] = useState<SearchResults>({ stations: [], landmarks: [], places: [] });
+  const [toResults, setToResults] = useState<SearchResults>({ stations: [], landmarks: [], places: [] });
   const [fromStation, setFromStation] = useState<Station | null>(null);
   const [toStation, setToStation] = useState<Station | null>(null);
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
@@ -203,39 +235,55 @@ export default function Home() {
   const handleFromSearch = (val: string) => {
     setFromQuery(val);
     setFromStation(null);
-    setFromResults(val.length >= 2 ? searchAll(val) : { stations: [], landmarks: [] });
+    setFromResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
   };
 
   const handleToSearch = (val: string) => {
     setToQuery(val);
     setToStation(null);
-    setToResults(val.length >= 2 ? searchAll(val) : { stations: [], landmarks: [] });
+    setToResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
   };
 
   const handleFromSelectStation = (s: Station) => {
     setFromStation(s);
     setFromQuery(s.name);
-    setFromResults({ stations: [], landmarks: [] });
+    setFromResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handleFromSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
     if (!l.station) return;
     setFromStation(l.station);
     setFromQuery(l.name);
-    setFromResults({ stations: [], landmarks: [] });
+    setFromResults({ stations: [], landmarks: [], places: [] });
+  };
+
+  // בחירת אזור בוחרת את התחנה שלו, אבל משאירה בשדה את מה שהמשתמש חיפש
+  // בפועל — "מתחם הבורסה" ולא "אבא הלל", כדי שיישאר ברור למה נבחרה התחנה.
+  const handleFromSelectPlace = (p: PlaceHit) => {
+    if (!p.station) return;
+    setFromStation(p.station);
+    setFromQuery(p.name);
+    setFromResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handleToSelectStation = (s: Station) => {
     setToStation(s);
     setToQuery(s.name);
-    setToResults({ stations: [], landmarks: [] });
+    setToResults({ stations: [], landmarks: [], places: [] });
+  };
+
+  const handleToSelectPlace = (p: PlaceHit) => {
+    if (!p.station) return;
+    setToStation(p.station);
+    setToQuery(p.name);
+    setToResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handleToSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
     if (!l.station) return;
     setToStation(l.station);
     setToQuery(l.name);
-    setToResults({ stations: [], landmarks: [] });
+    setToResults({ stations: [], landmarks: [], places: [] });
   };
 
   const handleSwap = () => {
@@ -444,6 +492,19 @@ export default function Home() {
                 מחפש את הנסיעה הטובה ביותר...
               </div>
             </div>
+          ) : result && isNoService(result) ? (
+            <div role="alert" style={{
+              background: t.card, border: "1px solid #b0405055", borderRadius: 12,
+              padding: "16px 18px", textAlign: "right",
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: t.text, marginBottom: 6 }}>
+                אין רכבת בזמן שבחרת
+              </div>
+              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
+              <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
+                לוח שעות הפעילות המלא ←
+              </a>
+            </div>
           ) : result ? (
             /* Collapsed result view */
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -577,6 +638,7 @@ export default function Home() {
                 results={fromResults}
                 onSelectStation={handleFromSelectStation}
                 onSelectLandmark={handleFromSelectLandmark}
+                onSelectPlace={handleFromSelectPlace}
                 t={t}
               />
 
@@ -623,6 +685,7 @@ export default function Home() {
                 results={toResults}
                 onSelectStation={handleToSelectStation}
                 onSelectLandmark={handleToSelectLandmark}
+                onSelectPlace={handleToSelectPlace}
                 t={t}
               />
 

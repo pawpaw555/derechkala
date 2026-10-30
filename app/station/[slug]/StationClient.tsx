@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, searchAll, findRoute, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
+import { Station, Landmark, searchAll, findRoute, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -257,6 +257,19 @@ const content = STATION_CONTENT[stationName];
               <div style={{ fontSize: 13, color: t.muted, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>
                 מחפש את הנסיעה הטובה ביותר...
               </div>
+            </div>
+          ) : result && isNoService(result) ? (
+            <div role="alert" style={{
+              background: t.card, border: "1px solid #b0405055", borderRadius: 12,
+              padding: "16px 18px", textAlign: "right",
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: t.text, marginBottom: 6 }}>
+                אין רכבת בזמן שבחרת
+              </div>
+              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
+              <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
+                לוח שעות הפעילות המלא ←
+              </a>
             </div>
           ) : result ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

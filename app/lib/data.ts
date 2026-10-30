@@ -24,7 +24,10 @@ export const STATIONS: Station[] = [
   { name: "דנקנר", lat: 32.0910, lng: 34.8718, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב דנקנר, פתח תקווה", nearbyPlaces: ["פארק יד לבנים", "מוזיאון האדם והסביבה"] },
   { name: "בילינסון", lat: 32.0915, lng: 34.8664, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "בית חולים בילינסון, פתח תקווה", nearbyPlaces: ["מרכז רפואי רבין", "בית חולים שניידר"] },
   { name: "שחם", lat: 32.0919, lng: 34.8614, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שחם, פתח תקווה", nearbyPlaces: ["מגדלי בסר", "B.S.R סיטי"] },
-  { name: "שנקר", lat: 32.0926, lng: 34.8536, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שנקר, פתח תקווה", nearbyPlaces: ["מכללת שנקר", "פארקטק קריית אריה"] },
+  // התחנה קרויה על שם רחוב אריה שנקר, התעשיין. מכללת שנקר הופיעה כאן
+  // כמקום סמוך — היא ברמת גן, 4.8 ק"מ מכאן, והתחנה הקרובה לה היא אבא הלל.
+  // אזור התעשייה קריית אריה אומת ב-510 מ' מהתחנה.
+  { name: "שנקר", lat: 32.0926, lng: 34.8536, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שנקר, פתח תקווה", nearbyPlaces: ["פארקטק קריית אריה"] },
   { name: "קריית אריה", lat: 32.1062, lng: 34.8617, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "קריית אריה, פתח תקווה", nearbyPlaces: ["אצטדיון שלמה ביטוח", "מסלול ירקון פתח תקווה"] },
   // ── קו אדום — בני ברק ───────────────────────────────
   { name: "גשר אם המושבות", lat: 32.0993, lng: 34.8464, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "גשר אם המושבות, בני ברק", nearbyPlaces: ["אזור תעשייה קריית אריה", "שכונת קריית הרצוג"] },
@@ -73,7 +76,9 @@ export const LANDMARKS: Landmark[] = [
   // שחם
   { name: "B.S.R סיטי", stationName: "שחם", walkMins: 4, lineId: "red" },
   // שנקר
-  { name: "מכללת שנקר", stationName: "שנקר", walkMins: 3, lineId: "red" },
+  // הוסר: "מכללת שנקר, תחנת שנקר, 3 דקות". המכללה ברמת גן ברחוב אנה פרנק,
+  // 4.8 ק"מ מתחנת שנקר שבפתח תקווה — כשעה הליכה, לא שלוש דקות. השיוך הנכון
+  // הוא לאבא הלל, והוא יושב ב-places.ts עם קואורדינטה מאומתת.
   // קריית אריה
   { name: "אצטדיון שלמה ביטוח", stationName: "קריית אריה", walkMins: 5, lineId: "red" },
   // אבא הלל
@@ -188,7 +193,7 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   change?: string;
   departureTime?: string;
   arrivalTime?: string;
-} | null {
+} | NoService | null {
   const from = STATIONS.find(s => s.name === fromName);
   const to = STATIONS.find(s => s.name === toName);
   if (!from || !to) return null;
@@ -202,6 +207,9 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   const depTime = baseDate
     ? new Date(base.getTime())
     : new Date(base.getTime() + next * 60 * 1000);
+  // שעת היציאה היא הנקודה שקובעת, לא השעה שבה נלחץ הכפתור: בערב שבת
+  // ב-15:38 הרכבת הבאה בעוד 4 דקות כבר מעבר לרכבת האחרונה.
+  if (!isOperating(depTime)) return { noService: true, reason: describeNoService(depTime) };
   const arrTime = new Date(depTime.getTime() + travelMins * 60 * 1000);
   const fmt = (d: Date) => `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
   return {
@@ -299,6 +307,28 @@ export const FRIDAY_LAST_MINS = 15 * 60 + 40;
 export const SATURDAY_NIGHT_FIRST_MINS = 19 * 60 + 45;
 export const SERVICE_FIRST_MINS = 5 * 60 + 30;
 
+/**
+ * כשאין שירות בזמן המבוקש, findRoute מחזירה את זה במקום לוח זמנים.
+ * קודם לכן היא התעלמה משעות הפעילות לחלוטין: בשבת ב-10:00 היא החזירה
+ * "יציאה 10:00, הגעה 10:12", והכרטיס הוצג בלי שום אזהרה.
+ */
+export type NoService = { noService: true; reason: string };
+
+const hhmm = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+function describeNoService(date: Date): string {
+  const t = getDayType(date);
+  const mins = date.getHours() * 60 + date.getMinutes();
+  if (t === "saturday" && mins < SATURDAY_NIGHT_FIRST_MINS)
+    return `הרכבת אינה פועלת בשבת. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
+  if (t === "friday" && mins > FRIDAY_LAST_MINS)
+    return `בערב שבת הרכבת האחרונה יוצאת ב-${hhmm(FRIDAY_LAST_MINS)}. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
+  if (mins < SERVICE_FIRST_MINS)
+    return `הרכבת מתחילה לפעול ב-${hhmm(SERVICE_FIRST_MINS)}.`;
+  return "הרכבת אינה פועלת בשעה שנבחרה.";
+}
+
 export function isOperating(date: Date): boolean {
   const dayType = getDayType(date);
   const mins = date.getHours() * 60 + date.getMinutes();
@@ -332,6 +362,9 @@ export function getNextDepartures(date: Date, count: number = 3): {
   for (let i = 0; i < count; i++) {
     const offsetMins = firstOffset + i * frequency;
     const depDate = new Date(date.getTime() + offsetMins * 60 * 1000);
+    // בלי החסם הזה הרשימה המציאה יציאות אחרי סוף השירות — 00:04 בלילה,
+    // או 15:46 בערב שבת, שש דקות אחרי הרכבת האחרונה.
+    if (!isOperating(depDate)) break;
     const h = depDate.getHours().toString().padStart(2, "0");
     const m = depDate.getMinutes().toString().padStart(2, "0");
     const minsFromNow = Math.round(offsetMins);
@@ -342,4 +375,9 @@ export function getNextDepartures(date: Date, count: number = 3): {
     });
   }
   return departures;
+}
+
+/** מבדיל בין תוצאת מסלול להודעת "אין שירות". */
+export function isNoService(r: unknown): r is NoService {
+  return !!r && typeof r === "object" && "noService" in (r as object);
 }
