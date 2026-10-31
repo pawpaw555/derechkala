@@ -33,7 +33,7 @@ ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב
 ok "תחנות·landmarks·pois·places" "$(python3 -I scripts/sources.py counts)"
 # כלל 10: שדה שהשכבה מחשבת ואף ממשק אינו קורא
-ok "שדות בלי קורא בממשק (בסיס 11)" "$(python3 -I scripts/dead-fields.py count)"
+ok "שדות בלי קורא בממשק (בסיס 13)" "$(python3 -I scripts/dead-fields.py count)"
 ok "שנקר → ≠ קריית אריה"        "$(curl -s "$B/station/%D7%A9%D7%A0%D7%A7%D7%A8"|grep -o 'תחנה הבאה[^<]*<[^>]*>[^<]*'|grep -c 'קריית אריה')"
 C=""; for p in / /map /line-red /line-green /line-purple /hours /privacy; do C="$C$(curl -s -o /dev/null -w '%{http_code}' $B$p) "; done
 ok "שבעת העמודים"               "$C"

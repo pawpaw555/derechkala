@@ -97,7 +97,7 @@ percent-encoding, ו**הברחה במקור קוד** — אחרת כל שם עם
     עמוד תחנה                  9 × h2, 1 × h1, TrainStation + FAQPage
     /station/<שטות>            404
     34 תחנות · 65 landmarks · 131 pois · 22 places   ← מ-`scripts/sources.py`
-    שדות בלי קורא בממשק        ≤ הבסיס  (11 נכון ל-31.10.2026)
+    שדות בלי קורא בממשק        ≤ הבסיס  (13 נכון ל-31.10.2026)
     שנקר → תחנה הבאה           לא "קריית אריה"
     / /map /line-red /line-green /line-purple /hours /privacy   200
     שגיאות שרת                 0
