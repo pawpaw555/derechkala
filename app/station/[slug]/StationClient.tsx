@@ -5,6 +5,7 @@ import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stat
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
+import HiddenCountNote from "../../lib/HiddenCountNote";
 import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
 import { searchCombined, PlaceHit, SearchResults } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
@@ -485,7 +486,8 @@ const content = STATION_CONTENT[stationName];
                         </div>
                       </button>
                     ))}
-                                </div>
+                    <HiddenCountNote count={results.hiddenCount ?? 0} />
+                  </div>
                 )}
                 {noResults && (
                   <div style={{

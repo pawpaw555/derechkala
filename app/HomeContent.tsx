@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
+import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
@@ -147,6 +148,7 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
           </div>
         </button>
       ))}
+      <HiddenCountNote count={results.hiddenCount ?? 0} />
     </div>
   );
 }

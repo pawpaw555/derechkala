@@ -212,14 +212,18 @@ function aliasHit(alias: string, q: string): boolean {
   return q.split(/[\s,.\u05be"'־]+/).some(w => w === alias);
 }
 
-export function searchPlaces(query: string, limit = 4): PlaceHit[] {
+/** כמה מקומות מוצגים. החיתוך עצמו נעשה אצל הקורא, כדי שהוא יוכל לספור
+ *  את מה שהוסתר ולדווח עליו. */
+export const PLACE_LIMIT = 4;
+
+/** כל ההתאמות, ממוינות לפי מרחק, בלי חיתוך. */
+export function matchPlaces(query: string): PlaceHit[] {
   const q = normalizeHebrew(query);
   if (q.length < 2) return [];  // normalizeHebrew כבר עשה trim
   return PLACES
     .filter(p => normalizeHebrew(p.name).includes(q) || p.aliases?.some(a => aliasHit(normalizeHebrew(a), q)))
     .map(describePlace)
-    .sort((a, b) => (a.metres ?? Infinity) - (b.metres ?? Infinity))
-    .slice(0, limit);
+    .sort((a, b) => (a.metres ?? Infinity) - (b.metres ?? Infinity));
 }
 
 /**
@@ -245,7 +249,8 @@ export type SearchResults = {
 
 export function searchCombined(query: string): SearchResults {
   const base = searchAll(query);
-  const places = searchPlaces(query);
+  const allPlaces = matchPlaces(query);
+  const places = allPlaces.slice(0, PLACE_LIMIT);
   const taken = new Set(places.map(p => p.name));
   // כשהוקלד שם תחנה במדויק, היא התשובה — לא מקום שבמקרה מכיל את המילה.
   // "שנקר" הציג את המכללה ברמת גן מעל התחנה ששמה בדיוק כך.
@@ -256,6 +261,7 @@ export function searchCombined(query: string): SearchResults {
     landmarks: base.landmarks.filter(l => !taken.has(l.name)),
     places,
     stationsFirst: exactStation,
-    hiddenCount: base.hiddenCount,
+    // הספירה כוללת את שלוש הרשימות. קודם לכן המקומות נחתכו ב-4 ולא נספרו.
+    hiddenCount: base.hiddenCount + (allPlaces.length - places.length),
   };
 }
