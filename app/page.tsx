@@ -428,6 +428,8 @@ export default function Home() {
         .btn-toggle { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
         .btn-toggle:active { transform: scale(0.96); }
 
+        .btn-mappick { transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
+        .btn-mappick:active { transform: scale(0.99); }
         .btn-swap { transition: box-shadow 0.2s ease; }
         .btn-swap:hover { box-shadow: 0 4px 16px #b0405050 !important; transform: scale(1.1); }
 
@@ -757,14 +759,22 @@ export default function Home() {
                 t={t}
               />
 
-              <button onClick={() => setShowMap(m => !m)} style={{
+              {/* המשתמש דיווח שהוא לא מבחין בכפתור הזה וצריך לחפש אותו.
+                  הניגודיות הייתה תקינה (8.36:1) — הבעיה הייתה צורה: מסגרת
+                  מקווקוות היא קונבנציה של אזור גרירה ולא של כפתור, והטקסט
+                  ב-t.muted נקרא כמשני. עכשיו מסגרת מלאה, טקסט בצבע הקו
+                  ומשקל 600, כמו "ראה במפה" בעמוד הקו. הגוון הכהה שונה כי
+                  #b04050 על רקע הכפתור הכהה הוא 2.76:1; #e08090 הוא 5.72:1. */}
+              <button onClick={() => setShowMap(m => !m)} className="btn-mappick" style={{
                 background: showMap ? (dark ? "#1a2220" : "#f0faf5") : t.mapBtn,
-                border: `1.5px dashed ${showMap ? "#3a906088" : t.border}`,
+                border: `1.5px solid ${showMap ? "#3a906088" : (dark ? "#e0809066" : "#b0405066")}`,
                 borderRadius: 10, padding: "12px 14px",
-                color: showMap ? (dark ? "#6fc496" : "#2f7a51") : t.muted,
-                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: 500,
+                color: showMap ? (dark ? "#6fc496" : "#2f7a51") : (dark ? "#e08090" : "#b04050"),
+                fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: 600,
                 cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
+                <span aria-hidden="true">{showMap ? "✕" : "📍"}</span>
                 {showMap ? "סגור מפה" : "בחר תחנת יעד מהמפה"}
               </button>
 
