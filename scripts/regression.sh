@@ -22,9 +22,13 @@ echo "═══ בלוק רגרסיה ═══"
 ok "tsc"                        "$(npx tsc --noEmit 2>&1 | grep -c 'error TS')"
 ok "build"                      "$BUILD"
 ok "lint (בסיס 26)"             "$(npm run lint 2>&1 | grep -o '[0-9]* problems' | head -1)"
-ok "/hours 15:40 · 19:45"       "$(curl -s $B/hours|grep -c '15:40') · $(curl -s $B/hours|grep -c '19:45')"
+# grep -c סופר שורות, ו-Next קובע את מעברי השורה ב-HTML לפי שיקוליו:
+# הוספת בלוק <style> אחד הזיזה את אותן מחרוזות מ-2 שורות ל-3 בלי ששום
+# תוכן השתנה. סופרים מופעים, ומתוך תשובה אחת ולא שתיים.
+HRS=$(curl -s $B/hours)
+ok "/hours 15:40 · 19:45"       "$(echo "$HRS"|grep -o '15:40'|wc -l|tr -d ' ') · $(echo "$HRS"|grep -o '19:45'|wc -l|tr -d ' ')"
 ok "עמוד תחנה h2 · h1"          "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
-ok "TrainStation · FAQPage"     "$(echo "$S"|grep -c 'TrainStation') · $(echo "$S"|grep -c 'FAQPage')"
+ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב
 ok "תחנות·landmarks·pois·places" "$(python3 -I scripts/sources.py counts)"
