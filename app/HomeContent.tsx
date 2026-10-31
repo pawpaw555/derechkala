@@ -251,6 +251,9 @@ export default function HomeContent() {
   const [planInstant, setPlanInstant] = useState<Date | null>(null);
   const finder = useNearestStation();
   const { locError, locating } = finder;
+  /** מה הוזן מהכתובת, ומאיזה עמוד הגענו — כדי להסביר למשתמש מה קרה. */
+  const [arrivedWith, setArrivedWith] = useState<{ from?: string; to?: string } | null>(null);
+  const [backTo, setBackTo] = useState<{ href: string; label: string } | null>(null);
 
   useEffect(() => {
     // עמוד התחנה מקשר לכאן בשני הכיוונים: מי שמחפש תחנת מוצא ומי שמחפש
@@ -260,15 +263,28 @@ export default function HomeContent() {
     // בטעינה מפילה את כל העץ, כך ש-/?to=% הציג מסך שגיאה באנגלית במקום
     // האתר. ארבעת המייצרים (StationClient, Map) מקודדים פעם אחת בלבד.
     const params = new URLSearchParams(window.location.search);
+    const picked: { from?: string; to?: string } = {};
     const from = params.get("from");
     if (from) {
       const station = STATIONS.find(s => s.name === from);
-      if (station) handleFromSelectStation(station);
+      if (station) { handleFromSelectStation(station); picked.from = station.name; }
     }
     const to = params.get("to");
     if (to) {
       const station = STATIONS.find(s => s.name === to);
-      if (station) handleToSelectStation(station);
+      if (station) { handleToSelectStation(station); picked.to = station.name; }
+    }
+    // מי שלוחץ "תכנן נסיעה לכאן" בכרטיס שעל המפה נוחת כאן עם שדה מלא
+    // ובלי הסבר, ולא ברור לו לאן הגיע ואיך לחזור. ההודעה אומרת את שניהם.
+    if (picked.from || picked.to) {
+      setArrivedWith(picked);
+      try {
+        const ref = document.referrer ? new URL(document.referrer) : null;
+        if (ref && ref.origin === window.location.origin) {
+          if (ref.pathname === "/map") setBackTo({ href: "/map", label: "חזרה למפה" });
+          else if (ref.pathname.startsWith("/station/")) setBackTo({ href: ref.pathname, label: "חזרה לעמוד התחנה" });
+        }
+      } catch { /* referrer לא תקין — פשוט בלי קישור חזרה */ }
     }
   }, []);
 
@@ -278,12 +294,14 @@ export default function HomeContent() {
   const { dark, t } = useTheme();
 
   const handleFromSearch = (val: string) => {
+    setArrivedWith(null);
     setFromQuery(val);
     setFromStation(null);
     setFromResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
   };
 
   const handleToSearch = (val: string) => {
+    setArrivedWith(null);
     setToQuery(val);
     setToStation(null);
     setToResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
@@ -677,6 +695,28 @@ export default function HomeContent() {
           ) : (
             /* Full search form */
             <>
+              {arrivedWith && (
+                <div role="status" style={{
+                  display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
+                  justifyContent: "space-between",
+                  background: t.resultBg, border: `1px solid ${t.border}`,
+                  borderRadius: 9, padding: "9px 12px",
+                  fontSize: 12, color: t.muted, fontFamily: "'Rubik', sans-serif",
+                }}>
+                  <span>
+                    {arrivedWith.from && arrivedWith.to
+                      ? `המוצא והיעד הוזנו מראש`
+                      : arrivedWith.to
+                      ? `היעד הוזן: ${arrivedWith.to}`
+                      : `המוצא הוזן: ${arrivedWith.from}`}
+                  </span>
+                  {backTo && (
+                    <a href={backTo.href} style={{ color: "#b04050", fontWeight: 600, textDecoration: "none" }}>
+                      {backTo.label}
+                    </a>
+                  )}
+                </div>
+              )}
               <InputField
                 id="plan-from"
                 label="מתחנה"
