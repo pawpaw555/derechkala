@@ -598,8 +598,8 @@ const content = STATION_CONTENT[stationName];
                     display: "flex", gap: 10, alignItems: "center", justifyContent: "center",
                   }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
-                      <select value={customDay} onChange={e => setCustomDay(Number(e.target.value))} style={{
+                      <label htmlFor="st-day" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>יום</label>
+                      <select id="st-day" value={customDay} onChange={e => setCustomDay(Number(e.target.value))} style={{
                         background: t.inputBg, border: `1px solid ${t.border}`,
                         borderRadius: 7, padding: "6px 10px", color: t.text,
                         fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
@@ -614,8 +614,8 @@ const content = STATION_CONTENT[stationName];
                       </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>שעה</div>
-                      <select value={customHour} onChange={e => setCustomHour(Number(e.target.value))} style={{
+                      <label htmlFor="st-hour" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>שעה</label>
+                      <select id="st-hour" value={customHour} onChange={e => setCustomHour(Number(e.target.value))} style={{
                         background: t.inputBg, border: `1px solid ${t.border}`,
                         borderRadius: 7, padding: "6px 10px", color: t.text,
                         fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
@@ -626,8 +626,8 @@ const content = STATION_CONTENT[stationName];
                       </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>דקות</div>
-                      <select value={customMinute} onChange={e => setCustomMinute(Number(e.target.value))} style={{
+                      <label htmlFor="st-min" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>דקות</label>
+                      <select id="st-min" value={customMinute} onChange={e => setCustomMinute(Number(e.target.value))} style={{
                         background: t.inputBg, border: `1px solid ${t.border}`,
                         borderRadius: 7, padding: "6px 10px", color: t.text,
                         fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",

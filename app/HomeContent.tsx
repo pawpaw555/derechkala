@@ -945,8 +945,8 @@ export default function HomeContent() {
                   justifyContent: "center",
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>יום</div>
-                    <select value={customDay} onChange={e => setCustomDay(Number(e.target.value))} style={{
+                    <label htmlFor="plan-day" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>יום</label>
+                    <select id="plan-day" value={customDay} onChange={e => setCustomDay(Number(e.target.value))} style={{
                       background: t.inputBg, border: `1px solid ${t.border}`,
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
@@ -961,8 +961,8 @@ export default function HomeContent() {
                     </select>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>שעה</div>
-                    <select value={customHour} onChange={e => setCustomHour(Number(e.target.value))} style={{
+                    <label htmlFor="plan-hour" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>שעה</label>
+                    <select id="plan-hour" value={customHour} onChange={e => setCustomHour(Number(e.target.value))} style={{
                       background: t.inputBg, border: `1px solid ${t.border}`,
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
@@ -973,8 +973,8 @@ export default function HomeContent() {
                     </select>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>דקות</div>
-                    <select value={customMinute} onChange={e => setCustomMinute(Number(e.target.value))} style={{
+                    <label htmlFor="plan-min" style={{ fontSize: 11, color: t.muted, fontWeight: 500, display: "block", cursor: "pointer" }}>דקות</label>
+                    <select id="plan-min" value={customMinute} onChange={e => setCustomMinute(Number(e.target.value))} style={{
                       background: t.inputBg, border: `1px solid ${t.border}`,
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
