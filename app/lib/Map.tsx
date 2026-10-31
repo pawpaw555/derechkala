@@ -328,7 +328,6 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               width:${size}px;height:${size}px;
               background:${s.lineColor};
               border-color:${isFrom ? "#5aa880" : isTo ? "#aa4858" : "#0e0e11"};
-              --glow:${s.lineColor}8c;
             "></div>`,
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
@@ -422,9 +421,9 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         נתפס מיד בעין. לכן הגוונים נשמרים — הם נושאים משמעות — והבליטות
         מגיעה משלוש טבעות: ליבה צבעונית, טבעת מנוגדת, הילה.
 
-        בזום הרחוק הסמנים גדלים ב-30% ופועמים, כי שם המסר הוא "יש כאן
-        דברים, התקרבו". ברגע שהשמות נדלקים הפעימה נעצרת. מי שביקש במערכת
-        ההפעלה להפחית תנועה לא מקבל אותה בכלל.
+        בזום הרחוק הסמנים גדלים ב-30%, כי שם המסר הוא "יש כאן דברים,
+        התקרבו". נוסתה גם פעימה קלה בזום הזה; בעל האתר ראה אותה ואמר
+        שהיא חזקה מדי, והיא הוסרה. הגודל נשאר.
       */}
       <style>{`
         .mk { box-sizing: border-box; cursor: pointer; position: relative;
@@ -433,27 +432,13 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               box-shadow: 0 0 0 2px #ffffffee, 0 1px 4px rgba(0,0,0,.45); }
         .mk-poi { width: 9px; height: 9px; background: #2563eb;
               border: 2px solid #fff; transform: rotate(45deg);
-              box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.4);
-              --glow: rgba(37,99,235,.55); }
+              box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.4); }
         .mk-rail { width: 10px; height: 10px; background: #334155;
               border: 2px solid #fff;
-              box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.45);
-              --glow: rgba(51,65,85,.6); }
+              box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.45); }
         .map-far .mk-station, .map-far .mk-rail { transform: scale(1.3); }
         .map-far .mk-poi { transform: rotate(45deg) scale(1.3); }
-        .map-far .mk::after {
-          content: ""; position: absolute; inset: -2px; border-radius: inherit;
-          animation: mkPulse 2.2s ease-out infinite;
-        }
-        @keyframes mkPulse {
-          0%   { box-shadow: 0 0 0 0 var(--glow); }
-          70%  { box-shadow: 0 0 0 9px rgba(0,0,0,0); }
-          100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .map-far .mk::after { animation: none; }
-          .mk { transition: none; }
-        }
+        @media (prefers-reduced-motion: reduce) { .mk { transition: none; } }
       `}</style>
       {/* הרצועה הזאת הייתה טקסט אפור בן 11 פיקסלים על רקע קבוע בהיר —
           גם במצב כהה, על עמוד ברקע 06060a. היא נשארה מפתח בלבד: המשתמש
