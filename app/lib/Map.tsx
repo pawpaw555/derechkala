@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "./data";
 import { PLACES } from "./places";
+import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
 import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
@@ -84,6 +85,8 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const poiLayersRef = useRef<Marker[]>([]);
   /** תוויות המוקדים בנפרד מהסמנים, כי רק הן נבדקות מול שמות התחנות. */
   const poiLabelsRef = useRef<Marker[]>([]);
+  /** תחנות רכבת ישראל: הסמנים גלויים תמיד, התוויות נדלקות עם השמות. */
+  const railLabelsRef = useRef<Marker[]>([]);
   const declutterRef = useRef<() => void>(() => {});
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
@@ -185,6 +188,53 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       poiLayersRef.current = poiLayer;
       poiLabelsRef.current = poiLabels;
 
+      // תחנות רכבת ישראל בטווח הליכה. הסמן גלוי בכל זום — מי שמסתכל על
+      // הקו כולו רוצה לדעת איפה אפשר להחליף לרכבת, וארבעה ריבועים אינם
+      // מעמיסים. התווית נדלקת עם שמות התחנות ועוברת את אותו סינון.
+      const railLabels: Marker[] = [];
+      RAIL_STATIONS.forEach(r => {
+        const d = railDistance(r);
+        const popup =
+          `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:170px;padding:2px;">
+             <div style="font-weight:700;font-size:14px;">${r.name}</div>
+             <div style="font-size:11px;color:#666;margin-bottom:6px;">רכבת ישראל</div>
+             <div style="font-size:12px;margin-bottom:8px;">${stationLabel(r.nearStation)}${d !== null ? ` · ${formatDistance(d)}` : ""}</div>
+             <a href="/station/${encodeURIComponent(r.nearStation)}"
+                style="display:block;text-align:center;background:#b04050;color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
+                תחנת הרכבת הקלה</a>
+             <a href="https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}&travelmode=walking"
+                target="_blank" rel="noopener noreferrer"
+                style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
+                🚶 ניווט לתחנת הרכבת</a>
+           </div>`;
+        L.marker([r.lat, r.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="
+              width:9px;height:9px;background:#334155;border:2px solid #fff;
+              box-shadow:0 0 4px #33415577;cursor:pointer;
+            "></div>`,
+            iconSize: [9, 9],
+            iconAnchor: [4.5, 4.5],
+          }),
+        }).bindPopup(popup, { maxWidth: 230 }).addTo(map);
+        railLabels.push(
+          L.marker([r.lat, r.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: `<div style="
+                position:absolute;left:11px;top:-8px;white-space:nowrap;
+                font-family:'Rubik',sans-serif;font-size:10px;font-weight:600;
+                color:#1e293b;background:#e2e8f0dd;border-radius:4px;
+                padding:2px 6px;direction:rtl;cursor:pointer;
+              ">רכבת ישראל</div>`,
+              iconSize: [0, 0],
+            }),
+          }).bindPopup(popup, { maxWidth: 230 })
+        );
+      });
+      railLabelsRef.current = railLabels;
+
       /**
        * שם תחנה מנצח שם מוקד. הזזת התוויות לא פתרה את ההתנגשות — מוקד
        * יושב עשרות פיקסלים מהתחנה שלו, ושני השמות ארוכים: צד נגדי נתן
@@ -200,7 +250,8 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         });
         const hits = (r: DOMRect) =>
           boxes.some(b => r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top);
-        poiLabelsRef.current.forEach(l => {
+        // סדר העדיפות: שם תחנה, אחריו רכבת ישראל, ורק אז מוקד עניין.
+        [...railLabelsRef.current, ...poiLabelsRef.current].forEach(l => {
           const el = l.getElement();
           const inner = el && (el.firstElementChild as HTMLElement | null);
           if (!inner) return;
@@ -218,6 +269,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         zoomLayersRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         poiLayersRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
         poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
+        railLabelsRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         setStage(pois ? "all" : names ? "stations" : "far");
         if (pois) requestAnimationFrame(declutter);
       };
@@ -385,6 +437,10 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
           <span style={{ width: 9, height: 9, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block" }} />
           מוקד עניין
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
+          <span style={{ width: 9, height: 9, background: "#334155", display: "inline-block" }} />
+          רכבת ישראל
         </span>
         <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
       </div>
