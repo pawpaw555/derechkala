@@ -100,19 +100,19 @@ export const LANDMARKS: Landmark[] = [
   // קרליבך
   { name: "קניון TLV", stationName: "קרליבך", walkMins: 4, lineId: "red" },
   // אלנבי
-  { name: "שוק הכרמל", stationName: "אלנבי", walkMins: 5, lineId: "red" },
+  { name: "שוק הכרמל", stationName: "אלנבי", walkMins: 11, lineId: "red" },
   { name: "שדרות רוטשילד", stationName: "אלנבי", walkMins: 6, lineId: "red" },
   // אליפלט
   { name: "פארק המסילה", stationName: "אליפלט", walkMins: 4, lineId: "red" },
-  { name: "נווה צדק", stationName: "אליפלט", walkMins: 6, lineId: "red" },
+  { name: "נווה צדק", stationName: "אליפלט", walkMins: 7, lineId: "red" },
   // שלמה (סלמה)
-  { name: "יפו העתיקה", stationName: "שלמה (סלמה)", walkMins: 7, lineId: "red" },
+  { name: "יפו העתיקה", stationName: "שלמה (סלמה)", walkMins: 11, lineId: "red" },
   { name: "תיאטרון גשר", stationName: "שלמה (סלמה)", walkMins: 5, lineId: "red" },
   // אצטדיון בלומפילד
-  { name: "אצטדיון בלומפילד", stationName: "אצטדיון בלומפילד", walkMins: 2, lineId: "red" },
+  { name: "אצטדיון בלומפילד", stationName: "אצטדיון בלומפילד", walkMins: 4, lineId: "red" },
   { name: "שוק הפשפשים", stationName: "אצטדיון בלומפילד", walkMins: 6, lineId: "red" },
   // הבעש"ט
-  { name: "בית חולים וולפסון", stationName: "הבעש\"ט", walkMins: 4, lineId: "red" },
+  { name: "בית חולים וולפסון", stationName: "הבעש\"ט", walkMins: 9, lineId: "red" },
   // יוספטל
   { name: "קניון בת ים", stationName: "יוספטל", walkMins: 5, lineId: "red" },
   // בלפור
