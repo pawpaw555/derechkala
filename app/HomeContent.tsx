@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel } from "./lib/data";
-import { searchCombined, PlaceHit } from "./lib/places";
+import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
@@ -14,14 +14,6 @@ const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
 
-
-type SearchResults = {
-  places: PlaceHit[];
-  /** כשהוקלד שם תחנה במדויק, התחנות מוצגות לפני המקומות. */
-  stationsFirst?: boolean;
-  stations: Station[];
-  landmarks: (Landmark & { station: Station | undefined })[];
-};
 
 function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
   results: SearchResults;

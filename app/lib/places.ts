@@ -1,4 +1,4 @@
-import { STATIONS, LANDMARKS, Station, distanceMetres, formatDistance, searchAll, normalizeHebrew } from "./data";
+import { STATIONS, LANDMARKS, Station, Landmark, distanceMetres, formatDistance, searchAll, normalizeHebrew } from "./data";
 
 /**
  * מקומות שאפשר לחפש לפי האזור, לא לפי שם התחנה.
@@ -228,7 +228,22 @@ export function searchPlaces(query: string, limit = 4): PlaceHit[] {
  * "בורסת היהלומים · 2 דק׳" ומיד אחריו "בורסת היהלומים · 4 דקות".
  * רשומה עם קואורדינטה מאומתת גוברת, והכפילה נושרת.
  */
-export function searchCombined(query: string) {
+/**
+ * צורת התשובה של `searchCombined`. הוכרזה קודם לכן פעמיים, בעמוד הבית
+ * ובעמוד התחנה, ושתי ההכרזות נפרדו: `hiddenCount` נוסף לאחת ולא לשנייה.
+ * הטיפוס יושב אצל מי שמייצר את הערך.
+ */
+export type SearchResults = {
+  stations: Station[];
+  landmarks: (Landmark & { station: Station | undefined })[];
+  places: PlaceHit[];
+  /** כשהוקלד שם תחנה במדויק, התחנות מוצגות לפני המקומות. */
+  stationsFirst?: boolean;
+  /** כמה תוצאות נחתכו ואינן מוצגות. 0 = הרשימה שלמה. */
+  hiddenCount?: number;
+};
+
+export function searchCombined(query: string): SearchResults {
   const base = searchAll(query);
   const places = searchPlaces(query);
   const taken = new Set(places.map(p => p.name));

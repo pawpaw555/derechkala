@@ -6,7 +6,7 @@ import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
 import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
-import { searchCombined, PlaceHit } from "../../lib/places";
+import { searchCombined, PlaceHit, SearchResults } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
@@ -14,13 +14,6 @@ const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
 type Props = {
   stationName: string;
   station: Station | null;
-};
-
-type SearchResults = {
-  places: PlaceHit[];
-  stationsFirst?: boolean;
-  stations: Station[];
-  landmarks: (Landmark & { station: Station | undefined })[];
 };
 
 /** שכנה אחת או כמה: אהרונוביץ' היא צומת ולכן יש לה שתי תחנות קודמות. */
@@ -492,7 +485,7 @@ const content = STATION_CONTENT[stationName];
                         </div>
                       </button>
                     ))}
-                  </div>
+                                </div>
                 )}
                 {noResults && (
                   <div style={{
