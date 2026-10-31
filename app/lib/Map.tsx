@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel } from "./data";
+import { Station, distanceMetres, formatDistance, stationLabel } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
-import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
+import type { Map as LeafletMap, Marker, Layer } from "leaflet";
 
 type Props = {
   stations: Station[];
@@ -23,29 +23,14 @@ type Props = {
   route?: [number, number][] | null;
 };
 
-// כרטיס תחנה אחיד — משמש גם ללחיצה על סמן וגם ללחיצה על רקע המפה.
-// כשנמסרת נקודת מוצא, מוצגים גם מרחק וזמן הליכה ממנה.
-function stationPopup(s: Station, from?: { lat: number; lng: number }) {
+// כרטיס תחנה, לסמן ולתווית. היה לו גם מצב שני שהציג מרחק וזמן הליכה
+// מנקודה שנלחצה על רקע המפה; בעל האתר ביקש להסיר את הלחיצה ההיא, ואיתה
+// ירד הענף — קוד שאיש אינו מגיע אליו גרוע מקוד שאינו קיים.
+function stationPopup(s: Station) {
   const near = s.nearbyPlaces.slice(0, 2).join(" · ");
-  let meta = s.city;
-  let walkable = true;
-  if (from) {
-    // דרך walkEstimate כמו כל שאר האתר. כאן אין מסלול לשאול עליו, והכלל
-    // מרשה אווירי במקרה הזה — אבל הוא מוכרע במקום אחד, לא משוכפל כאן.
-    const est = walkEstimate(distanceMetres(from, s), null);
-    if (est.metres !== null) {
-      // לחיצה על רקע המפה יכולה ליפול בחדרה. הכרטיס הציג שם "19.1 ק״מ ·
-      // כ-239 דק׳ הליכה" וכפתור ניווט רגלי — תשובה בטוחה ואבסורדית,
-      // אותו סוג כשל כמו מצב ההגעה שהחזיר שעה מאוחרת מהמבוקשת.
-      walkable = isWalkable(est.metres);
-      meta += ` · ${formatDistance(est.metres)}`;
-      if (walkable && est.trustTime) meta += ` · כ-${walkMinutes(est.metres)} דק׳ הליכה`;
-      else if (!walkable) meta += " · רחוק מכדי ללכת";
-    }
-  }
+  const meta = s.city;
   return `
     <div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:180px;padding:2px;">
-      ${from ? `<div style="font-size:11px;color:#777;margin-bottom:4px;">התחנה הקרובה לנקודה שבחרת</div>` : ""}
       <div style="font-weight:700;font-size:15px;margin-bottom:2px;">${s.name}</div>
       <div style="font-size:11px;color:#666;margin-bottom:${near ? 4 : 8}px;">${meta}</div>
       ${near ? `<div style="font-size:11px;color:#888;margin-bottom:8px;">📍 ${near}</div>` : ""}
@@ -55,10 +40,10 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
       <a href="/?to=${encodeURIComponent(s.name)}"
          style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;margin-bottom:6px;">
          תכנן נסיעה לכאן</a>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=${walkable ? "walking" : "transit"}"
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
          target="_blank" rel="noopener noreferrer"
          style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
-         ${walkable ? "🚶 ניווט לתחנה" : "🚌 איך מגיעים לתחנה"}</a>
+         🚶 ניווט לתחנה</a>
     </div>`;
 }
 
@@ -280,16 +265,6 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       syncRef.current = sync;
       map.on("zoomend", sync);
       sync();
-
-      // לחיצה על רקע המפה הייתה קליק מת — 53% מהקליקים בעמוד.
-      // עכשיו היא עונה על השאלה שנשאלה בפועל: איזו תחנה קרובה לנקודה הזאת.
-      map.on("click", (e: LeafletMouseEvent) => {
-        const s = findNearestStation(e.latlng.lat, e.latlng.lng);
-        L.popup({ maxWidth: 240 })
-          .setLatLng(e.latlng)
-          .setContent(stationPopup(s, { lat: e.latlng.lat, lng: e.latlng.lng }))
-          .openOn(map);
-      });
 
       setMapReady(true);
     })();
