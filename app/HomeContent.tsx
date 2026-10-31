@@ -5,10 +5,9 @@ import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
-import { SITE_NAME } from "./lib/SiteComponents";
+import { SiteHeader } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
-import ThemeToggle from "./lib/ThemeToggle";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
@@ -440,20 +439,7 @@ export default function HomeContent() {
         .line-card:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px #00000015 !important; }
       `}</style>
 
-      {/* Header */}
-      <header style={{
-        padding: "14px 16px", display: "flex",
-        justifyContent: "space-between", alignItems: "center",
-        borderBottom: `1px solid ${t.border}`, background: t.card,
-      }}>
-        <nav style={{ display: "flex", gap: 14 }}>
-          <a href="/hours" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>שעות פעילות</a>
-          <a href="/line-red" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>תחנות</a>
-          <a href="/map" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>מפה</a>
-        </nav>
-        <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
-        <ThemeToggle />
-      </header>
+      <SiteHeader />
 
       {/* Hero */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "52px 24px 36px", textAlign: "center" }}>

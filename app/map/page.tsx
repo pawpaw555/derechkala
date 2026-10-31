@@ -1,4 +1,3 @@
-import MapHeader from "./MapHeader";
 import { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_URL } from "../lib/constants";
@@ -39,7 +38,7 @@ export default function MapPage() {
           ]
         })}}
       />
-      <MapHeader />
+      <SiteHeader />
       <section style={{ maxWidth: 760, margin: "0 auto", padding: "36px 24px 48px" }}>
 
         {/* H1 — server rendered for SEO */}

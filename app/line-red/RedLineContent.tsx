@@ -21,7 +21,7 @@ export default function RedLineContent() {
       fontFamily: "'Rubik', sans-serif", direction: "rtl",
       transition: "background 0.2s",
     }}>
-      <SiteHeader backHref="/" />
+      <SiteHeader />
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px" }}>
 
       {/* Breadcrumbs */}

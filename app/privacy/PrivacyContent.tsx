@@ -19,7 +19,7 @@ export default function PrivacyContent() {
         a { text-decoration: none; }
       `}</style>
 
-      <SiteHeader backHref="/" />
+      <SiteHeader />
 
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "40px 24px 48px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: t.text, marginBottom: 8 }}>מדיניות פרטיות</h1>

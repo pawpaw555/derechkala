@@ -1,33 +1,76 @@
 "use client";
+import { usePathname } from "next/navigation";
 import { useTheme } from "./useTheme";
 import ThemeToggle from "./ThemeToggle";
 
 import { SITE_NAME } from "./constants";
 export { SITE_NAME };
 
-export function SiteHeader({ backHref, backLabel }: { backHref?: string; backLabel?: string }) {
+/**
+ * האדר אחד לכל האתר. קודם לכן היו שלושה: אחד בעמוד הבית, אחד בעמוד
+ * המפה, והשלישי — זה — בשאר 39 העמודים. לשלושתם היו קישורים שונים בסדר
+ * שונה, והשלישי לא כלל את עמוד השעות בכלל, כך שמעמוד תחנה לא הייתה שום
+ * דרך להגיע אליו. בנוסף הוא היה בנוי משלוש משבצות, כשהראשונה היא קישור
+ * "חזרה" שהיעד שלו משתנה מעמוד לעמוד ובחלקם ריק — ולכן מה שיושב בכל
+ * פינה התחלף בכל מעבר בין עמודים.
+ *
+ * שתי משבצות קבועות: הלוגו, ואז התפריט עם המתג. התפריט נושא את אותם
+ * ארבעה קישורים באותו סדר בכל עמוד, והעמוד הנוכחי מסומן.
+ */
+const NAV = [
+  { href: "/", label: "דף הבית" },
+  { href: "/map", label: "מפה" },
+  { href: "/line-red", label: "תחנות" },
+  { href: "/hours", label: "שעות פעילות" },
+];
+
+/** עמוד תחנה ועמודי הקווים שייכים כולם ל"תחנות". */
+function isCurrent(href: string, path: string): boolean {
+  if (href === "/") return path === "/";
+  if (href === "/line-red") return path.startsWith("/line-") || path.startsWith("/station/");
+  return path === href || path.startsWith(href + "/");
+}
+
+export function SiteHeader() {
   const { t } = useTheme();
+  const path = usePathname() || "/";
   return (
     <header style={{
-      padding: "18px 24px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
+      padding: "14px 20px",
+      display: "flex", flexWrap: "wrap", gap: 10,
+      justifyContent: "space-between", alignItems: "center",
       borderBottom: `1px solid ${t.border}`,
       background: t.card,
     }}>
-      {backHref
-        ? <a href={backHref} style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>{backLabel || "חזרה"}</a>
-        : <div style={{ width: 60 }} />
-      }
-      <a href="/" style={{ textDecoration: "none" }}>
+      <a href="/" style={{ textDecoration: "none", flexShrink: 0 }}>
         <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>{SITE_NAME}</span>
       </a>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <a href="/map" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>מפה</a>
-        <a href="/" style={{ color: t.muted, fontSize: 14, fontWeight: 500, textDecoration: "none" }}>דף הבית</a>
+      {/* הגופן והמרווח יושבים ב-CSS ולא ב-style, כי ב-375px התפריט חרג
+          ב-23 פיקסלים ונשבר לשתי שורות — והעדפת מדיה אינה אפשרית בסגנון
+          מוטבע. נמדד: 71 לוגו + 277 תפריט מול 335 פנויים. */}
+      <style>{`
+        .site-nav { gap: 14px; }
+        .site-nav a { font-size: 13px; }
+        @media (max-width: 420px) {
+          .site-nav { gap: 8px; }
+          .site-nav a { font-size: 12px; }
+        }
+      `}</style>
+      <nav className="site-nav" style={{ display: "flex", flexWrap: "wrap", alignItems: "center" }}>
+        {NAV.map(l => {
+          const on = isCurrent(l.href, path);
+          return (
+            <a key={l.href} href={l.href} aria-current={on ? "page" : undefined} style={{
+              color: on ? "#b04050" : t.muted,
+              fontWeight: on ? 600 : 500,
+              textDecoration: "none",
+            }}>
+              {l.label}
+            </a>
+          );
+        })}
         <ThemeToggle />
-      </div>
+      </nav>
     </header>
   );
 }

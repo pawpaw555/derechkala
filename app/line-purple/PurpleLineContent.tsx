@@ -19,7 +19,7 @@ export default function PurpleLineContent() {
         a { text-decoration: none; }
       `}</style>
 
-      <SiteHeader backHref="/" />
+      <SiteHeader />
 
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "40px 24px 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>

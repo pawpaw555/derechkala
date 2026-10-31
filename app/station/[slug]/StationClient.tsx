@@ -192,7 +192,7 @@ const content = STATION_CONTENT[stationName];
         .btn-reset-s:hover { border-color: #b04050 !important; color: #b04050 !important; }
       `}</style>
 
-      <SiteHeader backHref={station?.lineHref || "/"} />
+      <SiteHeader />
 
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px" }}>
 
