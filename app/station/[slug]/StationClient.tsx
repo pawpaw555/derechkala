@@ -253,7 +253,7 @@ const content = STATION_CONTENT[stationName];
         {(content || station) && (
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>כתובת</h2>
-            {(content?.address || station?.address || "").split(/,\s*(?=כניסה)/).map((line, i) => (
+            {(content?.address || "").split(/,\s*(?=כניסה)/).map((line, i) => (
               <div key={i} style={{ fontSize: 14, color: t.text, fontWeight: 500, marginBottom: 2 }}>
                 {line.trim()}
               </div>

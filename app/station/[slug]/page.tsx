@@ -91,7 +91,7 @@ export default async function StationPage({ params }: Props) {
         },
         address: {
           "@type": "PostalAddress",
-          streetAddress: content?.address ?? station.address,
+          streetAddress: content?.address,
           addressLocality: content?.city ?? station.city,
         },
       }
