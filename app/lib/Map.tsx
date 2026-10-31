@@ -84,10 +84,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const poiLayersRef = useRef<Marker[]>([]);
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
-  const { t, dark } = useTheme();
-  /** #b04050 על רקע הכרטיס הכהה הוא 3.11:1, מתחת לסף. אותו גוון שתיקן
-   *  את כפתור בחירת היעד מהמפה. הסמלים עצמם נשארים בצבע הסמן האמיתי. */
-  const hint = dark ? "#e08090" : "#b04050";
+  const { t } = useTheme();
   const markersRef = useRef<Marker[]>([]);
   const overlayRef = useRef<Layer[]>([]);
   /** מסנכרן את השכבות תלויות הזום. ב-ref ולא על אובייקט המפה. */
@@ -332,38 +329,46 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `1px solid ${t.border}` }}>
       {/* הרצועה הזאת הייתה טקסט אפור בן 11 פיקסלים על רקע קבוע בהיר —
-          גם במצב כהה, על עמוד ברקע 06060a. ומשתמש שנשאל עליה לא ידע
-          בכלל שהיא קיימת. עכשיו היא עוקבת אחרי הערכה, ואומרת בכל רגע
-          את הדבר היחיד שרלוונטי: קודם מה לעשות, ואחר כך מה רואים. */}
+          גם במצב כהה, על עמוד ברקע 06060a. היא נשארה מפתח בלבד: המשתמש
+          דיווח שהוא לא מבחין בה, ורמז שיושב מחוץ למפה לא נקרא כשהעין
+          על המפה. הקריאה לפעולה עברה לתוך המפה עצמה. */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
         padding: "9px 12px", background: t.card,
         borderBottom: `1px solid ${t.border}`,
         fontSize: 12, fontFamily: "'Rubik', sans-serif", direction: "rtl",
       }}>
-        {stage === "far" ? (
-          <span style={{ color: hint, fontWeight: 600 }}>
-            🔍 התקרבו במפה כדי לראות את שמות התחנות
-          </span>
-        ) : (
-          <>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
-              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
-              תחנה
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
+          <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
+          תחנה
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
+          <span style={{ width: 9, height: 9, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block" }} />
+          מוקד עניין
+        </span>
+        <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
+      </div>
+      <div style={{ position: "relative" }}>
+        <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
+        {/* שלב הביניים ("עוד קצת למוקדי עניין") נמחק — המשתמש קרא לו
+            נדנוד, והוא צודק: אחרי שהשמות דלוקים אין מה לבקש ממנו.
+            pointer-events: none כדי שהגרירה והלחיצה יעברו דרכו. */}
+        {stage === "far" && (
+          <div style={{
+            position: "absolute", top: 12, left: 0, right: 0, zIndex: 1000,
+            display: "flex", justifyContent: "center", pointerEvents: "none",
+          }}>
+            <span style={{
+              background: "#11112ae6", color: "#ffffff",
+              fontFamily: "'Rubik', sans-serif", fontSize: 12, fontWeight: 600,
+              padding: "7px 14px", borderRadius: 999,
+              boxShadow: "0 2px 10px #00000040", direction: "rtl",
+            }}>
+              🔍 התקרבו כדי לראות את שמות התחנות
             </span>
-            {stage === "all" ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
-                <span style={{ width: 9, height: 9, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block" }} />
-                מוקד עניין
-              </span>
-            ) : (
-              <span style={{ color: hint, fontWeight: 600 }}>🔍 עוד קצת למוקדי עניין באזור</span>
-            )}
-            <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
-          </>
+          </div>
         )}
       </div>
-      <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
     </div>
   );
 }
