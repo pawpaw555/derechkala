@@ -66,13 +66,13 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
  */
 const LABEL_ZOOM = 14;
 /**
- * מוקדי העניין נדלקים דרגה אחת מאוחר יותר. נמדד בזום 14 על 56 התוויות:
- * 13 זוגות חופפים, מתוכם 7 בין שם תחנה לשם מוקד ו-3 בין שני מוקדים.
- * דחיית המוקדים לזום 15 משאירה 3 חפיפות בלבד, וגם מסדרת את הסדר —
- * קודם שמות התחנות, ואחר כך הפירוט סביבן. הורדת הסף ל-13 נבדקה גם היא
- * ונדחתה: 55 חפיפות.
+ * מוקדי העניין נדלקו דרגה אחת מאוחר יותר, כדי להימנע מ-13 זוגות תוויות
+ * חופפים בזום 14. המשתמש ביקש לראות אותם כבר בזום הראשון שבו יש שמות,
+ * ולכן הסיבה טופלה במקום התוצאה: שתי משפחות התוויות ישבו באותו צד של
+ * הסמן — שתיהן `right`, כלומר משמאל לנקודה — ולכן התנגשו. שם תחנה נשאר
+ * משמאל לסמן, ושם מוקד עבר מימין לו. הורדת הסף ל-13 נבדקה ונדחתה: 55 חפיפות.
  */
-const POI_LABEL_ZOOM = 15;
+const POI_LABEL_ZOOM = LABEL_ZOOM;
 
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -82,6 +82,9 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const zoomLayersRef = useRef<Marker[]>([]);
   /** תוויות וסמני המוקדים, שנדלקים בזום גבוה יותר מתוויות התחנות. */
   const poiLayersRef = useRef<Marker[]>([]);
+  /** תוויות המוקדים בנפרד מהסמנים, כי רק הן נבדקות מול שמות התחנות. */
+  const poiLabelsRef = useRef<Marker[]>([]);
+  const declutterRef = useRef<() => void>(() => {});
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
   const { t } = useTheme();
@@ -131,6 +134,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
 
       // נקודות עניין אינן תלויות במוצא או ביעד, ולכן נבנות כאן פעם אחת.
       const poiLayer: Marker[] = [];
+      const poiLabels: Marker[] = [];
       PLACES.forEach(p => {
         const st = stations.find(x => x.name === p.stationName);
         const m = st ? Math.round(distanceMetres(p, st)) : null;
@@ -159,12 +163,12 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             }),
           }).bindPopup(poiPopup, { maxWidth: 220 })
         );
-        poiLayer.push(
+        poiLabels.push(
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
               className: "",
               html: `<div style="
-                position:absolute;right:9px;top:-8px;white-space:nowrap;
+                position:absolute;left:11px;top:-8px;white-space:nowrap;
                 font-family:'Rubik',sans-serif;font-size:10px;font-weight:500;
                 color:#1d4ed8;background:#eff6ffdd;border-radius:4px;
                 padding:2px 6px;direction:rtl;cursor:pointer;
@@ -175,6 +179,33 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         );
       });
       poiLayersRef.current = poiLayer;
+      poiLabelsRef.current = poiLabels;
+
+      /**
+       * שם תחנה מנצח שם מוקד. הזזת התוויות לא פתרה את ההתנגשות — מוקד
+       * יושב עשרות פיקסלים מהתחנה שלו, ושני השמות ארוכים: צד נגדי נתן
+       * 14 חפיפות ומיקום מתחת לסמן 16, מול 13 במצב המקורי. לכן מודדים
+       * בפועל ומסתירים את מה שמתנגש, במקום לנחש מיקום. רץ אחרי שליפט
+       * מיקם את הסמנים, ולכן בתוך requestAnimationFrame.
+       */
+      const declutter = () => {
+        const boxes: DOMRect[] = [];
+        zoomLayersRef.current.forEach(l => {
+          const el = l.getElement();
+          if (el && el.firstElementChild) boxes.push(el.firstElementChild.getBoundingClientRect());
+        });
+        const hits = (r: DOMRect) =>
+          boxes.some(b => r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top);
+        poiLabelsRef.current.forEach(l => {
+          const el = l.getElement();
+          const inner = el && (el.firstElementChild as HTMLElement | null);
+          if (!inner) return;
+          inner.style.visibility = "visible";
+          const r = inner.getBoundingClientRect();
+          if (hits(r)) inner.style.visibility = "hidden";
+          else boxes.push(r);
+        });
+      };
 
       const sync = () => {
         const z = map.getZoom();
@@ -182,8 +213,12 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         const pois = z >= POI_LABEL_ZOOM;
         zoomLayersRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         poiLayersRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
+        poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
         setStage(pois ? "all" : names ? "stations" : "far");
+        if (pois) requestAnimationFrame(declutter);
       };
+      declutterRef.current = () => requestAnimationFrame(declutter);
+      map.on("moveend", () => { if (map.getZoom() >= POI_LABEL_ZOOM) requestAnimationFrame(declutter); });
       syncRef.current = sync;
       map.on("zoomend", sync);
       sync();
@@ -279,6 +314,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
 
       zoomLayersRef.current = labels;
       syncRef.current();
+      declutterRef.current();
     })();
 
     return () => { cancelled = true; };
