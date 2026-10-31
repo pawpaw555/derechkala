@@ -21,7 +21,7 @@ S=$(curl -s "$ST")
 echo "═══ בלוק רגרסיה ═══"
 ok "tsc"                        "$(npx tsc --noEmit 2>&1 | grep -c 'error TS')"
 ok "build"                      "$BUILD"
-ok "lint (בסיס 26)"             "$(npm run lint 2>&1 | grep -o '[0-9]* problems' | head -1)"
+ok "lint (בסיס 18)"             "$(npm run lint 2>&1 | grep -o '[0-9]* problems' | head -1)"
 # grep -c סופר שורות, ו-Next קובע את מעברי השורה ב-HTML לפי שיקוליו:
 # הוספת בלוק <style> אחד הזיזה את אותן מחרוזות מ-2 שורות ל-3 בלי ששום
 # תוכן השתנה. סופרים מופעים, ומתוך תשובה אחת ולא שתיים.
