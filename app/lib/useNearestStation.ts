@@ -111,6 +111,10 @@ export function useNearestStation() {
   // כל שינוי מיקום מפעיל בקשת מסלול. בלי מונה, תשובה איטית של בקשה ישנה
   // דורסת תשובה חדשה יותר, והפאנל מציג מרחק למקום אחר ממה שעל המסך.
   const routeSeq = useRef(0);
+  // אותו שיקול בחיפוש הכתובות: שאילתה עם מספר בית מפעילה גם קריאה שנייה
+  // ל-Nominatim ולכן איטית בהרבה מהשאילתה שבאה אחריה. בלי מונה, "הלוחמים 2"
+  // חוזרת אחרי "הלוחמים 25" ודורסת אותה — השדה מראה טקסט אחד והרשימה אחר.
+  const searchSeq = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -175,6 +179,7 @@ export function useNearestStation() {
   const search = async (raw?: string) => {
     const q = (raw ?? place).trim();
     if (q.length < 2) return;
+    const seq = ++searchSeq.current;
     setSearching(true);
     setPlaceMsg(null);
     setResults([]);
@@ -214,12 +219,15 @@ export function useNearestStation() {
         return true;
       }).slice(0, 5);
 
+      if (seq !== searchSeq.current) return;
       if (merged.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
       setResults(merged);
     } catch {
+      if (seq !== searchSeq.current) return;
       setPlaceMsg("החיפוש לא זמין כרגע. אפשר ללחוץ על המפה במקום שבו אתם נמצאים.");
+    } finally {
+      if (seq === searchSeq.current) setSearching(false);
     }
-    setSearching(false);
   };
 
   const onType = (v: string) => {
