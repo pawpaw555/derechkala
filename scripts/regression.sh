@@ -26,9 +26,10 @@ ok "/hours 15:40 · 19:45"       "$(curl -s $B/hours|grep -c '15:40') · $(curl 
 ok "עמוד תחנה h2 · h1"          "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
 ok "TrainStation · FAQPage"     "$(echo "$S"|grep -c 'TrainStation') · $(echo "$S"|grep -c 'FAQPage')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
-ok "תחנות·landmarks·pois·places" "$(sed -n '/export const STATIONS/,/^\];/p' app/lib/data.ts|grep -c '{ name:') · $(awk '/export const LANDMARKS/,/^\];/' app/lib/data.ts|grep -c '{ name:') · $(python3 -c "
-import io,re;s=io.open('app/lib/stationContent.ts',encoding='utf-8').read()
-print(len(re.findall(r'\{\s*name:\s*\"(?:[^\"\\\\]|\\\\.)*\",\s*type:',s)))") · $(grep -c '    name: \"' app/lib/places.ts)"
+# כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב
+ok "תחנות·landmarks·pois·places" "$(python3 -I scripts/sources.py counts)"
+# כלל 10: שדה שהשכבה מחשבת ואף ממשק אינו קורא. 12 כולל hiddenCount הפתוח
+ok "שדות בלי קורא בממשק (בסיס 12)" "$(python3 -I scripts/dead-fields.py count)"
 ok "שנקר → ≠ קריית אריה"        "$(curl -s "$B/station/%D7%A9%D7%A0%D7%A7%D7%A8"|grep -o 'תחנה הבאה[^<]*<[^>]*>[^<]*'|grep -c 'קריית אריה')"
 C=""; for p in / /map /line-red /line-green /line-purple /hours /privacy; do C="$C$(curl -s -o /dev/null -w '%{http_code}' $B$p) "; done
 ok "שבעת העמודים"               "$C"
