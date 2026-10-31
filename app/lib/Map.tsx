@@ -163,7 +163,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             }),
           }).bindPopup(poiPopup, { maxWidth: 220 })
         );
-        poiLabels.push(
+        // תחנת אצטדיון בלומפילד קרויה על שם האצטדיון, שיושב 321 מ׳ ממנה.
+        // שתי התוויות הופיעו זו ליד זו ואמרו בדיוק אותו דבר, בלי לרמוז
+        // איזו מהן התחנה. הנקודה הכחולה נשארת — היא מסמנת את האצטדיון
+        // עצמו והכרטיס שלה מסביר את ההבדל — אבל הטקסט לא נכפל.
+        if (p.name !== p.stationName) poiLabels.push(
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
               className: "",
