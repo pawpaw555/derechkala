@@ -86,9 +86,21 @@ export default function HoursContent() {
         <h1 style={{ fontSize: 28, fontWeight: 700, color: t.text, marginBottom: 6 }}>
           שעות פעילות הרכבת הקלה
         </h1>
-        <p style={{ fontSize: 13, color: t.muted, marginBottom: 24 }}>
-          {ready ? `${dayLabel} · ${currentTime}` : "\u00A0"}
-        </p>
+        {/* השעה הייתה שורה אפורה בת 13 פיקסלים מתחת לכותרת, והיא התשובה
+            שבגללה אנשים נכנסים לעמוד הזה. ממורכזת ובולטת, מעל כרטיס הסטטוס
+            שמסביר מה המשמעות שלה. ה-nbsp שומר על הגובה לפני שהשעון עולה,
+            כדי שהעמוד לא יקפוץ. */}
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <div style={{
+            fontSize: 44, fontWeight: 700, color: t.text, lineHeight: 1.1,
+            fontVariantNumeric: "tabular-nums", direction: "ltr",
+          }}>
+            {ready ? currentTime : "\u00A0"}
+          </div>
+          <div style={{ fontSize: 13, color: t.muted, marginTop: 4, fontWeight: 500 }}>
+            {ready ? dayLabel : "\u00A0"}
+          </div>
+        </div>
 
         {/* Is it operating today? */}
         <div style={{
