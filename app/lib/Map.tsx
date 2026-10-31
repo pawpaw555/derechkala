@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "./data";
+import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
@@ -28,13 +28,19 @@ type Props = {
 function stationPopup(s: Station, from?: { lat: number; lng: number }) {
   const near = s.nearbyPlaces.slice(0, 2).join(" · ");
   let meta = s.city;
+  let walkable = true;
   if (from) {
     // דרך walkEstimate כמו כל שאר האתר. כאן אין מסלול לשאול עליו, והכלל
     // מרשה אווירי במקרה הזה — אבל הוא מוכרע במקום אחד, לא משוכפל כאן.
     const est = walkEstimate(distanceMetres(from, s), null);
     if (est.metres !== null) {
+      // לחיצה על רקע המפה יכולה ליפול בחדרה. הכרטיס הציג שם "19.1 ק״מ ·
+      // כ-239 דק׳ הליכה" וכפתור ניווט רגלי — תשובה בטוחה ואבסורדית,
+      // אותו סוג כשל כמו מצב ההגעה שהחזיר שעה מאוחרת מהמבוקשת.
+      walkable = isWalkable(est.metres);
       meta += ` · ${formatDistance(est.metres)}`;
-      if (est.trustTime) meta += ` · כ-${walkMinutes(est.metres)} דק׳ הליכה`;
+      if (walkable && est.trustTime) meta += ` · כ-${walkMinutes(est.metres)} דק׳ הליכה`;
+      else if (!walkable) meta += " · רחוק מכדי ללכת";
     }
   }
   return `
@@ -49,10 +55,10 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
       <a href="/?to=${encodeURIComponent(s.name)}"
          style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;margin-bottom:6px;">
          תכנן נסיעה לכאן</a>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=walking"
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=${walkable ? "walking" : "transit"}"
          target="_blank" rel="noopener noreferrer"
          style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
-         🚶 ניווט לתחנה</a>
+         ${walkable ? "🚶 ניווט לתחנה" : "🚌 איך מגיעים לתחנה"}</a>
     </div>`;
 }
 
