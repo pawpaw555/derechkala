@@ -18,12 +18,12 @@ export type Landmark = {
 };
 export const STATIONS: Station[] = [
   // ── קו אדום — פתח תקווה ──────────────────────────────
-  { name: "תחנה מרכזית פתח תקווה", lat: 32.0947, lng: 34.8868, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "התחנה המרכזית, פתח תקווה", nearbyPlaces: ["שוק פתח תקווה", "תיאטרון המסילה"] },
+  { name: "תחנה מרכזית פתח תקווה", lat: 32.0947, lng: 34.8868, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "התחנה המרכזית, פתח תקווה", nearbyPlaces: ["תיאטרון המסילה"] },
   { name: "פינסקר", lat: 32.0938, lng: 34.8825, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב פינסקר, פתח תקווה", nearbyPlaces: ["שוק פתח תקווה", "מתחמי הבילוי גיסין"] },
   { name: "קרול", lat: 32.0917, lng: 34.8772, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב קרול, פתח תקווה", nearbyPlaces: ["גלריית הציפור הכחולה", "פארק תמר בורנשטיין"] },
   { name: "דנקנר", lat: 32.0910, lng: 34.8718, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב דנקנר, פתח תקווה", nearbyPlaces: ["פארק יד לבנים", "מוזיאון האדם והסביבה"] },
-  { name: "בילינסון", lat: 32.0915, lng: 34.8664, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "בית חולים בילינסון, פתח תקווה", nearbyPlaces: ["מרכז רפואי רבין", "בית חולים שניידר"] },
-  { name: "שחם", lat: 32.0919, lng: 34.8614, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שחם, פתח תקווה", nearbyPlaces: ["מגדלי בסר", "B.S.R סיטי"] },
+  { name: "בילינסון", lat: 32.0915, lng: 34.8664, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "בית חולים בילינסון, פתח תקווה", nearbyPlaces: ["בית חולים בילינסון", "בית חולים שניידר"] },
+  { name: "שחם", lat: 32.0919, lng: 34.8614, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "רחוב שחם, פתח תקווה", nearbyPlaces: ["מגדלי בסר פתח תקווה", "B.S.R סיטי"] },
   // התחנה קרויה על שם רחוב אריה שנקר, התעשיין. מכללת שנקר הופיעה כאן
   // כמקום סמוך — היא ברמת גן, 4.8 ק"מ מכאן, והתחנה הקרובה לה היא אבא הלל.
   // אזור התעשייה קריית אריה אומת ב-510 מ' מהתחנה.
@@ -31,7 +31,7 @@ export const STATIONS: Station[] = [
   { name: "קריית אריה", lat: 32.1062, lng: 34.8617, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", address: "קריית אריה, פתח תקווה", nearbyPlaces: ["אצטדיון שלמה ביטוח", "מסלול ירקון פתח תקווה"] },
   // ── קו אדום — בני ברק ───────────────────────────────
   { name: "גשר אם המושבות", lat: 32.0993, lng: 34.8464, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "גשר אם המושבות, בני ברק", nearbyPlaces: ["אזור תעשייה קריית אריה", "שכונת קריית הרצוג"] },
-  { name: "אהרונוביץ'", lat: 32.0927, lng: 34.8382, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "רחוב אהרונוביץ', בני ברק", nearbyPlaces: ["לשכת האוכלוסין", "מגדלי שקל"] },
+  { name: "אהרונוביץ'", lat: 32.0927, lng: 34.8382, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בני ברק", address: "רחוב אהרונוביץ', בני ברק", nearbyPlaces: ["לשכת האוכלוסין וההגירה", "מגדלי שקל"] },
   // ── קו אדום — רמת גן ────────────────────────────────
   // העיר אומתה מול שני מקורות: OSM מחזיר "תל גיבורים, בני ברק" לקואורדינטה
   // הזו, ו-Google מציג "בני ברק" לתחנה. קודם היה כאן "רמת גן", כך שכותרת
@@ -49,12 +49,12 @@ export const STATIONS: Station[] = [
   { name: "שלמה (סלמה)", lat: 32.0542, lng: 34.7594, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב שלמה, תל אביב", nearbyPlaces: ["יפו העתיקה", "תיאטרון גשר"] },
   { name: "אצטדיון בלומפילד", lat: 32.0500, lng: 34.7589, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "אצטדיון בלומפילד, תל אביב", nearbyPlaces: ["אצטדיון בלומפילד", "שוק הפשפשים"] },
   { name: "ארליך", lat: 32.0457, lng: 34.7583, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב ארליך, תל אביב", nearbyPlaces: ["המכללה האקדמית תל אביב יפו"] },
-  { name: "איסקוב", lat: 32.0419, lng: 34.7569, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב איסקוב, תל אביב", nearbyPlaces: ["קריית חינוך יפו"] },
+  { name: "איסקוב", lat: 32.0419, lng: 34.7569, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב איסקוב, תל אביב", nearbyPlaces: ["קריית חינוך יפו, עירוני ז׳"] },
   { name: "הבעש\"ט", lat: 32.0384, lng: 34.7556, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב הבעש\"ט, תל אביב", nearbyPlaces: ["בית חולים וולפסון", "מרכז הטניס יפו"] },
   { name: "מחרוזת", lat: 32.0333, lng: 34.7515, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", address: "רחוב מחרוזת, תל אביב", nearbyPlaces: ["שכונת עג'מי"] },
   // ── קו אדום — בת ים ─────────────────────────────────
-  { name: "העצמאות", lat: 32.0279, lng: 34.7488, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב העצמאות, בת ים", nearbyPlaces: ["מרכז העיר בת ים", "כיכר המגינים"] },
-  { name: "רוטשילד", lat: 32.0267, lng: 34.7441, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב רוטשילד, בת ים", nearbyPlaces: ["מרכז העיר", "חוף הים בת ים"] },
+  { name: "העצמאות", lat: 32.0279, lng: 34.7488, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב העצמאות, בת ים", nearbyPlaces: ["מרכז העיר בת ים", "כיכר המגינים (המצבה)"] },
+  { name: "רוטשילד", lat: 32.0267, lng: 34.7441, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב רוטשילד, בת ים", nearbyPlaces: ["מרכז העיר בת ים", "חוף הים בת ים"] },
   { name: "ז'בוטינסקי", lat: 32.0214, lng: 34.7432, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב ז'בוטינסקי, בת ים", nearbyPlaces: ["חוף הים בת ים"] },
   { name: "בלפור", lat: 32.0173, lng: 34.7450, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב בלפור, בת ים", nearbyPlaces: ["עיריית בת ים"] },
   { name: "בנימין", lat: 32.0163, lng: 34.7488, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "בת ים", address: "רחוב בנימין, בת ים", nearbyPlaces: ["ספריית בת ים", "גן שעשועים ירושלמי"] },
@@ -65,7 +65,9 @@ export const STATIONS: Station[] = [
 ];
 export const LANDMARKS: Landmark[] = [
   // תחנה מרכזית פתח תקווה
-  { name: "שוק פתח תקווה", stationName: "תחנה מרכזית פתח תקווה", walkMins: 4, lineId: "red" },
+  // אומת ב-Nominatim: השוק נמצא 667 מ' מהתחנה המרכזית ו-387 מ' מפינסקר.
+  // ארבע הדקות שהוצהרו כאן התאימו למרחק שגוי ולתחנה שגויה.
+  { name: "שוק פתח תקווה", stationName: "פינסקר", walkMins: 5, lineId: "red" },
   { name: "תיאטרון המסילה", stationName: "תחנה מרכזית פתח תקווה", walkMins: 6, lineId: "red" },
   // פינסקר
   { name: "מתחמי הבילוי גיסין", stationName: "פינסקר", walkMins: 5, lineId: "red" },
@@ -74,7 +76,9 @@ export const LANDMARKS: Landmark[] = [
   { name: "מוזיאון האדם והסביבה", stationName: "דנקנר", walkMins: 5, lineId: "red" },
   // בילינסון
   { name: "בית חולים בילינסון", stationName: "בילינסון", walkMins: 3, lineId: "red" },
-  { name: "מרכז רפואי רבין", stationName: "בילינסון", walkMins: 4, lineId: "red" },
+  // הוסר: "מרכז רפואי רבין" הוא שמו הרשמי של בית חולים בילינסון. שתי
+  // הרשומות גיאוקודו לאותה נקודה בדיוק, 33 מ' מהתחנה, אבל הצהירו 3 ו-4
+  // דקות — אותו מקום הופיע פעמיים באותו כרטיס עם שני זמנים.
   { name: "בית חולים שניידר", stationName: "בילינסון", walkMins: 5, lineId: "red" },
   // שחם
   { name: "B.S.R סיטי", stationName: "שחם", walkMins: 4, lineId: "red" },
