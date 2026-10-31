@@ -30,7 +30,7 @@ export default function NearestStationFinder({
   /** בעמוד תחנה השאלה היא "איפה אני", לא "איזו תחנה קרובה אליי". */
   buttonLabel?: string;
 }) {
-  const { t } = useTheme();
+  const { t, dark } = useTheme();
   const {
     userLoc, station, routeMetres, accuracy, locError, locating, diag,
     place, results, searching, placeMsg, recent,
@@ -60,9 +60,10 @@ export default function NearestStationFinder({
           disabled={locating}
           aria-busy={locating}
           style={{
-            background: "#f0faf5", border: "1px solid #3a906088",
+            background: dark ? "#1a2220" : "#f0faf5",
+            border: `1px solid ${dark ? "#3a906066" : "#3a906088"}`,
             borderRadius: 10, padding: "10px 18px",
-            color: "#3a9060", fontSize: 14, fontWeight: 600,
+            color: dark ? "#6fc496" : "#2f7a51", fontSize: 14, fontWeight: 600,
             cursor: locating ? "progress" : "pointer",
             fontFamily: "'Rubik', sans-serif", opacity: locating ? 0.7 : 1,
           }}

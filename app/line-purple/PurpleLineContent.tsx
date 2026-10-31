@@ -3,7 +3,7 @@ import { useTheme } from "../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 
 export default function PurpleLineContent() {
-  const { t } = useTheme();
+  const { t, dark } = useTheme();
 
   return (
     <main style={{
@@ -39,10 +39,10 @@ export default function PurpleLineContent() {
         }}>
           <div style={{
             display: "inline-block",
-            background: "#f4f0fc",
-            border: "1px solid #6a52a866",
+            background: dark ? "#1a1a2a" : "#f4f0fc",
+            border: `1px solid ${dark ? "#6a52a855" : "#6a52a866"}`,
             borderRadius: 20, padding: "4px 14px",
-            fontSize: 12, fontWeight: 600, color: "#6a52a8",
+            fontSize: 12, fontWeight: 600, color: dark ? "#b9a8e8" : "#5b4592",
             marginBottom: 16,
           }}>
             בבנייה

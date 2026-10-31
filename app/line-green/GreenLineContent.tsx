@@ -3,7 +3,7 @@ import { useTheme } from "../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 
 export default function GreenLineContent() {
-  const { t } = useTheme();
+  const { t, dark } = useTheme();
 
   return (
     <main style={{
@@ -39,10 +39,10 @@ export default function GreenLineContent() {
         }}>
           <div style={{
             display: "inline-block",
-            background: "#f0faf5",
-            border: "1px solid #3a906066",
+            background: dark ? "#1a2220" : "#f0faf5",
+            border: `1px solid ${dark ? "#3a906055" : "#3a906066"}`,
             borderRadius: 20, padding: "4px 14px",
-            fontSize: 12, fontWeight: 600, color: "#3a9060",
+            fontSize: 12, fontWeight: 600, color: dark ? "#6fc496" : "#2f7a51",
             marginBottom: 16,
           }}>
             בבנייה

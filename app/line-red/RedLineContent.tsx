@@ -8,7 +8,7 @@ import NearestStationFinder from "../lib/NearestStationFinder";
 const cities = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
 export default function RedLineContent() {
-  const { t } = useTheme();
+  const { t, dark } = useTheme();
   const redStations = STATIONS.filter(s => s.lineId === "red");
   const finder = useNearestStation();
 
@@ -38,9 +38,9 @@ export default function RedLineContent() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, marginRight: 26 }}>
         <div style={{
-          background: "#f0faf5", border: "1px solid #3a906044",
+          background: dark ? "#1a2220" : "#f0faf5", border: `1px solid ${dark ? "#3a906055" : "#3a906044"}`,
           borderRadius: 20, padding: "3px 12px",
-          fontSize: 12, fontWeight: 600, color: "#3a9060",
+          fontSize: 12, fontWeight: 600, color: dark ? "#6fc496" : "#2f7a51",
         }}>
           פעיל
         </div>
