@@ -232,6 +232,7 @@ function instantFromTime(sameDay: Date, hhmm: string): Date {
 }
 
 export default function Home() {
+  const EMPTY_RESULTS: SearchResults = { stations: [], landmarks: [], places: [] };
   const [swapSpinning, setSwapSpinning] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
@@ -277,26 +278,26 @@ export default function Home() {
   const handleFromSearch = (val: string) => {
     setFromQuery(val);
     setFromStation(null);
-    setFromResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
+    setFromResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
   };
 
   const handleToSearch = (val: string) => {
     setToQuery(val);
     setToStation(null);
-    setToResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
+    setToResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
   };
 
   const handleFromSelectStation = (s: Station) => {
     setFromStation(s);
     setFromQuery(s.name);
-    setFromResults({ stations: [], landmarks: [], places: [] });
+    setFromResults(EMPTY_RESULTS);
   };
 
   const handleFromSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
     if (!l.station) return;
     setFromStation(l.station);
     setFromQuery(l.name);
-    setFromResults({ stations: [], landmarks: [], places: [] });
+    setFromResults(EMPTY_RESULTS);
   };
 
   // בחירת אזור בוחרת את התחנה שלו, אבל משאירה בשדה את מה שהמשתמש חיפש
@@ -305,27 +306,27 @@ export default function Home() {
     if (!p.station) return;
     setFromStation(p.station);
     setFromQuery(p.name);
-    setFromResults({ stations: [], landmarks: [], places: [] });
+    setFromResults(EMPTY_RESULTS);
   };
 
   const handleToSelectStation = (s: Station) => {
     setToStation(s);
     setToQuery(s.name);
-    setToResults({ stations: [], landmarks: [], places: [] });
+    setToResults(EMPTY_RESULTS);
   };
 
   const handleToSelectPlace = (p: PlaceHit) => {
     if (!p.station) return;
     setToStation(p.station);
     setToQuery(p.name);
-    setToResults({ stations: [], landmarks: [], places: [] });
+    setToResults(EMPTY_RESULTS);
   };
 
   const handleToSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
     if (!l.station) return;
     setToStation(l.station);
     setToQuery(l.name);
-    setToResults({ stations: [], landmarks: [], places: [] });
+    setToResults(EMPTY_RESULTS);
   };
 
   const handleSwap = () => {
@@ -335,6 +336,11 @@ export default function Home() {
     setFromQuery(toQuery);
     setToStation(tmpStation);
     setToQuery(tmpQuery);
+    // כל מטפל אחר שמשנה ערך של שדה מנקה את הרשימה של אותו שדה. ההחלפה
+    // שינתה את שני השדות ולא ניקתה אף אחת, כך שרשימה שנפתחה תחת "מוצא"
+    // נשארה שם בזמן שהטקסט שהוליד אותה עבר ל"יעד".
+    setFromResults(EMPTY_RESULTS);
+    setToResults(EMPTY_RESULTS);
     setResult(null);
   };
 
