@@ -257,15 +257,19 @@ export default function Home() {
   useEffect(() => {
     // עמוד התחנה מקשר לכאן בשני הכיוונים: מי שמחפש תחנת מוצא ומי שמחפש
     // תחנת יעד. קודם לכן רק ?from= נקרא, ולכן לא היה אפשר להגיע לתחנה.
+    // URLSearchParams.get מפענח את הערך בעצמו. ה-decodeURIComponent שהיה
+    // כאן היה פענוח שני, והוא זרק URIError על כל % תועה — זריקה מתוך effect
+    // בטעינה מפילה את כל העץ, כך ש-/?to=% הציג מסך שגיאה באנגלית במקום
+    // האתר. ארבעת המייצרים (StationClient, Map) מקודדים פעם אחת בלבד.
     const params = new URLSearchParams(window.location.search);
     const from = params.get("from");
     if (from) {
-      const station = STATIONS.find(s => s.name === decodeURIComponent(from));
+      const station = STATIONS.find(s => s.name === from);
       if (station) handleFromSelectStation(station);
     }
     const to = params.get("to");
     if (to) {
-      const station = STATIONS.find(s => s.name === decodeURIComponent(to));
+      const station = STATIONS.find(s => s.name === to);
       if (station) handleToSelectStation(station);
     }
   }, []);
