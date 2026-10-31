@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel } from "./lib/data";
 import { searchCombined, PlaceHit } from "./lib/places";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SITE_NAME } from "./lib/SiteComponents";
@@ -150,7 +150,7 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
           <div style={{ flex: 1, textAlign: "right" }}>
             <div style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
             <div style={{ fontSize: 11, color: t.muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
-              תחנת {l.stationName} · {l.walkMins} דקות הליכה
+              {stationLabel(l.stationName)} · {l.walkMins} דקות הליכה
             </div>
           </div>
         </button>
@@ -592,7 +592,7 @@ export default function Home() {
                     borderTop: `1px solid ${t.border}`, padding: "10px 14px",
                     fontSize: 12, color: t.text, lineHeight: 1.6, textAlign: "right",
                   }}>
-                    <strong>נדרשת החלפה בתחנת {result.change}.</strong> הקו מתפצל שם: שירות אחד ממשיך
+                    <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
                     לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
                   </div>
                 )}

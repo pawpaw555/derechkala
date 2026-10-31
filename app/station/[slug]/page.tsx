@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import StationClient from "./StationClient";
-import { STATIONS } from "../../lib/data";
+import { STATIONS, stationLabel } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ } from "../../lib/stationContent";
 import { SITE_URL, SITE_NAME } from "../../lib/constants";
 
@@ -17,12 +17,12 @@ export async function generateMetadata({ params }: Props) {
 
   const description =
     nearby.length >= 2
-      ? `תחנת ${stationName} ברכבת הקלה — ${city}. ליד ${nearby[0]} ו${nearby[1]}. תכנון נסיעה, שעות עזיבה ומפה.`
+      ? `${stationLabel(stationName)} ברכבת הקלה — ${city}. ליד ${nearby[0]} ו${nearby[1]}. תכנון נסיעה, שעות עזיבה ומפה.`
       : nearby.length === 1
-      ? `תחנת ${stationName} ברכבת הקלה — ${city}. ליד ${nearby[0]}. תכנון נסיעה, שעות עזיבה ומפה.`
-      : `תחנת ${stationName} ברכבת הקלה, ${city} — תכנון נסיעה, שעות עזיבה ומפה.`;
+      ? `${stationLabel(stationName)} ברכבת הקלה — ${city}. ליד ${nearby[0]}. תכנון נסיעה, שעות עזיבה ומפה.`
+      : `${stationLabel(stationName)} ברכבת הקלה, ${city} — תכנון נסיעה, שעות עזיבה ומפה.`;
 
-  const title = `תחנת ${stationName} — קו אדום, ${city} | דרך קלה`;
+  const title = `${stationLabel(stationName)} — קו אדום, ${city} | דרך קלה`;
 
   return {
     title,
@@ -68,7 +68,7 @@ export default async function StationPage({ params }: Props) {
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "ראשי", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "תחנות הקו האדום", item: `${SITE_URL}/line-red` },
-      { "@type": "ListItem", position: 3, name: `תחנת ${stationName}`, item: `${SITE_URL}/station/${encodeURIComponent(stationName)}` },
+      { "@type": "ListItem", position: 3, name: stationLabel(stationName), item: `${SITE_URL}/station/${encodeURIComponent(stationName)}` },
     ],
   };
 
@@ -81,7 +81,7 @@ export default async function StationPage({ params }: Props) {
     ? {
         "@context": "https://schema.org",
         "@type": "TrainStation",
-        name: `תחנת ${stationName}`,
+        name: stationLabel(stationName),
         url: stationUrl,
         ...(content?.locationSummary ? { description: content.locationSummary } : {}),
         geo: {

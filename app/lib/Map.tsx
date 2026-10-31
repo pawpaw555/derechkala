@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "./data";
+import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "./data";
 import { PLACES } from "./places";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
 import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
@@ -124,7 +124,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:160px;padding:2px;">
              <div style="font-weight:700;font-size:14px;">${p.name}</div>
              <div style="font-size:11px;color:#666;margin-bottom:6px;">${p.kind}</div>
-             <div style="font-size:12px;margin-bottom:8px;">תחנת ${p.stationName}${m !== null ? ` · ${formatDistance(m)}` : ""}</div>
+             <div style="font-size:12px;margin-bottom:8px;">${stationLabel(p.stationName)}${m !== null ? ` · ${formatDistance(m)}` : ""}</div>
              <a href="/station/${encodeURIComponent(p.stationName)}"
                 style="display:block;text-align:center;background:#b04050;color:#fff;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">
                 פרטי התחנה</a>

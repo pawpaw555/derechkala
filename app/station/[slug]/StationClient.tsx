@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -209,7 +209,7 @@ const content = STATION_CONTENT[stationName];
             <span>›</span>
             <a href="/line-red" style={{ color: t.muted, textDecoration: "none" }}>תחנות הקו האדום</a>
             <span>›</span>
-            <span style={{ color: t.text, fontWeight: 500 }}>תחנת {stationName}</span>
+            <span style={{ color: t.text, fontWeight: 500 }}>{stationLabel(stationName)}</span>
           </div>
           <a href="/map" style={{
             fontSize: 12, color: color, fontWeight: 500,
@@ -342,7 +342,7 @@ const content = STATION_CONTENT[stationName];
                     borderTop: `1px solid ${t.border}`, padding: "10px 14px",
                     fontSize: 12, color: t.text, lineHeight: 1.6, textAlign: "right",
                   }}>
-                    <strong>נדרשת החלפה בתחנת {result.change}.</strong> הקו מתפצל שם: שירות אחד ממשיך
+                    <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
                     לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
                   </div>
                 )}
@@ -486,7 +486,7 @@ const content = STATION_CONTENT[stationName];
                         <div style={{ width: 9, height: 9, borderRadius: "50%", background: l.station?.lineColor || "#888", flexShrink: 0, marginTop: 2 }} />
                         <div style={{ flex: 1, textAlign: "right" }}>
                           <div style={{ fontSize: 13, color: t.text, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{l.name}</div>
-                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>תחנת {l.stationName} · {l.walkMins} דקות הליכה</div>
+                          <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>{stationLabel(l.stationName)} · {l.walkMins} דקות הליכה</div>
                         </div>
                       </button>
                     ))}
