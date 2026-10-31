@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "./data";
 import { PLACES } from "./places";
+import { useTheme } from "./useTheme";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
 import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
 
@@ -64,6 +65,14 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
  * בזום 13 נכנסות 21 מתוך 34, בזום 14 נכנסות 29, ובזום 15 כולן.
  */
 const LABEL_ZOOM = 14;
+/**
+ * מוקדי העניין נדלקים דרגה אחת מאוחר יותר. נמדד בזום 14 על 56 התוויות:
+ * 13 זוגות חופפים, מתוכם 7 בין שם תחנה לשם מוקד ו-3 בין שני מוקדים.
+ * דחיית המוקדים לזום 15 משאירה 3 חפיפות בלבד, וגם מסדרת את הסדר —
+ * קודם שמות התחנות, ואחר כך הפירוט סביבן. הורדת הסף ל-13 נבדקה גם היא
+ * ונדחתה: 55 חפיפות.
+ */
+const POI_LABEL_ZOOM = 15;
 
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -71,6 +80,14 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const onSelectRef = useRef(onSelectStation);
   /** השכבות תלויות הזום, כדי שאפשר יהיה לסנכרן אותן גם אחרי בנייה מחדש. */
   const zoomLayersRef = useRef<Marker[]>([]);
+  /** תוויות וסמני המוקדים, שנדלקים בזום גבוה יותר מתוויות התחנות. */
+  const poiLayersRef = useRef<Marker[]>([]);
+  /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
+  const [stage, setStage] = useState<"far" | "stations" | "all">("far");
+  const { t, dark } = useTheme();
+  /** #b04050 על רקע הכרטיס הכהה הוא 3.11:1, מתחת לסף. אותו גוון שתיקן
+   *  את כפתור בחירת היעד מהמפה. הסמלים עצמם נשארים בצבע הסמן האמיתי. */
+  const hint = dark ? "#e08090" : "#b04050";
   const markersRef = useRef<Marker[]>([]);
   const overlayRef = useRef<Layer[]>([]);
   /** מסנכרן את השכבות תלויות הזום. ב-ref ולא על אובייקט המפה. */
@@ -160,11 +177,15 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           }).bindPopup(poiPopup, { maxWidth: 220 })
         );
       });
-      zoomLayersRef.current = poiLayer;
+      poiLayersRef.current = poiLayer;
 
       const sync = () => {
-        const on = map.getZoom() >= LABEL_ZOOM;
-        zoomLayersRef.current.forEach(l => (on ? l.addTo(map) : map.removeLayer(l)));
+        const z = map.getZoom();
+        const names = z >= LABEL_ZOOM;
+        const pois = z >= POI_LABEL_ZOOM;
+        zoomLayersRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
+        poiLayersRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
+        setStage(pois ? "all" : names ? "stations" : "far");
       };
       syncRef.current = sync;
       map.on("zoomend", sync);
@@ -259,7 +280,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         markersRef.current.push(label);
       });
 
-      zoomLayersRef.current = [...zoomLayersRef.current, ...labels];
+      zoomLayersRef.current = labels;
       syncRef.current();
     })();
 
@@ -309,20 +330,38 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   }, [mapReady, userLoc, route]);
 
   return (
-    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid #22222a" }}>
+    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `1px solid ${t.border}` }}>
+      {/* הרצועה הזאת הייתה טקסט אפור בן 11 פיקסלים על רקע קבוע בהיר —
+          גם במצב כהה, על עמוד ברקע 06060a. ומשתמש שנשאל עליה לא ידע
+          בכלל שהיא קיימת. עכשיו היא עוקבת אחרי הערכה, ואומרת בכל רגע
+          את הדבר היחיד שרלוונטי: קודם מה לעשות, ואחר כך מה רואים. */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
-        padding: "7px 12px", background: "#f4f4f8", borderBottom: "1px solid #e4e4ec",
-        fontSize: 11, color: "#444458", fontFamily: "'Rubik', sans-serif", direction: "rtl",
+        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+        padding: "9px 12px", background: t.card,
+        borderBottom: `1px solid ${t.border}`,
+        fontSize: 12, fontFamily: "'Rubik', sans-serif", direction: "rtl",
       }}>
-        <span>לחצו על תחנה לפרטים.</span>
-        <span style={{ color: "#777788" }}>התקרבו כדי לראות שמות תחנות ומוקדים באזור.</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: "auto" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
-          תחנה
-          <span style={{ width: 8, height: 8, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block", marginRight: 6 }} />
-          מוקד עניין
-        </span>
+        {stage === "far" ? (
+          <span style={{ color: hint, fontWeight: 600 }}>
+            🔍 התקרבו במפה כדי לראות את שמות התחנות
+          </span>
+        ) : (
+          <>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
+              תחנה
+            </span>
+            {stage === "all" ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
+                <span style={{ width: 9, height: 9, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block" }} />
+                מוקד עניין
+              </span>
+            ) : (
+              <span style={{ color: hint, fontWeight: 600 }}>🔍 עוד קצת למוקדי עניין באזור</span>
+            )}
+            <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
+          </>
+        )}
       </div>
       <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
     </div>
