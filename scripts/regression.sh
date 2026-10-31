@@ -34,7 +34,17 @@ ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B
 ok "תחנות·landmarks·pois·places" "$(python3 -I scripts/sources.py counts)"
 # כלל 10: שדה שהשכבה מחשבת ואף ממשק אינו קורא
 ok "שדות בלי קורא בממשק (בסיס 13)" "$(python3 -I scripts/dead-fields.py count)"
-ok "שנקר → ≠ קריית אריה"        "$(curl -s "$B/station/%D7%A9%D7%A0%D7%A7%D7%A8"|grep -o 'תחנה הבאה[^<]*<[^>]*>[^<]*'|grep -c 'קריית אריה')"
+# הבדיקה הקודמת שאלה "האם מופיע כאן 'קריית אריה'" על מקטע שלא הכיל שום
+# שם תחנה: התבנית עצרה על `תחנה הבאה</div>`. היא החזירה 0 בכל מצב, גם
+# אם הקוד היה שבור. עכשיו שולפים את השם עצמו ומשווים — טענה שיכולה להיכשל.
+next_station(){ curl -s "$B/station/$1" | python3 -I -c "
+import sys,re,html
+h=sys.stdin.read(); i=h.find('תחנה הבאה')
+if i==-1: print('לא נמצא'); raise SystemExit
+parts=[x.strip() for x in html.unescape(re.sub('<[^>]*>','|',h[i:i+400])).split('|') if x.strip()]
+print(parts[1] if len(parts)>1 else 'לא נמצא')"; }
+ok "שנקר → אהרונוביץ'"           "$(next_station '%D7%A9%D7%A0%D7%A7%D7%A8')"
+ok "בילינסון → שחם"              "$(next_station '%D7%91%D7%99%D7%9C%D7%99%D7%A0%D7%A1%D7%95%D7%9F')"
 C=""; for p in / /map /line-red /line-green /line-purple /hours /privacy; do C="$C$(curl -s -o /dev/null -w '%{http_code}' $B$p) "; done
 ok "שבעת העמודים"               "$C"
 ok "שגיאות שרת"                 "$(grep -ci 'error\|unhandled' /tmp/reg-srv.log)"

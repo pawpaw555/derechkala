@@ -98,7 +98,7 @@ percent-encoding, ו**הברחה במקור קוד** — אחרת כל שם עם
     /station/<שטות>            404
     34 תחנות · 65 landmarks · 131 pois · 22 places   ← מ-`scripts/sources.py`
     שדות בלי קורא בממשק        ≤ הבסיס  (13 נכון ל-31.10.2026)
-    שנקר → תחנה הבאה           לא "קריית אריה"
+    שנקר → תחנה הבאה           אהרונוביץ'  ·  בילינסון → שחם
     / /map /line-red /line-green /line-purple /hours /privacy   200
     שגיאות שרת                 0
 
