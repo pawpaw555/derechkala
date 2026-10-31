@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Station, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "./data";
+import { Station, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable } from "./data";
 import { useTheme } from "./useTheme";
 import { detectPlatform } from "./useNearestStation";
 import NavigationLinks from "./NavigationLinks";
@@ -41,7 +41,7 @@ export default function NearestStationFinder({
   const airMetres = userLoc && station ? distanceMetres(userLoc, station) : null;
   const est = walkEstimate(airMetres, routeMetres ?? null);
   const metres = est.metres;
-  const walkable = metres !== null && metres <= 2500;
+  const walkable = isWalkable(metres);
   const showWalkTime = walkable && est.trustTime;
   // כשרדיוס השגיאה גדול מהמרחק עצמו, "התחנה הקרובה" היא ניחוש. אומרים
   // את זה במקום להציג מספר שנראה ודאי.

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, stationLabel } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -76,7 +76,7 @@ export default function StationClient({ stationName, station }: Props) {
   const airHere = station && finder.userLoc ? distanceMetres(finder.userLoc, station) : null;
   const estHere = walkEstimate(airHere, routeMetresHere);
   const toHere = estHere.metres;
-  const walkableHere = toHere !== null && toHere <= 2500;
+  const walkableHere = isWalkable(toHere);
   const showWalkHere = walkableHere && estHere.trustTime;
 
   const color = station?.lineColor || "#b04050";

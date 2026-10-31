@@ -386,6 +386,17 @@ export function walkEstimate(
     : { metres: airMetres, fromRoute: false, trustTime: false };
 }
 
+/**
+ * מעל המרחק הזה הליכה אינה הצעה אמיתית, והאתר אינו מציג זמן הליכה.
+ * המספר ישב פעמיים — בפאנל התחנה הקרובה ובעמוד התחנה — ולא ישב כלל
+ * בכרטיס שנפתח בלחיצה על המפה, שהציע "כ-239 דק׳ הליכה" ל-19.1 ק״מ.
+ */
+export const WALKABLE_MAX_M = 2500;
+
+export function isWalkable(metres: number | null): boolean {
+  return metres !== null && metres <= WALKABLE_MAX_M;
+}
+
 export function findNearestStation(lat: number, lng: number): Station {
   let best = STATIONS[0];
   let bestDist = Infinity;
