@@ -3,23 +3,17 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew } from "./lib/data";
 import { searchCombined, PlaceHit } from "./lib/places";
+import { useTheme, type Theme } from "./lib/useTheme";
 import { SITE_NAME } from "./lib/SiteComponents";
 import { useNearestStation } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
+import ThemeToggle from "./lib/ThemeToggle";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
 const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
 
-type Theme = {
-  bg: string; card: string; card2: string; border: string;
-  borderSelected: string; text: string; label: string;
-  muted: string; subtle: string; inputBg: string; shadow: string;
-  resultBg: string; routeBg: string; mapBtn: string;
-  mapBtnBorder: string; mapBtnText: string;
-  swapBg: string; swapBorder: string; swapText: string;
-};
 
 type SearchResults = {
   places: PlaceHit[];
@@ -238,7 +232,6 @@ function instantFromTime(sameDay: Date, hhmm: string): Date {
 }
 
 export default function Home() {
-  const [dark, setDark] = useState(false);
   const [swapSpinning, setSwapSpinning] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
@@ -261,8 +254,6 @@ export default function Home() {
   const { locError, locating } = finder;
 
   useEffect(() => {
-    const saved = localStorage.getItem("dankal_theme");
-    if (saved === "dark") setDark(true);
     // עמוד התחנה מקשר לכאן בשני הכיוונים: מי שמחפש תחנת מוצא ומי שמחפש
     // תחנת יעד. קודם לכן רק ?from= נקרא, ולכן לא היה אפשר להגיע לתחנה.
     const params = new URLSearchParams(window.location.search);
@@ -278,27 +269,10 @@ export default function Home() {
     }
   }, []);
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    localStorage.setItem("dankal_theme", next ? "dark" : "light");
-  };
 
-  const t: Theme = dark ? {
-    bg: "#06060a", card: "#18181f", card2: "#222230", border: "#303044",
-    borderSelected: "#5a5a78", text: "#f2f2fa", label: "#d8d8ee",
-    muted: "#b0b0c8", subtle: "#787890", inputBg: "#222230",
-    shadow: "0 8px 24px #000000bb", resultBg: "#222230", routeBg: "#06060a",
-    mapBtn: "#222230", mapBtnBorder: "#404058", mapBtnText: "#d8d8ee",
-    swapBg: "#2e2e40", swapBorder: "#505068", swapText: "#f2f2fa",
-  } : {
-    bg: "#eaeaef", card: "#ffffff", card2: "#f4f4f8", border: "#d0d0dc",
-    borderSelected: "#333344", text: "#111120", label: "#222233",
-    muted: "#444458", subtle: "#777788", inputBg: "#ffffff",
-    shadow: "0 8px 24px #00000022", resultBg: "#f8f8fc", routeBg: "#e8e8f0",
-    mapBtn: "#f0f0f6", mapBtnBorder: "#c0c0cc", mapBtnText: "#333344",
-    swapBg: "#e8e8f0", swapBorder: "#b0b0c0", swapText: "#222233",
-  };
+  // הערכה מגיעה מהספק המשותף. ההגדרה שישבה כאן שוכפלה מ-useTheme
+  // והייתה גדולה ממנה בשבעה שדות.
+  const { dark, t } = useTheme();
 
   const handleFromSearch = (val: string) => {
     setFromQuery(val);
@@ -467,14 +441,7 @@ export default function Home() {
           <a href="/map" style={{ color: t.muted, fontSize: 13, fontWeight: 500 }}>מפה</a>
         </nav>
         <span style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>דרך קלה</span>
-        <button onClick={toggleTheme} style={{
-          background: t.swapBg, border: `1px solid ${t.swapBorder}`,
-          borderRadius: 8, padding: "5px 10px",
-          color: t.swapText, fontSize: 13, fontWeight: 500,
-          cursor: "pointer", fontFamily: "'Rubik', sans-serif",
-        }}>
-          {dark ? "בהיר" : "כהה"}
-        </button>
+        <ThemeToggle />
       </header>
 
       {/* Hero */}
@@ -731,7 +698,7 @@ export default function Home() {
                   flex: 1, background: dark ? "#1a2220" : "#f0faf5",
                   border: `1px solid ${dark ? "#3a906066" : "#3a906088"}`,
                   borderRadius: 8, padding: "9px 12px",
-                  color: "#3a9060", fontSize: 13, fontWeight: 600,
+                  color: dark ? "#6fc496" : "#2f7a51", fontSize: 13, fontWeight: 600,
                   cursor: locating ? "progress" : "pointer", fontFamily: "'Rubik', sans-serif",
                   opacity: locating ? 0.7 : 1,
                 }}>
@@ -777,7 +744,7 @@ export default function Home() {
                 background: showMap ? (dark ? "#1a2220" : "#f0faf5") : t.mapBtn,
                 border: `1.5px dashed ${showMap ? "#3a906088" : t.border}`,
                 borderRadius: 10, padding: "12px 14px",
-                color: showMap ? "#3a9060" : t.muted,
+                color: showMap ? (dark ? "#6fc496" : "#2f7a51") : t.muted,
                 fontFamily: "'Rubik', sans-serif", fontSize: 13, fontWeight: 500,
                 cursor: "pointer",
               }}>
@@ -787,9 +754,12 @@ export default function Home() {
               {showMap && (
                 <div>
                   <div style={{
+                    // הצבע היה קבוע #6a52a8 בשתי הערכות. על הרקע הכהה זה
+                    // 2.76:1 — המשפט היחיד שמסביר מה לעשות עם המפה היה
+                    // כמעט בלתי קריא. עכשיו צבע לכל ערכה, שניהם מעל AA.
                     background: dark ? "#1a1a2a" : "#f4f0fc",
                     padding: "8px 14px", fontSize: 12, fontWeight: 500,
-                    color: "#6a52a8", fontFamily: "'Rubik', sans-serif", textAlign: "right",
+                    color: dark ? "#b9a8e8" : "#5b4592", fontFamily: "'Rubik', sans-serif", textAlign: "right",
                     borderRadius: "10px 10px 0 0",
                     border: `1px solid ${t.border}`, borderBottom: "none",
                   }}>

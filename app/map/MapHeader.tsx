@@ -1,6 +1,7 @@
 "use client";
 import { useTheme } from "../lib/useTheme";
 import { SITE_NAME } from "../lib/constants";
+import ThemeToggle from "../lib/ThemeToggle";
 
 export default function MapHeader() {
   const { t } = useTheme();
@@ -31,7 +32,7 @@ export default function MapHeader() {
       <a href="/" style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: "-0.02em", textDecoration: "none" }}>
         {SITE_NAME}
       </a>
-      <div style={{ width: 120 }} />
+      <ThemeToggle />
     </header>
   );
 }

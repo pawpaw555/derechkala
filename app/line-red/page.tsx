@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { SITE_NAME, SITE_URL } from "../lib/constants";
-import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import RedLineContent from "./RedLineContent";
 
 export const metadata: Metadata = {
@@ -20,15 +19,5 @@ export const metadata: Metadata = {
 };
 
 export default function RedLinePage() {
-  return (
-    <main style={{
-      minHeight: "100vh",
-      fontFamily: "'Rubik', sans-serif",
-      direction: "rtl",
-    }}>
-      <SiteHeader backHref="/" />
-      <RedLineContent />
-      <SiteFooter />
-    </main>
-  );
+  return <RedLineContent />;
 }

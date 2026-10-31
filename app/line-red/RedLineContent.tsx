@@ -1,6 +1,7 @@
 "use client";
 import { useTheme } from "../lib/useTheme";
 import { STATIONS } from "../lib/data";
+import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import { useNearestStation } from "../lib/useNearestStation";
 import NearestStationFinder from "../lib/NearestStationFinder";
 
@@ -12,7 +13,16 @@ export default function RedLineContent() {
   const finder = useNearestStation();
 
   return (
-    <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px", background: t.bg, minHeight: "80vh" }}>
+    // המעטפת הייתה ב-page.tsx של השרת, בלי גישה לערכת הנושא, ולכן הכותרת
+    // והתחתית רונדרו על רקע לבן קבוע בזמן שהגוף היה כהה. זה היה העמוד
+    // היחיד באתר שבנוי כך.
+    <main style={{
+      minHeight: "100vh", background: t.bg,
+      fontFamily: "'Rubik', sans-serif", direction: "rtl",
+      transition: "background 0.2s",
+    }}>
+      <SiteHeader backHref="/" />
+      <section style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px 48px" }}>
 
       {/* Breadcrumbs */}
       <nav style={{ fontSize: 12, color: t.muted, marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>
@@ -157,6 +167,8 @@ export default function RedLineContent() {
         </p>
       </div>
 
-    </section>
+      </section>
+      <SiteFooter />
+    </main>
   );
 }

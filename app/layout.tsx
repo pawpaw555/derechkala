@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { SITE_URL } from "./lib/constants";
+import { ThemeProvider } from "./lib/useTheme";
 
 export const metadata: Metadata = {
   // בלי זה Next בונה את כתובת og:image מול localhost:3000, וכל שיתוף
@@ -42,6 +43,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
+        <ThemeProvider>
         {children}
         <Script id="ms-clarity" strategy="afterInteractive">
           {`(function(c,l,a,r,i,t,y){
@@ -50,6 +52,8 @@ export default function RootLayout({
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "yrc8o851ob");`}
         </Script>
+        </ThemeProvider>
+
       </body>
     </html>
   );
