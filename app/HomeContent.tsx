@@ -793,10 +793,10 @@ export default function HomeContent() {
               )}
               <InputField
                 id="plan-from"
-                label="מתחנה"
+                label="מוצא"
                 value={fromQuery}
                 onChange={handleFromSearch}
-                placeholder="מאיפה אתה יוצא?"
+                placeholder="תחנה, מקום או יישוב"
                 selected={fromStation}
                 results={fromResults}
                 onSelectStation={handleFromSelectStation}
@@ -844,7 +844,7 @@ export default function HomeContent() {
 
               <InputField
                 id="plan-to"
-                label="לתחנה"
+                label="יעד"
                 value={toQuery}
                 onChange={handleToSearch}
                 placeholder="לאן אתה רוצה להגיע?"
