@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SiteHeader } from "./lib/SiteComponents";
-import { useNearestStation } from "./lib/useNearestStation";
+import { useNearestStation, lookupPlaces, type Place } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
@@ -152,7 +152,7 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
   );
 }
 
-function InputField({ id, label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
+function InputField({ id, label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, onSelectPlace, geoResults = [], geoBusy = false, onSelectGeo, t }: {
   id: string;
   label: string;
   value: string;
@@ -163,6 +163,10 @@ function InputField({ id, label, value, onChange, placeholder, selected, results
   onSelectStation: (s: Station) => void;
   onSelectLandmark: (l: Landmark & { station: Station | undefined }) => void;
   onSelectPlace: (p: PlaceHit) => void;
+  /** תוצאות ממנוע המקומות, כשהחיפוש המקומי לא מצא דבר. */
+  geoResults?: Place[];
+  geoBusy?: boolean;
+  onSelectGeo?: (p: Place) => void;
   t: Theme;
 }) {
   return (
@@ -199,11 +203,40 @@ function InputField({ id, label, value, onChange, placeholder, selected, results
           <div style={{
             position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 100,
             background: t.card, border: `1px solid ${t.border}`,
-            borderRadius: 10, boxShadow: t.shadow,
-            padding: "14px 16px", fontSize: 13, color: t.muted,
+            borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
             fontFamily: "'Rubik', sans-serif", textAlign: "right",
           }}>
-            לא נמצאו תוצאות עבור "{value}"
+            {geoBusy ? (
+              <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>מחפש מקומות…</div>
+            ) : geoResults.length > 0 ? (
+              <>
+                <div style={{ padding: "8px 14px", fontSize: 11, color: t.muted, background: t.resultBg }}>
+                  לא תחנה — אבל מצאנו את המקום
+                </div>
+                {geoResults.map(g => {
+                  const st = findNearestStation(g.lat, g.lng);
+                  const m = Math.round(distanceMetres(g, st));
+                  return (
+                    <button key={g.label} onClick={() => onSelectGeo?.(g)} className="dropdown-item" style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      width: "100%", background: "transparent",
+                      border: "none", borderBottom: `1px solid ${t.border}`,
+                      padding: "12px 14px", cursor: "pointer",
+                    }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 3, flexShrink: 0, background: st.lineColor, transform: "rotate(45deg)" }} />
+                      <div style={{ flex: 1, textAlign: "right" }}>
+                        <div style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>{g.label}</div>
+                        <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>
+                          התחנה הקרובה: {st.name} · {formatDistance(m)}{isWalkable(m) ? "" : " · רחוק מכדי ללכת"}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            ) : (
+              <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>לא נמצאו תוצאות עבור &quot;{value}&quot;</div>
+            )}
           </div>
         )}
       </div>
@@ -252,6 +285,17 @@ export default function HomeContent() {
   const finder = useNearestStation();
   const { locError, locating } = finder;
   /** מה הוזן מהכתובת, ומאיזה עמוד הגענו — כדי להסביר למשתמש מה קרה. */
+  /**
+   * כששדה המוצא לא מוצא תחנה, אותה שאילתה נשלחת למנוע המקומות שכבר
+   * משרת את עמוד המפה. "כפר סירקין" החזיר מסך ריק, והמשתמש נתקע בדיוק
+   * בשדה שבו הוא מתכנן. ההשהיה ושומר הרצף יושבים כאן כי הם תלויים
+   * בממשק; החיפוש עצמו הוא lookupPlaces, אחד לכל האתר.
+   */
+  const [fromGeo, setFromGeo] = useState<Place[]>([]);
+  const [fromGeoBusy, setFromGeoBusy] = useState(false);
+  const geoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoSeq = useRef(0);
+
   const [arrivedWith, setArrivedWith] = useState<{ from?: string; to?: string } | null>(null);
   const [backTo, setBackTo] = useState<{ href: string; label: string } | null>(null);
 
@@ -297,8 +341,27 @@ export default function HomeContent() {
     setArrivedWith(null);
     setFromQuery(val);
     setFromStation(null);
-    setFromResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
+    const local = val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS;
+    setFromResults(local);
+
+    if (geoTimer.current) clearTimeout(geoTimer.current);
+    const empty = local.stations.length === 0 && local.landmarks.length === 0 && local.places.length === 0;
+    if (!empty || val.trim().length < 3) { setFromGeo([]); setFromGeoBusy(false); return; }
+    setFromGeoBusy(true);
+    geoTimer.current = setTimeout(async () => {
+      const seq = ++geoSeq.current;
+      try {
+        const hits = await lookupPlaces(val.trim());
+        if (seq !== geoSeq.current) return;
+        setFromGeo(hits);
+      } catch {
+        if (seq === geoSeq.current) setFromGeo([]);
+      } finally {
+        if (seq === geoSeq.current) setFromGeoBusy(false);
+      }
+    }, 450);
   };
+
 
   const handleToSearch = (val: string) => {
     setArrivedWith(null);
@@ -311,6 +374,17 @@ export default function HomeContent() {
     setFromStation(s);
     setFromQuery(s.name);
     setFromResults(EMPTY_RESULTS);
+  };
+
+  /** מקום שאינו תחנה: בוחרים את התחנה הקרובה אליו, ומשאירים בשדה את מה
+   *  שהמשתמש הקליד — כדי שיהיה ברור למה נבחרה דווקא היא. */
+  const handleFromSelectGeo = (g: Place) => {
+    const st = findNearestStation(g.lat, g.lng);
+    setFromStation(st);
+    setFromQuery(g.label);
+    setFromResults(EMPTY_RESULTS);
+    setFromGeo([]);
+    setFromGeoBusy(false);
   };
 
   const handleFromSelectLandmark = (l: Landmark & { station: Station | undefined }) => {
@@ -728,6 +802,9 @@ export default function HomeContent() {
                 onSelectStation={handleFromSelectStation}
                 onSelectLandmark={handleFromSelectLandmark}
                 onSelectPlace={handleFromSelectPlace}
+                geoResults={fromGeo}
+                geoBusy={fromGeoBusy}
+                onSelectGeo={handleFromSelectGeo}
                 t={t}
               />
 
