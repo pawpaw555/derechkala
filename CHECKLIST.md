@@ -7,14 +7,16 @@
 
 ---
 
-## 1. עובדה על מקום יושבת בשלושה מקומות
+## 1. עובדה על מקום יושבת בחמישה מקומות
 
 לפני שמסיימים שינוי בנתוני מקום, לבדוק את שלושתם:
 
     data.ts            STATIONS[].nearbyPlaces
     data.ts            LANDMARKS[]
     stationContent.ts  pois[]
-    stationContent.ts  פרוזה — intro, locationSummary, bestFor, nameFact
+    stationContent.ts  פרוזה — intro, locationSummary, bestFor, nameFact, address
+    places.ts          PLACES[]  — היחיד עם קואורדינטה מאומתת
+    railStations.ts    RAIL_STATIONS[]
 
 **מקור:** הסרתי נקודות ציון מ-pois והן נשארו בפרוזה וב-nearbyPlaces. פעמיים.
 
@@ -92,9 +94,10 @@ percent-encoding, ו**הברחה במקור קוד** — אחרת כל שם עם
 
     tsc                        0 שגיאות
     build                      עובר
-    lint                       ≤ הבסיס  (26 נכון ל-31.10.2026)
+    lint                       ≤ הבסיס  (18 נכון ל-31.10.2026)
     /hours                     15:40 ו-19:45 — 6 · 8 מופעים (לא שורות)
-    עמוד תחנה                  9 × h2, 1 × h1, TrainStation + FAQPage
+    עמוד תחנה                  9 × h2 (10 בארבע תחנות עם רכבת ישראל), 1 × h1,
+                               TrainStation + FAQPage
     /station/<שטות>            404
     34 תחנות · 65 landmarks · 131 pois · 22 places   ← מ-`scripts/sources.py`
     שדות בלי קורא בממשק        ≤ הבסיס  (13 נכון ל-31.10.2026)
@@ -165,7 +168,8 @@ percent-encoding, ו**הברחה במקור קוד** — אחרת כל שם עם
 **מקור:** `slice(0, 5)` הסתיר חלק מהתחנות בחיפוש "בת ים" בלי לציין זאת.
 הוספתי `hiddenCount`, כתבתי בהערה "הספירה מאפשרת לממשק לומר שיש עוד",
 ודיווחתי שהחיתוך השקט נסגר. `hiddenCount` מחושב ב-`data.ts`, מועבר
-ב-`places.ts`, ואין לו **אף צרכן בממשק**. החיתוך נשאר שקט בדיוק כפי שהיה.
+ב-`places.ts`, ולא היה לו **אף צרכן בממשק**. החיתוך נשאר שקט בדיוק כפי
+שהיה, עד שחובר ב-31.10 לשני הממשקים דרך `HiddenCountNote`.
 זו אותה צורה בדיוק שממנה נולד כלל 4 — ולא הרצתי את כלל 4 על התיקון שלי.
 
 ## 11. כלי המדידה שלי הוא קוד — כללים 3 ו-4 חלים עליו
