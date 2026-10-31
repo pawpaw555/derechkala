@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import GreenLineContent from "./GreenLineContent";
 
 // קודם לכן זה היה רכיב לקוח בלי metadata, ולכן העמוד שלח את הכותרת
@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "הקו הירוק של הרכבת הקלה יחבר את הרצליה עם ראשון לציון דרך תל אביב וחולון. החלק הדרומי צפוי להיפתח בדצמבר 2028 והקו המלא ב-2030. מה ידוע היום על המסלול.",
   alternates: { canonical: `${SITE_URL}/line-green` },
   openGraph: {
+    images: [OG_IMAGE],
     title: "קו ירוק רכבת קלה — מסלול ומועד פתיחה",
     description: "הרצליה עד ראשון לציון. החלק הדרומי צפוי דצמבר 2028, הקו המלא ב-2030.",
     url: `${SITE_URL}/line-green`,

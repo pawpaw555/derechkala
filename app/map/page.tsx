@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import MapContent from "./MapContent";
 import MapWrapper from "./MapWrapper";
@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/map`,
   },
   openGraph: {
+    images: [OG_IMAGE],
     title: "מפת הרכבת הקלה בגוש דן | דרך קלה",
     description: "מפה אינטראקטיבית של כל 34 תחנות הקו האדום. מצאו תחנה קרובה אליכם.",
     url: `${SITE_URL}/map`,

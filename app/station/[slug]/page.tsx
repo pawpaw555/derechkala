@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import StationClient from "./StationClient";
 import { STATIONS, stationLabel, type Station } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ } from "../../lib/stationContent";
-import { SITE_URL, SITE_NAME } from "../../lib/constants";
+import { SITE_URL, SITE_NAME, OG_IMAGE } from "../../lib/constants";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -56,6 +56,7 @@ export async function generateMetadata({ params }: Props) {
       canonical: `${SITE_URL}/station/${encodeURIComponent(stationName)}`,
     },
     openGraph: {
+      images: [OG_IMAGE],
       title,
       description,
       url: `${SITE_URL}/station/${encodeURIComponent(stationName)}`,

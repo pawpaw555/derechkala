@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import PrivacyContent from "./PrivacyContent";
 
 export const metadata: Metadata = {
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/privacy` },
   robots: { index: true, follow: true },
   openGraph: {
+    images: [OG_IMAGE],
     title: "מדיניות פרטיות — דרך קלה",
     description: "איזה מידע נאסף, אילו שירותים חיצוניים מעורבים ומה נשמר בדפדפן.",
     url: `${SITE_URL}/privacy`,

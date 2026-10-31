@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
-import { SITE_URL } from "./lib/constants";
+import { SITE_URL, OG_IMAGE } from "./lib/constants";
 import { ThemeProvider } from "./lib/useTheme";
 
 export const metadata: Metadata = {
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "דרך קלה | הרכבת הקלה של גוש דן",
   description: "תכנון נסיעה, זמנים ותחנות של הרכבת הקלה בגוש דן — קו אדום פעיל עם 34 תחנות. קו ירוק וסגול בבנייה.",
   openGraph: {
+    images: [OG_IMAGE],
     title: "דרך קלה | הרכבת הקלה של גוש דן",
     description: "תכנון נסיעה ברכבת הקלה בגוש דן. קו אדום פעיל עם 34 תחנות מפתח תקווה עד בת ים.",
     url: "https://derechkala.online",

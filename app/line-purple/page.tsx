@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import PurpleLineContent from "./PurpleLineContent";
 
 export const metadata: Metadata = {
@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: "הקו הסגול של הרכבת הקלה יחבר את יהוד ואור יהודה עם מרכז תל אביב, דרך גבעת שמואל, רמת גן וגבעתיים. פתיחה מסחרית צפויה ביולי 2028. מה ידוע היום על המסלול.",
   alternates: { canonical: `${SITE_URL}/line-purple` },
   openGraph: {
+    images: [OG_IMAGE],
     title: "קו סגול רכבת קלה — מסלול ומועד פתיחה",
     description: "יהוד ואור יהודה עד מרכז תל אביב, דרך גבעת שמואל ורמת גן. צפוי יולי 2028.",
     url: `${SITE_URL}/line-purple`,

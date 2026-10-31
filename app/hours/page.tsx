@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import HoursContent from "./HoursContent";
 
 export const metadata: Metadata = {
@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/hours`,
   },
   openGraph: {
+    images: [OG_IMAGE],
     title: "שעות פעילות הרכבת הקלה — קו אדום",
     description: "ראשון עד חמישי 05:30 עד חצות, ערב שבת עד 15:40, מוצאי שבת מ-19:45. בשבת אין שירות.",
     url: `${SITE_URL}/hours`,

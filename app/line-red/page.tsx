@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SITE_NAME, SITE_URL } from "../lib/constants";
+import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import RedLineContent from "./RedLineContent";
 
 export const metadata: Metadata = {
@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/line-red`,
   },
   openGraph: {
+    images: [OG_IMAGE],
     title: "קו אדום רכבת קלה | כל התחנות והמסלול",
     description: "כל 34 תחנות הקו האדום של הרכבת הקלה בגוש דן — מפתח תקווה עד בת ים.",
     url: `${SITE_URL}/line-red`,
