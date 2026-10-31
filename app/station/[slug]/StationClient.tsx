@@ -6,6 +6,7 @@ import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
 import HiddenCountNote from "../../lib/HiddenCountNote";
+import { railNear, railDistance } from "../../lib/railStations";
 import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
 import { searchCombined, PlaceHit, SearchResults } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
@@ -125,6 +126,10 @@ const content = STATION_CONTENT[stationName];
     setResults({ stations: [], landmarks: [], places: [] });
   };
 
+  /** תחנת רכבת ישראל בטווח הליכה, אם יש. ארבע מתוך 34. */
+  const rail = railNear(stationName);
+  const railM = rail ? railDistance(rail) : null;
+
   const origin = direction === "from" ? stationName : toStation;
   const dest = direction === "from" ? toStation : stationName;
 
@@ -232,6 +237,28 @@ const content = STATION_CONTENT[stationName];
             )}
           </div>
         </div>
+
+        {/* רק ארבע תחנות בקו נמצאות בטווח הליכה מרכבת ישראל, והאתר לא
+            אמר על כך דבר חוץ מפסקה אחת בקריית אריה. למי שעומד בארלוזורוב
+            זה ההבדל בין נסיעה אחת לשתיים. */}
+        {rail && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.04em" }}>חיבור לרכבת ישראל</h2>
+            <div style={{ fontSize: 14, color: t.text, fontWeight: 600 }}>{rail.name}</div>
+            {railM !== null && (
+              <div style={{ fontSize: 12, color: t.muted, marginTop: 3 }}>
+                {formatDistance(railM)} מהתחנה
+              </div>
+            )}
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${rail.lat},${rail.lng}&travelmode=walking`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: color, fontWeight: 600, textDecoration: "none" }}
+            >
+              🚶 ניווט לתחנת הרכבת
+            </a>
+          </div>
+        )}
 
         {/* Address */}
         {(content || station) && (
