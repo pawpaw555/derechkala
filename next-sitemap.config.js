@@ -4,19 +4,31 @@ const path = require('path');
 
 // Station names come from app/lib/data.ts so there is one source of truth.
 // data.ts is TypeScript and cannot be require()d here, so the STATIONS array
-// is parsed from source. Throws rather than silently emitting a short sitemap.
+// is parsed from source. Throws rather than silently emitting a wrong sitemap.
+//
+// The slice is bounded by the array's own closing `];`, not by the position of
+// whatever is declared next. Keying off `export const LANDMARKS` meant that any
+// array inserted between the two would have had its `{ name: "..." }` entries
+// counted as stations, inflating the sitemap with URLs that return 404.
 function stationNamesFromData() {
   const file = path.join(__dirname, 'app/lib/data.ts');
   const src = fs.readFileSync(file, 'utf8');
   const start = src.indexOf('export const STATIONS');
-  const end = src.indexOf('export const LANDMARKS');
-  if (start === -1 || end === -1 || end < start) {
+  if (start === -1) {
     throw new Error(`next-sitemap: could not locate the STATIONS array in ${file}`);
   }
-  const names = [...src.slice(start, end).matchAll(/\{\s*name:\s*"((?:[^"\\]|\\.)*)"/g)]
+  const close = src.indexOf('\n];', start);
+  if (close === -1) {
+    throw new Error(`next-sitemap: could not find the end of the STATIONS array in ${file}`);
+  }
+  const names = [...src.slice(start, close).matchAll(/\{\s*name:\s*"((?:[^"\\]|\\.)*)"/g)]
     .map(m => m[1].replace(/\\"/g, '"'));
   if (names.length === 0) {
     throw new Error(`next-sitemap: parsed 0 stations from ${file}`);
+  }
+  const dupes = names.filter((n, i) => names.indexOf(n) !== i);
+  if (dupes.length > 0) {
+    throw new Error(`next-sitemap: duplicate station names in ${file}: ${dupes.join(', ')}`);
   }
   return names;
 }
@@ -26,6 +38,10 @@ module.exports = {
   siteUrl: 'https://derechkala.online',
   generateRobotsTxt: true,
   outDir: 'public',
+  // next-sitemap סורק את תוצרי הבנייה ומוסיף כל נתיב שמצא, כולל
+  // /opengraph-image — נתיב שמחזיר PNG ולא עמוד. הוא נשאר נגיש לסורקים
+  // כדי שתצוגות השיתוף יעבדו, אבל אינו כתובת שצריכה להיות בסייטמאפ.
+  exclude: ['/opengraph-image'],
   robotsTxtOptions: {
     policies: [
       { userAgent: '*', allow: '/' },
