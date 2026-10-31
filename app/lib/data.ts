@@ -504,17 +504,43 @@ export function findRouteByArrival(
   const headway = getFrequencyMins(arriveBy);
   const searchFrom = new Date(arriveBy.getTime() - (travel + headway + 2) * 60 * 1000);
 
+  // getNextDepartures מחזיר רשימה ריקה כשנקודת החיפוש לפני פתיחת השירות,
+  // כי בשאלה "מתי הרכבת הבאה" אין תשובה ב-04:00. כאן השאלה אחרת: מהי
+  // הרכבת הראשונה שאפשר לתפוס. בלי ההצמדה הזו בקשה להגיע ב-05:45 חיפשה
+  // מ-05:27, קיבלה ריק, וענתה שאין שירות — למרות שהרכבת הראשונה ב-05:30
+  // מגיעה בזמן.
+  const dayOpens = getDayType(arriveBy) === "saturday" ? SATURDAY_NIGHT_FIRST_MINS : SERVICE_FIRST_MINS;
+  if (
+    searchFrom.toDateString() === arriveBy.toDateString() &&
+    searchFrom.getHours() * 60 + searchFrom.getMinutes() < dayOpens
+  ) {
+    searchFrom.setHours(Math.floor(dayOpens / 60), dayOpens % 60, 0, 0);
+  }
+  // אם אחרי ההצמדה נקודת החיפוש כבר מאוחרת מהשעה המבוקשת, אין מה לחפש:
+  // בשבת ב-10:00 ההצמדה דוחפת ל-19:45, וההסבר הנכון הוא שאין שירות בשבת
+  // ולא "הרכבת הראשונה יוצאת ב-19:45".
+  if (searchFrom.getTime() >= arriveBy.getTime()) {
+    return { noService: true, reason: describeNoService(arriveBy) };
+  }
+
   const candidates = getNextDepartures(searchFrom, 8);
   const inTime = candidates.filter(
     d => searchFrom.getTime() + (d.minsFromNow + travel) * 60 * 1000 <= arriveBy.getTime()
   );
   if (!inTime.length) {
-    return {
-      noService: true,
-      reason: candidates.length
-        ? `אין רכבת שמגיעה עד ${hhmm(arriveBy.getHours() * 60 + arriveBy.getMinutes())}. הנסיעה אורכת כ-${travel} דקות, והרכבת הקרובה יוצאת מאוחר מדי.`
-        : describeNoService(searchFrom),
-    };
+    // ההסבר חייב להיות על מה שהמשתמש ביקש, לא על נקודת החיפוש הפנימית.
+    // קודם לכן בקשה להגיע ב-05:35 ענתה "הרכבת מתחילה לפעול ב-05:30",
+    // משפט שנשמע כאילו ביקשו מוקדם מדי — בעוד שהבעיה היא שהרכבת
+    // הראשונה יוצאת ב-05:30 והנסיעה אורכת כ-10 דקות.
+    const first = getNextDepartures(searchFrom, 1)[0];
+    if (first) {
+      const arrival = new Date(searchFrom.getTime() + (first.minsFromNow + travel) * 60 * 1000);
+      return {
+        noService: true,
+        reason: `הנסיעה אורכת כ-${travel} דקות, והרכבת הראשונה שאפשר לתפוס יוצאת ב-${first.time}. ההגעה המוקדמת ביותר היא ${hhmm(arrival.getHours() * 60 + arrival.getMinutes())}.`,
+      };
+    }
+    return { noService: true, reason: describeNoService(arriveBy) };
   }
   const chosen = inTime[inTime.length - 1];
   return findRoute(fromName, toName, chosen.minsFromNow, searchFrom);
