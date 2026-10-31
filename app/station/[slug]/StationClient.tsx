@@ -33,7 +33,10 @@ export default function StationClient({ stationName, station }: Props) {
   const { t } = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>({ stations: [], landmarks: [], places: [] });
+  /** התחנה שהמשתמש בחר. לפי `direction` היא היעד או המוצא. */
   const [toStation, setToStation] = useState("");
+  /** "from" = יוצאים מהתחנה הזאת. "to" = מגיעים אליה. */
+  const [direction, setDirection] = useState<"from" | "to">("from");
   const [toQuery, setToQuery] = useState("");
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
@@ -122,10 +125,13 @@ const content = STATION_CONTENT[stationName];
     setResults({ stations: [], landmarks: [], places: [] });
   };
 
+  const origin = direction === "from" ? stationName : toStation;
+  const dest = direction === "from" ? toStation : stationName;
+
   const handlePlan = () => {
     if (!toStation) return;
-    const from = STATIONS.find(s => s.name === stationName);
-    const to = STATIONS.find(s => s.name === toStation);
+    const from = STATIONS.find(s => s.name === origin);
+    const to = STATIONS.find(s => s.name === dest);
     if (!from || !to) return;
 
     setLoading(true);
@@ -139,12 +145,12 @@ const content = STATION_CONTENT[stationName];
 
     setTimeout(() => {
       if (useCustomTime && timeMode === "arrival") {
-        const r = findRouteByArrival(stationName, toStation, baseDate);
+        const r = findRouteByArrival(origin, dest, baseDate);
         setResult(r);
         setPlanInstant(r && !isNoService(r) && r.departureTime ? instantFromTime(baseDate, r.departureTime) : baseDate);
       } else {
         const departures = getNextDepartures(baseDate, 1);
-        setResult(findRoute(stationName, toStation, departures[0]?.minsFromNow, baseDate));
+        setResult(findRoute(origin, dest, departures[0]?.minsFromNow, baseDate));
         setPlanInstant(baseDate);
       }
       setLoading(false);
@@ -224,22 +230,6 @@ const content = STATION_CONTENT[stationName];
                 <span style={{ fontSize: 13, color: color, fontWeight: 500 }}>{station.lineName}</span>
               </a>
             )}
-            {/* שני הכיוונים. קודם לכן היה רק "מכאן", אבל מי שמגיע לעמוד
-                תחנה מחפש לא פעם דווקא את הדרך אליה. */}
-            <a href={`/?from=${encodeURIComponent(stationName)}`} style={{
-              fontSize: 13, fontWeight: 600, color: "#fff",
-              background: color, borderRadius: 8,
-              padding: "6px 14px", textDecoration: "none",
-            }}>
-              תכנן נסיעה מכאן
-            </a>
-            <a href={`/?to=${encodeURIComponent(stationName)}`} style={{
-              fontSize: 13, fontWeight: 600, color: color,
-              background: "transparent", border: `1.5px solid ${color}`,
-              borderRadius: 8, padding: "5px 14px", textDecoration: "none",
-            }}>
-              תכנן נסיעה לכאן
-            </a>
           </div>
         </div>
 
@@ -261,7 +251,26 @@ const content = STATION_CONTENT[stationName];
 
         {/* Trip planner */}
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
-          <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנן נסיעה מתחנה זו</h2>
+          <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנון נסיעה</h2>
+          {/* הבחירה הייתה שני קישורים בראש העמוד, אחד מלא ואחד במסגרת —
+              היררכיה בין שני דברים שווים, ובגובה שונה בפיקסל בגלל המסגרת.
+              כאן היא פקד אחד, באותה שפה של "זמן יציאה / זמן הגעה" שמתחת. */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            {([["from", "יציאה מכאן"], ["to", "הגעה לכאן"]] as const).map(([d, label]) => (
+              <button key={d} onClick={() => { setDirection(d); setResult(null); setPlanInstant(null); }}
+                aria-pressed={direction === d}
+                style={{
+                  flex: 1, padding: "9px 12px", borderRadius: 8,
+                  border: `1px solid ${direction === d ? color : t.border}`,
+                  background: direction === d ? t.resultBg : "transparent",
+                  color: direction === d ? t.text : t.muted,
+                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
+                  fontWeight: direction === d ? 600 : 400, cursor: "pointer",
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
 
           {loading ? (
             <div style={{ padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
@@ -305,12 +314,12 @@ const content = STATION_CONTENT[stationName];
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div style={{ textAlign: "right", flex: 1 }}>
                     <div style={{ fontSize: 11, color: t.muted }}>מוצא</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{stationName}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{origin}</div>
                   </div>
                   <div style={{ fontSize: 16, color: result.lineColor }}>←</div>
                   <div style={{ textAlign: "left", flex: 1 }}>
                     <div style={{ fontSize: 11, color: t.muted }}>יעד</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{toStation}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{dest}</div>
                     {(() => {
                       const s = STATIONS.find(st => st.name === toStation);
                       return s && s.nearbyPlaces.length > 0 ? (
@@ -354,13 +363,13 @@ const content = STATION_CONTENT[stationName];
 
               {/* Map */}
               <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === stationName) || null} toStation={STATIONS.find(s => s.name === toStation) || null} />
+                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === origin) || null} toStation={STATIONS.find(s => s.name === dest) || null} />
               </div>
 {(() => {
                 const s = STATIONS.find(st => st.name === toStation);
                 return s && s.nearbyPlaces.length > 0 ? (
                   <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מקומות קרובים ליעד</div>
+                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מקומות קרובים {direction === "from" ? "ליעד" : "למוצא"}</div>
                     {s.nearbyPlaces.map(place => (
                       <div key={place} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                         <div style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0 }} />
@@ -385,8 +394,8 @@ const content = STATION_CONTENT[stationName];
                 <input
                   value={query}
                   onChange={e => handleSearch(e.target.value)}
-                  placeholder="בחרו תחנת יעד"
-                  aria-label="בחרו תחנת יעד"
+                  placeholder={direction === "from" ? "בחרו תחנת יעד" : "בחרו תחנת מוצא"}
+                  aria-label={direction === "from" ? "בחרו תחנת יעד" : "בחרו תחנת מוצא"}
                   autoComplete="off"
                   style={{
                     width: "100%", background: t.inputBg,
@@ -506,7 +515,7 @@ const content = STATION_CONTENT[stationName];
               {/* Selected destination card */}
               {toStation && (
                 <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 9, padding: "10px 14px" }}>
-                  <div style={{ fontSize: 13, color: t.text, fontWeight: 600, marginBottom: 4, textAlign: "right" }}>יעד: {toStation}</div>
+                  <div style={{ fontSize: 13, color: t.text, fontWeight: 600, marginBottom: 4, textAlign: "right" }}>{direction === "from" ? "יעד" : "מוצא"}: {toStation}</div>
                   {(() => {
                     const s = STATIONS.find(st => st.name === toStation);
                     return s && s.nearbyPlaces.length > 0 ? (
@@ -609,7 +618,7 @@ const content = STATION_CONTENT[stationName];
                 onClick={handlePlan}
                 disabled={!toStation}
                 aria-disabled={!toStation}
-                title={!toStation ? "בחרו תחנת יעד כדי לחפש נסיעה" : undefined}
+                title={!toStation ? (direction === "from" ? "בחרו תחנת יעד כדי לחפש נסיעה" : "בחרו תחנת מוצא כדי לחפש נסיעה") : undefined}
                 className="btn-primary-s"
                 style={{
                   width: "100%", background: toStation ? color : t.border,
