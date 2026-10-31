@@ -157,14 +157,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
               className: "",
-              html: `<div style="
-                width:9px;height:9px;background:#2563eb;border:2px solid #fff;
-                transform:rotate(45deg);box-shadow:0 0 4px #2563eb66;cursor:pointer;
-              "></div>`,
+              html: `<div class="mk mk-poi"></div>`,
               iconSize: [9, 9],
               iconAnchor: [4.5, 4.5],
             }),
-          }).bindPopup(poiPopup, { maxWidth: 220 })
+          }).bindPopup(poiPopup, { maxWidth: 220 }).addTo(map)
         );
         // תחנת אצטדיון בלומפילד קרויה על שם האצטדיון, שיושב 321 מ׳ ממנה.
         // שתי התוויות הופיעו זו ליד זו ואמרו בדיוק אותו דבר, בלי לרמוז
@@ -177,7 +174,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               html: `<div style="
                 position:absolute;left:11px;top:-8px;white-space:nowrap;
                 font-family:'Rubik',sans-serif;font-size:10px;font-weight:500;
-                color:#1d4ed8;background:#eff6ffdd;border-radius:4px;
+                color:#1d4ed8;background:#eff6fff5;border:1px solid #1d4ed826;border-radius:4px;
                 padding:2px 6px;direction:rtl;cursor:pointer;
               ">${p.name}</div>`,
               iconSize: [0, 0],
@@ -210,10 +207,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         L.marker([r.lat, r.lng], {
           icon: L.divIcon({
             className: "",
-            html: `<div style="
-              width:9px;height:9px;background:#334155;border:2px solid #fff;
-              box-shadow:0 0 4px #33415577;cursor:pointer;
-            "></div>`,
+            html: `<div class="mk mk-rail"></div>`,
             iconSize: [9, 9],
             iconAnchor: [4.5, 4.5],
           }),
@@ -225,7 +219,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               html: `<div style="
                 position:absolute;left:11px;top:-8px;white-space:nowrap;
                 font-family:'Rubik',sans-serif;font-size:10px;font-weight:600;
-                color:#1e293b;background:#e2e8f0dd;border-radius:4px;
+                color:#1e293b;background:#e2e8f0f7;border:1px solid #33415533;border-radius:4px;
                 padding:2px 6px;direction:rtl;cursor:pointer;
               ">רכבת ישראל</div>`,
               iconSize: [0, 0],
@@ -267,9 +261,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         const names = z >= LABEL_ZOOM;
         const pois = z >= POI_LABEL_ZOOM;
         zoomLayersRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
-        poiLayersRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
+        // הסמנים עצמם גלויים בכל זום — המשתמש ביקש לראות כבר במבט הראשון
+        // שיש מה לחפש. רק השמות ממתינים, כי הם אלה שמתנגשים.
         poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
         railLabelsRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
+        containerRef.current?.classList.toggle("map-far", !names);
         setStage(pois ? "all" : names ? "stations" : "far");
         if (pois) requestAnimationFrame(declutter);
       };
@@ -328,12 +324,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         const marker = L.marker([s.lat, s.lng], {
           icon: L.divIcon({
             className: "",
-            html: `<div style="
-              width:${size}px;height:${size}px;border-radius:50%;
+            html: `<div class="mk mk-station" style="
+              width:${size}px;height:${size}px;
               background:${s.lineColor};
-              border:2px solid ${isFrom ? "#5aa880" : isTo ? "#aa4858" : "#0e0e11"};
-              box-shadow:0 0 ${isFrom || isTo ? 8 : 4}px ${s.lineColor}88;
-              cursor:pointer;
+              border-color:${isFrom ? "#5aa880" : isTo ? "#aa4858" : "#0e0e11"};
+              --glow:${s.lineColor}8c;
             "></div>`,
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
@@ -357,7 +352,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             html: `<div style="
               position:absolute;right:10px;top:-9px;white-space:nowrap;
               font-family:'Rubik',sans-serif;font-size:11px;font-weight:600;
-              color:#1a1a22;background:#ffffffdd;border-radius:4px;
+              color:#1a1a22;background:#fffffff2;border:1px solid #00000014;border-radius:4px;
               padding:2px 6px;box-shadow:0 1px 3px #00000022;direction:rtl;
               cursor:pointer;
             ">${s.name}</div>`,
@@ -420,6 +415,46 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
 
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `1px solid ${t.border}` }}>
+      {/*
+        סמן בולט על מפה אינו עניין של גוון אלא של ניגודיות והילה. נמדד מול
+        הרקעים של אריחי OSM: צהוב מחזיר 1.03–1.44 מול מים ויבשה, כלומר
+        נעלם; האפור-כהה של רכבת ישראל מחזיר 6.99–10.35, ולכן דווקא הוא
+        נתפס מיד בעין. לכן הגוונים נשמרים — הם נושאים משמעות — והבליטות
+        מגיעה משלוש טבעות: ליבה צבעונית, טבעת מנוגדת, הילה.
+
+        בזום הרחוק הסמנים גדלים ב-30% ופועמים, כי שם המסר הוא "יש כאן
+        דברים, התקרבו". ברגע שהשמות נדלקים הפעימה נעצרת. מי שביקש במערכת
+        ההפעלה להפחית תנועה לא מקבל אותה בכלל.
+      */}
+      <style>{`
+        .mk { box-sizing: border-box; cursor: pointer; position: relative;
+              transition: transform .18s ease; }
+        .mk-station { border-radius: 50%; border: 2px solid #0e0e11;
+              box-shadow: 0 0 0 2px #ffffffee, 0 1px 4px rgba(0,0,0,.45); }
+        .mk-poi { width: 9px; height: 9px; background: #2563eb;
+              border: 2px solid #fff; transform: rotate(45deg);
+              box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.4);
+              --glow: rgba(37,99,235,.55); }
+        .mk-rail { width: 10px; height: 10px; background: #334155;
+              border: 2px solid #fff;
+              box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.45);
+              --glow: rgba(51,65,85,.6); }
+        .map-far .mk-station, .map-far .mk-rail { transform: scale(1.3); }
+        .map-far .mk-poi { transform: rotate(45deg) scale(1.3); }
+        .map-far .mk::after {
+          content: ""; position: absolute; inset: -2px; border-radius: inherit;
+          animation: mkPulse 2.2s ease-out infinite;
+        }
+        @keyframes mkPulse {
+          0%   { box-shadow: 0 0 0 0 var(--glow); }
+          70%  { box-shadow: 0 0 0 9px rgba(0,0,0,0); }
+          100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .map-far .mk::after { animation: none; }
+          .mk { transition: none; }
+        }
+      `}</style>
       {/* הרצועה הזאת הייתה טקסט אפור בן 11 פיקסלים על רקע קבוע בהיר —
           גם במצב כהה, על עמוד ברקע 06060a. היא נשארה מפתח בלבד: המשתמש
           דיווח שהוא לא מבחין בה, ורמז שיושב מחוץ למפה לא נקרא כשהעין
