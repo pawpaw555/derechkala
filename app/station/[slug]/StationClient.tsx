@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
-import { useNearestStation, fetchFootRoute, walkEstimate } from "../../lib/useNearestStation";
+import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
 import { searchCombined, PlaceHit } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import dynamic from "next/dynamic";

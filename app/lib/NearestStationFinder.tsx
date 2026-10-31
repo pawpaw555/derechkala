@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { Station, distanceMetres, formatDistance, walkMinutes } from "./data";
+import { Station, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "./data";
 import { useTheme } from "./useTheme";
-import { detectPlatform, walkEstimate } from "./useNearestStation";
+import { detectPlatform } from "./useNearestStation";
 import NavigationLinks from "./NavigationLinks";
 
 type Finder = ReturnType<typeof import("./useNearestStation").useNearestStation>;

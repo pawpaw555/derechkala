@@ -85,33 +85,6 @@ export async function fetchFootRoute(
   }
 }
 
-/**
- * המרחק שמוצג למשתמש, ואם מותר לגזור ממנו זמן הליכה.
- *
- * OSRM אמין ברוב המקרים, אבל בקטעים קצרים הוא מחזיר עקיפה שאינה הליכה
- * אמיתית כשאחת הנקודות אינה מחוברת לרשת ההולכי רגל שלו: 91 מ' אוויריים
- * מאבא הלל למגדל משה אביב חזרו כ-624 מ', ו-256 מ' בין שני בניינים באותו
- * מתחם חזרו כ-2,018. מעל 400 מ' יחס גבוה הוא בדרך כלל מחסום אמיתי —
- * מסילה או כביש מהיר — ואז המסלול נכון.
- *
- * כשהמסלול נדחה מוצג המרחק האווירי בלי זמן: זמן שנגזר מקו אווירי נמוך
- * מדי, ולהמעיט בהליכה גרוע מלא לתת אותה. קישורי הניווט נותנים את האמת.
- *
- * יושב כאן ולא בכל רכיב בנפרד — קודם לכן הכלל היה רק בפאנל התחנה הקרובה,
- * ועמוד התחנה המשיך להזין את מספר OSRM הגולמי לזמן ההליכה.
- */
-export function walkEstimate(
-  airMetres: number | null,
-  routeMetres: number | null
-): { metres: number | null; fromRoute: boolean; trustTime: boolean } {
-  if (airMetres == null) return { metres: routeMetres, fromRoute: routeMetres != null, trustTime: routeMetres != null };
-  if (routeMetres == null) return { metres: airMetres, fromRoute: false, trustTime: true };
-  const SHORT_HOP_M = 400;
-  const plausible = airMetres >= SHORT_HOP_M || routeMetres <= airMetres * 3;
-  return plausible
-    ? { metres: routeMetres, fromRoute: true, trustTime: true }
-    : { metres: airMetres, fromRoute: false, trustTime: false };
-}
 
 /**
  * כל הלוגיקה של "איפה אני ואיזו תחנה קרובה": GPS, חיפוש מקום, הדבקת

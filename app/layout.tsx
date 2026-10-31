@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { SITE_URL } from "./lib/constants";
 
 export const metadata: Metadata = {
+  // בלי זה Next בונה את כתובת og:image מול localhost:3000, וכל שיתוף
+  // בפרודקשן מצביע לכתובת שלא קיימת.
+  metadataBase: new URL(SITE_URL),
   title: "דרך קלה | הרכבת הקלה של גוש דן",
   description: "תכנון נסיעה, זמנים ותחנות של הרכבת הקלה בגוש דן — קו אדום פעיל עם 34 תחנות. קו ירוק וסגול בבנייה.",
   openGraph: {

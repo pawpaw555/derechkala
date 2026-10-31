@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes } from "./data";
+import { Station, findNearestStation, distanceMetres, formatDistance, walkMinutes, walkEstimate } from "./data";
 import { PLACES } from "./places";
 // ייבוא טיפוס בלבד — נמחק בקומפילציה ואינו טוען את Leaflet בשרת.
 import type { Map as LeafletMap, Marker, Layer, LeafletMouseEvent } from "leaflet";
@@ -27,8 +27,13 @@ function stationPopup(s: Station, from?: { lat: number; lng: number }) {
   const near = s.nearbyPlaces.slice(0, 2).join(" · ");
   let meta = s.city;
   if (from) {
-    const m = distanceMetres(from, s);
-    meta += ` · ${formatDistance(m)} · כ-${walkMinutes(m)} דק׳ הליכה`;
+    // דרך walkEstimate כמו כל שאר האתר. כאן אין מסלול לשאול עליו, והכלל
+    // מרשה אווירי במקרה הזה — אבל הוא מוכרע במקום אחד, לא משוכפל כאן.
+    const est = walkEstimate(distanceMetres(from, s), null);
+    if (est.metres !== null) {
+      meta += ` · ${formatDistance(est.metres)}`;
+      if (est.trustTime) meta += ` · כ-${walkMinutes(est.metres)} דק׳ הליכה`;
+    }
   }
   return `
     <div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:180px;padding:2px;">
