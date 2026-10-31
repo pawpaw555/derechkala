@@ -159,7 +159,8 @@ function SearchDropdown({ results, onSelectStation, onSelectLandmark, onSelectPl
   );
 }
 
-function InputField({ label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
+function InputField({ id, label, value, onChange, placeholder, selected, results, onSelectStation, onSelectLandmark, onSelectPlace, t }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -173,9 +174,13 @@ function InputField({ label, value, onChange, placeholder, selected, results, on
 }) {
   return (
     <div>
-      <div style={{ fontSize: 13, color: t.label, marginBottom: 6, fontWeight: 600 }}>{label}</div>
+      {/* הייתה כאן div: תווית נראית בלי קשר לשדה. placeholder אינו שם נגיש
+          והוא נעלם ברגע שמקלידים, ולכן שני השדות היו בלי שם בכלל. label
+          אמיתית נותנת שם נגיש וגם ממקדת את השדה בלחיצה על הטקסט. */}
+      <label htmlFor={id} style={{ display: "block", fontSize: 13, color: t.label, marginBottom: 6, fontWeight: 600, cursor: "pointer" }}>{label}</label>
       <div style={{ position: "relative" }}>
         <input
+          id={id}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -691,6 +696,7 @@ export default function Home() {
             /* Full search form */
             <>
               <InputField
+                id="plan-from"
                 label="מתחנה"
                 value={fromQuery}
                 onChange={handleFromSearch}
@@ -723,7 +729,7 @@ export default function Home() {
                   flexShrink: 0, boxShadow: "0 2px 8px #b0405044",
                   transform: swapSpinning ? "rotate(180deg)" : "rotate(0deg)",
                   transition: "transform 0.35s ease, box-shadow 0.2s ease",
-                }}>⇅</button>
+                }} aria-label="החלף בין תחנת המוצא לתחנת היעד">⇅</button>
               </div>
 
               {locError && (
@@ -738,6 +744,7 @@ export default function Home() {
               )}
 
               <InputField
+                id="plan-to"
                 label="לתחנה"
                 value={toQuery}
                 onChange={handleToSearch}

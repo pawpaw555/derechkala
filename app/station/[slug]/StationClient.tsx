@@ -392,6 +392,8 @@ const content = STATION_CONTENT[stationName];
                   value={query}
                   onChange={e => handleSearch(e.target.value)}
                   placeholder="בחרו תחנת יעד"
+                  aria-label="בחרו תחנת יעד"
+                  autoComplete="off"
                   style={{
                     width: "100%", background: t.inputBg,
                     border: `1.5px solid ${toStation ? t.borderSelected : t.border}`,
