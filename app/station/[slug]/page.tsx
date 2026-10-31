@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import StationClient from "./StationClient";
-import { STATIONS, stationLabel } from "../../lib/data";
+import { STATIONS, stationLabel, type Station } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ } from "../../lib/stationContent";
 import { SITE_URL, SITE_NAME } from "../../lib/constants";
 
@@ -8,12 +8,37 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+/**
+ * פותר אחד ל-generateMetadata ולרכיב העמוד.
+ *
+ * generateMetadata קרא decodeURIComponent(slug) ישירות, ולכן `/station/%25`
+ * זרק URIError בצד השרת והחזיר 500 במקום 404 — תשובה שגוגל קורא כ"נסה
+ * שוב" ומשאירה את הכתובת בתור הסריקה. הפתרון אינו לעטוף את הפענוח אלא
+ * לא לפענח בכלל: ההשוואה נעשית מול השמות המקודדים, בדיוק כמו ברכיב
+ * העמוד, וכך שתי הפונקציות גם אינן יכולות לחלוק על זהות התחנה.
+ *
+ * Next.js 16 מקודד את ה-slug פעמיים ב-SSG, ולכן נבדקות שלוש הצורות.
+ */
+function stationFromSlug(slug: string): Station | null {
+  return (
+    STATIONS.find(s => encodeURIComponent(encodeURIComponent(s.name)) === slug) ||
+    STATIONS.find(s => encodeURIComponent(s.name) === slug) ||
+    STATIONS.find(s => s.name === slug) ||
+    null
+  );
+}
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const stationName = decodeURIComponent(slug);
-  const station = STATIONS.find(s => s.name === stationName);
-  const city = station?.city ?? "גוש דן";
-  const nearby = station?.nearbyPlaces.slice(0, 2) ?? [];
+  const station = stationFromSlug(slug);
+  if (!station) {
+    // העמוד עצמו יקרא notFound() על אותו slug. הכותרת כאן רק מונעת
+    // זריקה בשלב המטא-דאטה, ו-noindex שומר על הכתובת מחוץ לאינדקס.
+    return { title: "התחנה לא נמצאה | דרך קלה", robots: { index: false, follow: false } };
+  }
+  const stationName = station.name;
+  const city = station.city;
+  const nearby = station.nearbyPlaces.slice(0, 2);
 
   const description =
     nearby.length >= 2
@@ -51,11 +76,7 @@ export default async function StationPage({ params }: Props) {
   const { slug } = await params;
   // Next.js 16 SSG double-encodes the slug in the default export params.
   // Try double-encoded match first, then single, then raw.
-  const station =
-    STATIONS.find(s => encodeURIComponent(encodeURIComponent(s.name)) === slug) ||
-    STATIONS.find(s => encodeURIComponent(s.name) === slug) ||
-    STATIONS.find(s => s.name === slug) ||
-    null;
+  const station = stationFromSlug(slug);
   // כל slug שאינו אחת מ-34 התחנות החזיר 200 עם עמוד תחנה מומצא, שנבנה
   // סביב השם שחולץ מהכתובת. זה גם מטעה משתמש וגם נותן לגוגל אינסוף
   // עמודים דקים לאינדוקס.
