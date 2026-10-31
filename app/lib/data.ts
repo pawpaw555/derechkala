@@ -110,7 +110,7 @@ export const LANDMARKS: Landmark[] = [
   { name: "תיאטרון גשר", stationName: "שלמה (סלמה)", walkMins: 5, lineId: "red" },
   // אצטדיון בלומפילד
   { name: "אצטדיון בלומפילד", stationName: "אצטדיון בלומפילד", walkMins: 4, lineId: "red" },
-  { name: "שוק הפשפשים", stationName: "אצטדיון בלומפילד", walkMins: 6, lineId: "red" },
+  { name: "שוק הפשפשים", stationName: "שלמה (סלמה)", walkMins: 4, lineId: "red" },
   // הבעש"ט
   { name: "בית חולים וולפסון", stationName: "הבעש\"ט", walkMins: 9, lineId: "red" },
   // יוספטל
