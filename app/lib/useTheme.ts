@@ -77,6 +77,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.body.style.background = dark ? darkTheme.bg : lightTheme.bg;
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    // רכיב שרת אינו יכול לקרוא את הערכה דרך הקונטקסט. עמוד ה-404 הוא
+    // כזה, והוא נשאר בהיר במצב כהה. הסימון הזה נותן ל-CSS רגיל לענות
+    // על אותה שאלה, בלי להפוך את העמוד לרכיב לקוח ולאבד את הרינדור בשרת.
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
 
   const apply = (v: boolean) => {
