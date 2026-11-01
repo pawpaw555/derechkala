@@ -216,8 +216,10 @@
 
 ## ד. סכמת FAQPage חסרה בשלושה עמודים שמציגים שאלות נפוצות
 
-    מגדירים סכמה   app/map/page.tsx, app/station/[slug]/page.tsx
-    מציגים בלוק     map, station, HomeContent, RedLineContent, HoursContent
+    מגדירים סכמה   app/map/page.tsx:32, app/station/[slug]/page.tsx:124
+    מציגים בלוק     app/HomeContent.tsx:1100, app/line-red/RedLineContent.tsx:137,
+                     app/hours/HoursContent.tsx:169, app/map/MapContent.tsx:75,
+                     app/station/[slug]/StationClient.tsx:791
 
 כלומר `/`, `/line-red` ו-`/hours` מציגים שאלות ותשובות בלי שגוגל יודע
 שאלה שאלות נפוצות. זה הממצא בעל הערך הישיר הגבוה ביותר ל-SEO ברשימה.
