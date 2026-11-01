@@ -46,12 +46,19 @@ export default function RootLayout({
       <body style={{ margin: 0, padding: 0 }}>
         <ThemeProvider>
         {children}
+        {/*
+          הסקריפט נטען קודם לכן ללא תנאי, ולכן כל בנייה מקומית נרשמה
+          לפרויקט החי: ב-31.10 הופיעו בלוח המחוונים 22 צפיות מ-localhost,
+          והשגיאה היחידה שדווחה — _leaflet_pos — הגיעה מסשן בדיקות שלי
+          ולא ממשתמש. מדידה שמערבת את מי שבודק את האתר עם מי שמשתמש בו
+          אינה מדידה. רץ רק על הדומיין עצמו.
+        */}
         <Script id="ms-clarity" strategy="afterInteractive">
-          {`(function(c,l,a,r,i,t,y){
+          {`if (location.hostname === "derechkala.online") {(function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "yrc8o851ob");`}
+    })(window, document, "clarity", "script", "yrc8o851ob");}`}
         </Script>
         </ThemeProvider>
 
