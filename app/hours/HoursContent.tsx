@@ -2,46 +2,24 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
+import {
+  getDayType, isOperating, hhmm,
+  SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS,
+  WEEKDAY_LAST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS,
+} from "../lib/data";
 
-const SCHEDULE = {
-  red: {
-    name: "קו אדום",
-    color: "#b04050",
-    weekday: { first: "05:30", last: "00:00" },
-    friday: { first: "05:30", last: "15:40" },
-    saturday: { first: "19:45", last: "00:00" },
-  },
-};
-
-function getDayType(date: Date) {
-  const day = date.getDay();
-  if (day === 5) return "friday";
-  if (day === 6) return "saturday";
-  return "weekday";
-}
-
-function timeToMins(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function isOperating(date: Date, dayType: string, schedule: typeof SCHEDULE.red) {
-  if (dayType === "saturday") {
-    return date.getHours() * 60 + date.getMinutes() >= 19 * 60 + 45;
-  }
-  const now = date.getHours() * 60 + date.getMinutes();
-  const hours = schedule[dayType as keyof typeof schedule] as { first: string; last: string };
-  const first = timeToMins(hours.first);
-  const last = hours.last === "00:00" ? 24 * 60 : timeToMins(hours.last);
-  return now >= first && now <= last;
-}
-
-function minsUntilClose(date: Date, dayType: string, schedule: typeof SCHEDULE.red) {
-  const now = date.getHours() * 60 + date.getMinutes();
-  const hours = schedule[dayType as keyof typeof schedule] as { first: string; last: string };
-  const last = hours.last === "00:00" ? 24 * 60 : timeToMins(hours.last);
-  return last - now;
-}
+// העמוד החזיק עותק משלו של שעות הפעילות, של getDayType ושל isOperating,
+// ולא ייבא דבר מ-data.ts. שינוי בלוח הזמנים במקום אחד היה משאיר את
+// מתכנן הנסיעה ואת העמוד הזה אומרים דברים שונים, בלי שום אזהרה.
+// minsUntilClose ו-timeToMins הוצהרו ולא נקראו מעולם.
+const FIRST = hhmm(SERVICE_FIRST_MINS);
+const MIDNIGHT = hhmm(WEEKDAY_LAST_MINS % (24 * 60));
+const FRIDAY_LAST = hhmm(FRIDAY_LAST_MINS);
+const SATURDAY_FIRST = hhmm(SATURDAY_NIGHT_FIRST_MINS);
+const LAST_BY_DAY = { weekday: MIDNIGHT, friday: FRIDAY_LAST, saturday: MIDNIGHT };
+const peakRanges = PEAK_WINDOWS.map(([f, t]) => `${hhmm(f * 60)}–${hhmm(t * 60)}`);
+const PEAK_LABEL = peakRanges.join(" · ");
+const PEAK_LABEL_AND = peakRanges.join(" ו-");
 
 export default function HoursContent() {
   const { t } = useTheme();
@@ -62,7 +40,7 @@ export default function HoursContent() {
   const dayType = getDayType(clock);
   const currentTime = ready ? clock.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "";
   const dayLabel = { weekday: "יום חול", friday: "ערב שבת", saturday: "שבת" }[dayType];
-  const operating = ready && isOperating(clock, dayType, SCHEDULE.red);
+  const operating = ready && isOperating(clock);
   const isShabat = ready && dayType === "saturday" && clock.getHours() < 21;
 
   return (
@@ -125,9 +103,9 @@ export default function HoursContent() {
             {!ready
               ? "השעה נקראת מהדפדפן שלך."
               : isShabat
-              ? "השירות מתחדש במוצאי שבת מהשעה 19:45."
+              ? `השירות מתחדש במוצאי שבת מהשעה ${SATURDAY_FIRST}.`
               : operating
-              ? `השירות פעיל עד ${SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] && (SCHEDULE.red[dayType as keyof typeof SCHEDULE.red] as any).last}.`
+              ? `השירות פעיל עד ${LAST_BY_DAY[dayType]}.`
               : "בדקו את לוח הזמנים השבועי למטה."}
           </div>
         </div>
@@ -136,10 +114,10 @@ export default function HoursContent() {
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 10, fontWeight: 600, letterSpacing: "0.04em" }}>לוח זמנים שבועי — קו אדום</div>
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
           {[
-            { label: "ראשון עד חמישי", sub: "ימי חול", first: "05:30", last: "00:00", key: "weekday" },
-            { label: "ערב שבת (שישי)", sub: "ובערבי חג", first: "05:30", last: "15:40", key: "friday" },
+            { label: "ראשון עד חמישי", sub: "ימי חול", first: FIRST, last: MIDNIGHT, key: "weekday" },
+            { label: "ערב שבת (שישי)", sub: "ובערבי חג", first: FIRST, last: FRIDAY_LAST, key: "friday" },
             { label: "שבת", sub: "לא פועל", first: "—", last: "—", key: "shabat" },
-            { label: "מוצאי שבת", sub: "ומוצאי חג", first: "19:45", last: "00:00", key: "saturday" },
+            { label: "מוצאי שבת", sub: "ומוצאי חג", first: SATURDAY_FIRST, last: MIDNIGHT, key: "saturday" },
           ].map((row, i, arr) => (
             <div key={row.label} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -163,12 +141,12 @@ export default function HoursContent() {
           <div style={{ fontSize: 13, color: t.muted, marginBottom: 12, fontWeight: 600, letterSpacing: "0.04em" }}>תדירות — קו אדום</div>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#b04050" }}>3.5′</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#b04050" }}>{PEAK_FREQ_MINS}′</div>
               <div style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>שעות עומס</div>
-              <div style={{ fontSize: 10, color: t.muted }}>07:00–09:00 · 16:00–19:00</div>
+              <div style={{ fontSize: 10, color: t.muted }}>{PEAK_LABEL}</div>
             </div>
             <div style={{ flex: 1, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>6′</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>{BASE_FREQ_MINS}′</div>
               <div style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>שעות רגילות</div>
               <div style={{ fontSize: 10, color: t.muted }}>שאר שעות היום</div>
             </div>
@@ -191,11 +169,11 @@ export default function HoursContent() {
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 10, fontWeight: 600, letterSpacing: "0.04em" }}>שאלות נפוצות</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
           {[
-            { q: "האם הרכבת הקלה פועלת בשבת?", a: "לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה 19:45." },
-            { q: "עד מתי פועלת הרכבת הקלה בשישי?", a: "בערב שבת ובערבי חג הרכבת האחרונה יוצאת ב-15:40. חשוב לתכנן את הנסיעה מראש." },
-            { q: "מתי מתחיל השירות בבוקר?", a: "בימי חול ובשישי השירות מתחיל ב-05:30. במוצאי שבת ומוצאי חג השירות מתחיל ב-19:45." },
-            { q: "כל כמה זמן יש רכבת?", a: "בשעות העומס (07:00–09:00 ו-16:00–19:00) רכבת כל 3.5 דקות. בשעות הרגילות רכבת כל 6 דקות." },
-            { q: "האם יש שינויים בחגים?", a: "כן. בערבי חג השירות מסתיים מוקדם (כמו ערב שבת), ובמוצאי חג השירות מתחדש בשעה 19:45. מומלץ לבדוק באתר הרשמי של דנקל לפני חג." },
+            { q: "האם הרכבת הקלה פועלת בשבת?", a: `לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה ${SATURDAY_FIRST}.` },
+            { q: "עד מתי פועלת הרכבת הקלה בשישי?", a: `בערב שבת ובערבי חג הרכבת האחרונה יוצאת ב-${FRIDAY_LAST}. חשוב לתכנן את הנסיעה מראש.` },
+            { q: "מתי מתחיל השירות בבוקר?", a: `בימי חול ובשישי השירות מתחיל ב-${FIRST}. במוצאי שבת ומוצאי חג השירות מתחיל ב-${SATURDAY_FIRST}.` },
+            { q: "כל כמה זמן יש רכבת?", a: `בשעות העומס (${PEAK_LABEL_AND}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
+            { q: "האם יש שינויים בחגים?", a: `כן. בערבי חג השירות מסתיים מוקדם (כמו ערב שבת), ובמוצאי חג השירות מתחדש בשעה ${SATURDAY_FIRST}. מומלץ לבדוק באתר הרשמי של דנקל לפני חג.` },
           ].map(({ q, a }, i) => (
             <details key={i} style={{
               background: t.card, border: `1px solid ${t.border}`,

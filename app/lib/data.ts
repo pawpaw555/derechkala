@@ -46,7 +46,7 @@ export const STATIONS: Station[] = [
   { name: "אלנבי", lat: 32.0626, lng: 34.7746, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["שדרות רוטשילד", "שוק הכרמל"] },
   { name: "אליפלט", lat: 32.0583, lng: 34.7625, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["מתחם התחנה", "פארק המסילה"] },
   { name: "שלמה (סלמה)", lat: 32.0542, lng: 34.7594, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["יפו העתיקה", "תיאטרון גשר"] },
-  { name: "אצטדיון בלומפילד", lat: 32.0500, lng: 34.7589, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["אצטדיון בלומפילד", "שוק הפשפשים"] },
+  { name: "אצטדיון בלומפילד", lat: 32.0500, lng: 34.7589, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["שוק הפשפשים", "מרכז תרבות מנדל"] },
   { name: "ארליך", lat: 32.0457, lng: 34.7583, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["המכללה האקדמית תל אביב יפו"] },
   { name: "איסקוב", lat: 32.0419, lng: 34.7569, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["קריית חינוך יפו, עירוני ז׳"] },
   { name: "הבעש\"ט", lat: 32.0384, lng: 34.7556, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "תל אביב", nearbyPlaces: ["בית חולים וולפסון", "מרכז הטניס יפו"] },
@@ -451,6 +451,11 @@ export function getDayType(date: Date): DayType {
 export const FRIDAY_LAST_MINS = 15 * 60 + 40;
 export const SATURDAY_NIGHT_FIRST_MINS = 19 * 60 + 45;
 export const SERVICE_FIRST_MINS = 5 * 60 + 30;
+export const WEEKDAY_LAST_MINS = 24 * 60;
+// התדירות הוגדרה כאן ושוכפלה ביד בעמוד השעות. עכשיו שניהם קוראים מכאן.
+export const PEAK_WINDOWS: readonly (readonly [number, number])[] = [[7, 9], [16, 19]];
+export const PEAK_FREQ_MINS = 3.5;
+export const BASE_FREQ_MINS = 6;
 
 /**
  * כשאין שירות בזמן המבוקש, findRoute מחזירה את זה במקום לוח זמנים.
@@ -459,7 +464,8 @@ export const SERVICE_FIRST_MINS = 5 * 60 + 30;
  */
 export type NoService = { noService: true; reason: string };
 
-const hhmm = (m: number) =>
+// מיוצא כדי שעמוד השעות יציג את אותן דקות באותו פורמט.
+export const hhmm = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
 function describeNoService(date: Date): string {
@@ -488,8 +494,8 @@ export function isSaturdayNight(date: Date): boolean {
 }
 export function getFrequencyMins(date: Date): number {
   const hour = date.getHours();
-  const isPeak = (hour >= 7 && hour < 9) || (hour >= 16 && hour < 19);
-  return isPeak ? 3.5 : 6;
+  const isPeak = PEAK_WINDOWS.some(([from, to]) => hour >= from && hour < to);
+  return isPeak ? PEAK_FREQ_MINS : BASE_FREQ_MINS;
 }
 export function getNextDepartures(date: Date, count: number = 3): {
   time: string;

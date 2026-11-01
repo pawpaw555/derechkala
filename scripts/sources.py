@@ -70,6 +70,31 @@ def counts():
     return len(stations()), landmark_count(), poi_count(), place_count()
 
 
+def station_nearby():
+    """{שם תחנה: [מקומות סמוכים]}. העובדה הזאת יושבת גם ב-LANDMARKS."""
+    seg = _array(_read('app/lib/data.ts'), 'export const STATIONS')
+    out = {}
+    for m in re.finditer(
+            r'\{\s*name:\s*"((?:[^"\\]|\\.)*)"'
+            r'[^}]*?nearbyPlaces:\s*\[([^\]]*)\]', seg, re.S):
+        names = [_unescape(x) for x in
+                 re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))]
+        out[_unescape(m.group(1))] = names
+    return out
+
+
+def landmarks():
+    """[{name, stationName, walkMins}] מתוך LANDMARKS ב-data.ts."""
+    seg = _array(_read('app/lib/data.ts'), 'export const LANDMARKS')
+    return [{'name': _unescape(m.group(1)),
+             'stationName': _unescape(m.group(2)),
+             'walkMins': int(m.group(3))}
+            for m in re.finditer(
+                r'\{\s*name:\s*"((?:[^"\\]|\\.)*)",\s*'
+                r'stationName:\s*"((?:[^"\\]|\\.)*)",\s*'
+                r'walkMins:\s*(\d+)', seg)]
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'counts':
         print('%d · %d · %d · %d' % counts())
