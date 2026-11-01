@@ -110,8 +110,17 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       if (cancelled || !containerRef.current) return;
       if ((containerRef.current as unknown as { _leaflet_id?: number })._leaflet_id) return;
 
+      // זום 11 קבוע התאים למיכל של 708×350. משהמיכל גדל ל-1068×620 בעמוד
+      // המפה, אותו זום השאיר את הקו קטן באמצע ים של שטח ריק. התאמה
+      // לגבולות התחנות נותנת את הזום הנכון לכל גודל מיכל, ובנייד היא
+      // מחזירה בדיוק את מה שהיה.
       const map = L.map(containerRef.current).setView([32.055, 34.790], 11);
       mapRef.current = map;
+      if (stations.length > 0) {
+        map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lng] as [number, number])), {
+          padding: [28, 28],
+        });
+      }
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -446,7 +455,9 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
       </div>
       <div style={{ position: "relative" }}>
-        <div ref={containerRef} style={{ width: "100%", height: "350px" }} />
+        {/* הגובה הוא משתנה כדי שעמוד המפה יוכל להגדיל אותו במסך רחב בלי
+            לשנות את המפה הקטנה שבעמוד התחנה. ברירת המחדל זהה לקודם. */}
+        <div ref={containerRef} style={{ width: "100%", height: "var(--map-h, 350px)" }} />
         {/* שלב הביניים ("עוד קצת למוקדי עניין") נמחק — המשתמש קרא לו
             נדנוד, והוא צודק: אחרי שהשמות דלוקים אין מה לבקש ממנו.
             pointer-events: none כדי שהגרירה והלחיצה יעברו דרכו. */}

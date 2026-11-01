@@ -40,7 +40,20 @@ export default function MapPage() {
         })}}
       />
       <SiteHeader />
-      <section style={{ maxWidth: 760, margin: "0 auto", padding: "36px 24px 48px" }}>
+      {/*
+        המפה היא העמוד הנצפה ביותר באתר, והיא ישבה ב-350px גובה בתוך עמודה
+        של 760px — במסך של 1440 זה פחות מחצי מהרוחב, עם שוליים ריקים משני
+        הצדדים. במסך רחב העמודה נפתחת ל-1120 והמפה ל-620, אבל פסקת הפתיחה
+        נשארת ב-760 כי שורת טקסט ארוכה מדי קשה לקריאה. בנייד שום דבר לא משתנה.
+      */}
+      <style>{`
+        .map-page { max-width: 760px; margin: 0 auto; padding: 36px 24px 48px; }
+        @media (min-width: 1000px) {
+          .map-page { max-width: 1120px; --map-h: 620px; }
+          .map-page .map-prose { max-width: 760px; }
+        }
+      `}</style>
+      <section className="map-page">
 
         {/* H1 — server rendered for SEO */}
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>

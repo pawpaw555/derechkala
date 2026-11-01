@@ -18,7 +18,7 @@ export default function MapContent() {
         <span style={{ color: t.muted }}>›</span>
         <span style={{ color: t.text }}>מפת הרכבת הקלה</span>
       </nav>
-      <p style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 24, color: t.muted }}>
+      <p className="map-prose" style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 24, color: t.muted }}>
         מפה אינטראקטיבית של כל תחנות הקו האדום של הרכבת הקלה בגוש דן — מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. לחצו על תחנה לפרטים נוספים.
       </p>
       {/* Map client */}
