@@ -41,7 +41,12 @@ export default function HoursContent() {
   const currentTime = ready ? clock.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "";
   const dayLabel = { weekday: "יום חול", friday: "ערב שבת", saturday: "שבת" }[dayType];
   const operating = ready && isOperating(clock);
-  const isShabat = ready && dayType === "saturday" && clock.getHours() < 21;
+  // ה-21:00 שהיה כאן היה עותק שלישי של לוח הזמנים, ששרד את המעבר ל-data.ts
+  // כי הוא מספר ולא מחרוזת. בשבת בין 19:45 ל-21:00 isOperating החזיר true
+  // והכרטיס אמר "לא פועלת בשבת" ומתחתיו "השירות מתחדש מהשעה 19:45" — שעה
+  // שכבר עברה, בזמן שמתכנן הנסיעה הציע יציאות חיות. שבת היא לא טווח שעות
+  // משלה: היא בדיוק "יום שבת ועוד לא פועלת", לפי אותו מקור יחיד.
+  const isShabat = ready && dayType === "saturday" && !operating;
 
   return (
     <main style={{
@@ -93,8 +98,6 @@ export default function HoursContent() {
               ? "הרכבת הקלה לא פועלת בשבת"
               : operating
               ? "הרכבת הקלה פועלת עכשיו"
-              : dayType === "saturday"
-              ? "הרכבת הקלה תחזור לפעול בעוד זמן מה"
               : "הרכבת הקלה לא פועלת כרגע"}
           </div>
           {/* רקע הכרטיס קבוע בהיר, ולכן הטקסט חייב להיות כהה קבוע. קודם
