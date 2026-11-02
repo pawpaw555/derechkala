@@ -65,6 +65,14 @@ const LABEL_ZOOM = 14;
  * משמאל לסמן, ושם מוקד עבר מימין לו. הורדת הסף ל-13 נבדקה ונדחתה: 55 חפיפות.
  */
 const POI_LABEL_ZOOM = LABEL_ZOOM;
+/**
+ * מתחת לסף הזה אין מקום להרחיב את שטח הלחיצה. נמדד על מסך 1440 בזום
+ * הפתיחה: 34 סמנים ברוחב 13 פיקסלים, והמרחק לשכן הקרוב הוא 12 במינימום
+ * ו-15 בחציון — הנקודות כמעט נוגעות. הילה שם הייתה בולעת שכנים, והלוחץ
+ * היה מקבל תחנה שרירותית: גרוע מהחטאה, כי זה נראה כאילו עבד. בזום 12
+ * המרווח 23 במינימום ו-31 בחציון, ובזום 13 הוא 98, ושם יש מקום.
+ */
+const HIT_ZOOM = 12;
 
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -266,6 +274,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
         railLabelsRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         containerRef.current?.classList.toggle("map-far", !names);
+        containerRef.current?.classList.toggle("map-tight", z < HIT_ZOOM);
         setStage(pois ? "all" : names ? "stations" : "far");
         if (pois) requestAnimationFrame(declutter);
       };
@@ -420,6 +429,14 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               transition: transform .18s ease; }
         .mk-station { border-radius: 50%; border: 2px solid #0e0e11;
               box-shadow: 0 0 0 2px #ffffffee, 0 1px 4px rgba(0,0,0,.45); }
+        /* שטח לחיצה בלבד — שקוף, ולא משנה פיקסל אחד במראה. נמדד שהסמן
+           נתפס עד שישה פיקסלים מהמרכז בלבד, ומעבר לזה הקליק נוחת על גוף
+           המפה. ::after לא נוגע בפריסה ולא מחייב לחשב מחדש את iconAnchor.
+           הערכים נפרדים כי map-far מגדיל את הסמן ואת ההילה איתו ב-30%. */
+        .mk-station::after { content: ""; position: absolute; inset: -10px;
+              border-radius: 50%; }
+        .map-far .mk-station::after { inset: -4px; }
+        .map-tight .mk-station::after { inset: 0; }
         .mk-poi { width: 9px; height: 9px; background: #2563eb;
               border: 2px solid #fff; transform: rotate(45deg);
               box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.4); }
