@@ -66,13 +66,53 @@ const LABEL_ZOOM = 14;
  */
 const POI_LABEL_ZOOM = LABEL_ZOOM;
 /**
- * מתחת לסף הזה אין מקום להרחיב את שטח הלחיצה. נמדד על מסך 1440 בזום
- * הפתיחה: 34 סמנים ברוחב 13 פיקסלים, והמרחק לשכן הקרוב הוא 12 במינימום
- * ו-15 בחציון — הנקודות כמעט נוגעות. הילה שם הייתה בולעת שכנים, והלוחץ
- * היה מקבל תחנה שרירותית: גרוע מהחטאה, כי זה נראה כאילו עבד. בזום 12
- * המרווח 23 במינימום ו-31 בחציון, ובזום 13 הוא 98, ושם יש מקום.
+ * גבול עליון לשטח הלחיצה. מעליו ההילה גדולה מהצורך ואינה מוסיפה דיוק.
+ *
+ * קודם לכן כאן ישב `HIT_ZOOM = 12` — מתחת לזום 12 ההילה כבויה, ומעליו
+ * 4 פיקסל אחידים לכל 34 הסמנים (map-far) או 10 מזום 14. נמדד בדפדפן
+ * שהשער הזה שוגה בשני הכיוונים, כי הזום אינו מה שקובע — ומפתיע יותר,
+ * הוא גם אינו קבוע:
+ *
+ *   /map במסך 1440 · מיכל 1068×620 · נפתח בזום 11 או 12, לא אחד מהם
+ *     קבוע: נמדד 6 פעמים 11 ו-3 פעמים 12 באותו מיכל בדיוק. fitBounds
+ *     בוחר 12 למיכל בגובה 620 ו-11 לגובה 350 — שהוא ברירת המחדל של
+ *     `var(--map-h, 350px)` — ואין מי שיתאים שוב אחרי שהגובה מוחל.
+ *     בטעינות שיצאו 12 המרווח החציוני 15.1, השער פתח 4 לכולם, והתוצאה
+ *     25 זוגות הילות נחתכות, 11.7 בגרוע: ההילה בלעה שכנים, בדיוק מה
+ *     שהשער נועד למנוע. בטעינות שיצאו 11 הוא סגר הכול.
+ *   בוחר היעד בעמוד הבית · 468×350 · זום 11 · מרווח חציוני 7.6
+ *   /map במסך 375 · 323×350 · זום 11 · מרווח חציוני 7.6
+ *     כאן הסגירה נכונה: 29 זוגות סמנים חופפים זה את זה כבר בלי שום
+ *     הילה, כי סמן ברוחב 13 ומרווח 7.6 אינם יכולים להתקיים יחד.
+ *
+ * הזום נמדד משני מקורות בלתי תלויים — הזומים של כל האריחים ב-DOM, וגזירה
+ * מהמרווח הנמדד בין הסמנים. קריאת האריח הראשון בלבד מטעה: שכבת הזום
+ * הקודמת נשארת ב-DOM בזמן הדהייה.
+ *
+ * שער שנשען על זום לא יכול לעבוד כאן, כי הזום עצמו אינו מוסכם בין שתי
+ * טעינות של אותו עמוד. מרווח נמדד תקף בשתיהן.
+ *
+ * לכן המרווח נמדד ישירות. לכל סמן i:
+ *   p_i = min( HIT_MAX,  min_j (d_ij − r_i − r_j) / 2 ),  לא שלילי
+ * ומכאן שלכל זוג (r_i+p_i) + (r_j+p_j) ≤ d_ij: שתי ההילות אינן נחתכות
+ * ולחיצה לעולם אינה נוחתת על שכן. d_ij נמדד על נקודות מעוגלות, כמו
+ * שליפט ממקם סמנים, אחרת המרחק המחושב אינו המרחק המצויר. j עובר על כל
+ * השכנים הלחיצים ולא על תחנות בלבד: סמן מוקד עניין וסמן רכבת ישראל
+ * לחיצים גם הם, והילה שבולעת אותם היא אותו באג. תוויות אינן בחישוב —
+ * declutter כבר מסתיר אותן בחפיפה, והן נדלקות רק מזום 14.
+ *
+ * נמדד אחרי השינוי, בכל זום מ-11 עד 16: ההילה מוסיפה 0 זוגות חפיפה
+ * ו-0 פיקסל. 4 זוגות הסמנים שכן חופפים בזום 11 הם גוף הסמן עצמו — 13
+ * פיקסל רוחב במרווח 11.7, ושני הסמנים שם מקבלים הילה 0 — וזה גודל הסמן
+ * ולא שטח הלחיצה. בקרה חיובית: אותה בדיקה כשכל ההילות מאולצות ל-10
+ * מדווחת 124 זוגות ו-26 פיקסל.
+ *
+ * מה שזה אינו פותר, ואסור שייחשב פתור: בזום 11 שום הילה אינה אפשרית,
+ * ולכן בעמוד הבית ובנייד התיקון מזיז 2 סמנים מ-34 ולא יותר. 53% הקליקים
+ * על שטח מת אינם נפתרים מכאן — הם דורשים מכניזם אחר, כמו לחיצה על גוף
+ * המפה שבוחרת את התחנה הקרובה.
  */
-const HIT_ZOOM = 12;
+const HIT_MAX = 10;
 
 export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -91,6 +131,12 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
   const { t } = useTheme();
   const markersRef = useRef<Marker[]>([]);
+  /**
+   * סמני הנקודה בלבד — markersRef מחזיק גם את התוויות, ולהן אין `.mk`
+   * ואין רדיוס. המיקום והרדיוס נשמרים כאן כי sizeHits צריך לחשב מרווחים
+   * לפני שהוא נוגע ב-DOM, והגודל תלוי במוצא וביעד.
+   */
+  const dotsRef = useRef<{ marker: Marker; lat: number; lng: number; r: number }[]>([]);
   const overlayRef = useRef<Layer[]>([]);
   /** מסנכרן את השכבות תלויות הזום. ב-ref ולא על אובייקט המפה. */
   const syncRef = useRef<() => void>(() => {});
@@ -264,6 +310,46 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         });
       };
 
+      /**
+       * קובע לכל סמן תחנה את שטח הלחיצה שלו לפי המרווח לשכן הקרוב לו.
+       * ההפרש בין שתי נקודות מוקרנות תלוי בזום בלבד ולא במרכז התצוגה,
+       * ולכן די להריץ ב-zoomend ואין צורך להיתלות ב-moveend.
+       */
+      const sizeHits = (far: boolean) => {
+        // ליפט ממקם סמנים בפיקסלים שלמים — נמדד שהשארית השברית של left
+        // היא 0 בכל 34 הסמנים — ולכן מעגלים גם כאן. בלי זה המרחק המחושב
+        // אינו המרחק המצויר, ונמדדו 4 זוגות בחפיפה של 1.3 פיקסל שכולה
+        // הפרש העיגול ולא חישוב. שולי ביטחון היו מכסים את זה ומקצצים את
+        // ההילה בכל מקום; עיגול זהה מבטל את ההפרש עצמו.
+        const at = (lat: number, lng: number) => {
+          const p = map.latLngToContainerPoint([lat, lng]);
+          return { x: Math.round(p.x), y: Math.round(p.y) };
+        };
+        // map-far מגדיל כל סמן ב-30%, ואיתו גם הרדיוס שצריך להתחשב בו.
+        const sc = far ? 1.3 : 1;
+        // מוקד עניין הוא ריבוע 9 מסובב ב-45°, ולכן רדיוס חוסם 6.4 ולא 4.5.
+        const others = [
+          ...PLACES.map(p => ({ p: at(p.lat, p.lng), r: 6.4 * sc })),
+          ...RAIL_STATIONS.map(s => ({ p: at(s.lat, s.lng), r: 5 * sc })),
+        ];
+        const dots = dotsRef.current.map(d => ({ m: d.marker, p: at(d.lat, d.lng), r: d.r * sc }));
+        dots.forEach((a, i) => {
+          // Infinity ולא HIT_MAX, כדי שהתקרה תיחתך אחרי המדידה ולא לפניה:
+          // כשהיא נחתכה קודם, אף סמן לא הגיע ל-10 גם במרווח של 60 פיקסל.
+          let pad = Infinity;
+          const near = (b: { p: { x: number; y: number }; r: number }) => {
+            pad = Math.min(pad, (Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) - a.r - b.r) / 2);
+          };
+          dots.forEach((b, j) => { if (j !== i) near(b); });
+          others.forEach(near);
+          // ה-inset נכתב לפני ה-transform ומוכפל ב-sc יחד עם הסמן, ולכן
+          // מחלקים כאן — אחרת ההילה גדולה פי 1.3 ממה שנמדד שיש לה מקום.
+          const el = a.m.getElement()?.firstElementChild as HTMLElement | null;
+          const px = Math.floor(Math.min(HIT_MAX, Math.max(0, pad)) / sc);
+          el?.style.setProperty("--hit", `${px}px`);
+        });
+      };
+
       const sync = () => {
         const z = map.getZoom();
         const names = z >= LABEL_ZOOM;
@@ -274,7 +360,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
         railLabelsRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         containerRef.current?.classList.toggle("map-far", !names);
-        containerRef.current?.classList.toggle("map-tight", z < HIT_ZOOM);
+        sizeHits(!names);
         setStage(pois ? "all" : names ? "stations" : "far");
         if (pois) requestAnimationFrame(declutter);
       };
@@ -293,6 +379,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       mapRef.current = null;
       zoomLayersRef.current = [];
       markersRef.current = [];
+      dotsRef.current = [];
       overlayRef.current = [];
       setMapReady(false);
     };
@@ -313,8 +400,10 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       markersRef.current.forEach(m => map.removeLayer(m));
       zoomLayersRef.current = zoomLayersRef.current.filter(l => !markersRef.current.includes(l));
       markersRef.current = [];
+      dotsRef.current = [];
 
       const labels: Marker[] = [];
+      const dots: { marker: Marker; lat: number; lng: number; r: number }[] = [];
       stations.forEach(s => {
         const isFrom = fromStation?.name === s.name;
         const isTo = toStation?.name === s.name;
@@ -340,6 +429,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           else marker.openPopup();
         });
         markersRef.current.push(marker);
+        dots.push({ marker, lat: s.lat, lng: s.lng, r: size / 2 });
 
         // שמות התחנות נדלקים כשמתקרבים. ב-Clarity נראו משתמשים מתקרבים
         // ועוברים נקודה-נקודה בחיפוש תחנה; בזום שבו הם כבר נמצאים יש מקום
@@ -362,6 +452,8 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       });
 
       zoomLayersRef.current = labels;
+      // לפני syncRef — sync קורא ל-sizeHits, ש-dotsRef הוא הקלט שלו.
+      dotsRef.current = dots;
       syncRef.current();
       declutterRef.current();
     })();
@@ -432,11 +524,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         /* שטח לחיצה בלבד — שקוף, ולא משנה פיקסל אחד במראה. נמדד שהסמן
            נתפס עד שישה פיקסלים מהמרכז בלבד, ומעבר לזה הקליק נוחת על גוף
            המפה. ::after לא נוגע בפריסה ולא מחייב לחשב מחדש את iconAnchor.
-           הערכים נפרדים כי map-far מגדיל את הסמן ואת ההילה איתו ב-30%. */
-        .mk-station::after { content: ""; position: absolute; inset: -10px;
-              border-radius: 50%; }
-        .map-far .mk-station::after { inset: -4px; }
-        .map-tight .mk-station::after { inset: 0; }
+           הערך נקבע לכל סמן בנפרד ב-sizeHits, לפי המרווח לשכן הקרוב לו.
+           ברירת המחדל 0: עד שנמדד, אין הילה — הילה שלא נמדדה עלולה לבלוע
+           שכן, וזה גרוע מהחטאה כי זה נראה כאילו עבד. */
+        .mk-station::after { content: ""; position: absolute;
+              inset: calc(-1 * var(--hit, 0px)); border-radius: 50%; }
         .mk-poi { width: 9px; height: 9px; background: #2563eb;
               border: 2px solid #fff; transform: rotate(45deg);
               box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.4); }
