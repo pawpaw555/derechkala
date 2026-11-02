@@ -288,8 +288,14 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   lineName: string;
   lineColor: string;
   change?: string;
-  departureTime?: string;
-  arrivalTime?: string;
+  // לא אופציונליים. מסלול ההצלחה היחיד שלמטה מציב את שניהם תמיד, וגם
+  // findRouteByArrival מחזירה או NoService או את findRoute עצמה. כל עוד
+  // הם היו `?`, שני כרטיסי התוצאה נפלו בשקט ל-`|| ""` — תא ריק בלי שום
+  // סימן. ב-02.11.2026 דיווחתי על "שעת הגעה ריקה" שלא קרתה מעולם, והנפילה
+  // הזאת היא מה שהפך את הדיווח לאמין. עכשיו הקומפיילר מוודא שהם קיימים
+  // במקום שהרינדור יסתיר את היעדרם.
+  departureTime: string;
+  arrivalTime: string;
 } | NoService | null {
   const from = STATIONS.find(s => s.name === fromName);
   const to = STATIONS.find(s => s.name === toName);

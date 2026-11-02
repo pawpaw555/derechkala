@@ -491,7 +491,7 @@ export default function HomeContent() {
       if (useCustomTime && timeMode === "arrival") {
         const r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
         setResult(r);
-        setPlanInstant(r && !isNoService(r) && r.departureTime ? instantFromTime(baseDate, r.departureTime) : baseDate);
+        setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
       } else {
         const departures = getNextDepartures(baseDate, 1);
         setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
@@ -691,9 +691,9 @@ export default function HomeContent() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0", borderTop: `1px solid ${t.border}` }}>
                   {[
-                    ["שעת יציאה", result.departureTime || `${result.next}′`, result.lineColor],
+                    ["שעת יציאה", result.departureTime, result.lineColor],
                     ["זמן נסיעה", `${result.mins}′`, t.text],
-                    ["שעת הגעה", result.arrivalTime || "", t.text],
+                    ["שעת הגעה", result.arrivalTime, t.text],
                   ].map(([label, val, color]) => (
                     <div key={label} style={{ textAlign: "center" }}>
                       <div style={{ fontSize: 22, fontWeight: 700, color }}>{val}</div>
