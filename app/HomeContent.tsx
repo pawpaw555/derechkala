@@ -8,6 +8,7 @@ import { useTheme, type Theme } from "./lib/useTheme";
 import { SiteHeader } from "./lib/SiteComponents";
 import { useNearestStation, lookupPlaces, type Place } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
+import TimeChoice, { TimeChoiceValue } from "./lib/TimeChoice";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
 
@@ -290,9 +291,19 @@ export default function HomeContent() {
   const [customDay, setCustomDay] = useState(new Date().getDay());
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
-  // הערכים שלמעלה נדרסים בשעה הנוכחית בפתיחה הראשונה של "בחר זמן".
-  // רק הראשונה: מי שחזר ל"עכשיו" ושוב ל"בחר זמן" לא מאבד את מה שהגדיר.
+  // הערכים שלמעלה נדרסים בשעה הנוכחית בבחירה הראשונה של שעה מפורשת.
+  // רק הראשונה: מי שחזר ל"עכשיו" ושוב לשעה מפורשת לא מאבד את מה שהגדיר.
   const timeSeeded = useRef(false);
+  const chooseTime = (next: TimeChoiceValue) => {
+    if (next === "now") { setUseCustomTime(false); return; }
+    if (!timeSeeded.current) {
+      const n = pickerDefaults(MINUTE_STEP);
+      setCustomDay(n.day); setCustomHour(n.hour); setCustomMinute(n.minute);
+      timeSeeded.current = true;
+    }
+    setTimeMode(next);
+    setUseCustomTime(true);
+  };
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
   // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
@@ -913,52 +924,10 @@ export default function HomeContent() {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button onClick={() => setUseCustomTime(false)} className="btn-toggle" style={{
-                  flex: 1, padding: "9px 12px", borderRadius: 8,
-                  border: `1px solid ${!useCustomTime ? t.borderSelected : t.border}`,
-                  background: !useCustomTime ? t.resultBg : "transparent",
-                  color: !useCustomTime ? t.text : t.muted,
-                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
-                  fontWeight: !useCustomTime ? 600 : 400, cursor: "pointer",
-                }}>עכשיו</button>
-                <button onClick={() => {
-                  if (!timeSeeded.current) {
-                    const n = pickerDefaults(MINUTE_STEP);
-                    setCustomDay(n.day); setCustomHour(n.hour); setCustomMinute(n.minute);
-                    timeSeeded.current = true;
-                  }
-                  setUseCustomTime(true);
-                }} className="btn-toggle" style={{
-                  flex: 1, padding: "9px 12px", borderRadius: 8,
-                  border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
-                  background: useCustomTime ? t.resultBg : "transparent",
-                  color: useCustomTime ? t.text : t.muted,
-                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
-                  fontWeight: useCustomTime ? 600 : 400, cursor: "pointer",
-                }}>בחר זמן</button>
-              </div>
+              <TimeChoice value={useCustomTime ? timeMode : "now"} onChange={chooseTime} className="btn-toggle" padding="9px 12px" />
 
               {useCustomTime && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setTimeMode("departure")} style={{
-                    flex: 1, padding: "8px 12px", borderRadius: 8,
-                    border: `1px solid ${timeMode === "departure" ? t.borderSelected : t.border}`,
-                    background: timeMode === "departure" ? t.resultBg : "transparent",
-                    color: timeMode === "departure" ? t.text : t.muted,
-                    fontFamily: "'Rubik', sans-serif", fontSize: 13,
-                    fontWeight: timeMode === "departure" ? 600 : 400, cursor: "pointer",
-                  }}>זמן יציאה</button>
-                  <button onClick={() => setTimeMode("arrival")} style={{
-                    flex: 1, padding: "8px 12px", borderRadius: 8,
-                    border: `1px solid ${timeMode === "arrival" ? t.borderSelected : t.border}`,
-                    background: timeMode === "arrival" ? t.resultBg : "transparent",
-                    color: timeMode === "arrival" ? t.text : t.muted,
-                    fontFamily: "'Rubik', sans-serif", fontSize: 13,
-                    fontWeight: timeMode === "arrival" ? 600 : 400, cursor: "pointer",
-                  }}>זמן הגעה</button>
-                </div>
                 <div style={{
                   background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 10, padding: "12px 14px",
