@@ -140,6 +140,13 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const overlayRef = useRef<Layer[]>([]);
   /** מסנכרן את השכבות תלויות הזום. ב-ref ולא על אובייקט המפה. */
   const syncRef = useRef<() => void>(() => {});
+  /**
+   * האם התצוגה כבר נשלטת בידי משהו אחר — תזוזה של המשתמש, מסלול או
+   * מיקום. מרגע שכן, אסור להתאים אותה מחדש מתחתיו.
+   */
+  const viewOwnedRef = useRef(false);
+  /** מנתק את המשקיף על המיכל ואת מאזיני הקלט. נאסף באפקט א'. */
+  const teardownRef = useRef<() => void>(() => {});
   // אפקט א' יוצר את המפה אחרי await, ולכן אפקטים ב' ו-ג' רצים לפניו
   // ורואים mapRef ריק. בלי הדגל הזה הם חזרו מוקדם ולא רצו שוב, והמפה
   // נשארה בלי 34 סמני התחנות ובלי התוויות שלהן.
@@ -170,11 +177,91 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       // מחזירה בדיוק את מה שהיה.
       const map = L.map(containerRef.current).setView([32.055, 34.790], 11);
       mapRef.current = map;
-      if (stations.length > 0) {
+
+      /**
+       * ההתאמה רצה גם מחדש כשהמיכל משתנה, ולא פעם אחת בבנייה בלבד.
+       *
+       * גובה המיכל הוא `var(--map-h, 350px)`, ועמוד המפה מעלה אותו ל-620
+       * (`app/map/page.tsx`). כשההתאמה רצה לפני שה-CSS הוחל היא מדדה מיכל
+       * בגובה 350, ושם fitBounds בוחר זום 11 ולא 12 — חושב מהמקור: הקו
+       * תופס 209×178 פיקסל בזום 11 ו-418×357 בזום 12, מול שטח שימושי של
+       * 1012×294 בגובה 350 ו-1012×564 בגובה 620.
+       *
+       * נמדד בדפדפן לפני התיקון, מסך 1440, אותו מיכל 1068×620 בכל טעינה:
+       * 6 טעינות נפתחו בזום 11 ו-3 בזום 12. כלומר רוב המבקרים ראו את הקו
+       * ב-209×178 פיקסל בתוך מיכל של 1068×620, ורוב השטח שקומיט a67af84
+       * הוסיף נשאר ריק. fitBounds רץ פעם אחת ולא היה מי שיתאים שוב.
+       */
+      /**
+       * ההתאמה לגבולות התחנות. `animate: false` הוא התיקון עצמו, לא ליטוש.
+       *
+       * ב-Leaflet 1.9.4 `_tryAnimatedZoom` מחזיר `true` ודוחה את התזוזה
+       * עצמה ל-requestAnimationFrame, ולכן `fitBounds` חוזר בלי שהזום
+       * השתנה — ובינתיים ממשיכות לרוץ כאן שכבת האריחים, שלושת הקווים,
+       * 22 מוקדי העניין וארבע תחנות הרכבת.
+       *
+       * נמדד: `getBoundsZoom` החזיר 12 בכל טעינה, אבל התזוזה הדחויה
+       * התרחשה רק בטעינה אחת מכל שלוש. בשתיים האחרות הזום נשאר 11 לנצח,
+       * בלי שאף `zoomstart` או `zoomend` נורה. מכאן זום פתיחה דו-יציב
+       * באותו מיכל 1068×620 בדיוק: 6 טעינות ב-11 ו-3 ב-12 לפני התיקון.
+       *
+       * התנאי הראשון ב-`_tryAnimatedZoom` הוא `options.animate === false`,
+       * והוא מוציא את הקריאה לנתיב הסינכרוני של `_resetView`. הזום נקבע
+       * אז בתוך הקריאה עצמה ואין מה שיתחרה בה: 6 מתוך 6 ב-12.
+       *
+       * אין כאן הפסד — זו תצוגת הפתיחה, ואין ממה לאנפש אותה.
+       *
+       * `invalidateSize` לפני כן כי ליפט מודד את המיכל פעם אחת ושומר.
+       */
+      const fitStations = () => {
+        if (stations.length === 0) return;
+        map.invalidateSize();
         map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lng] as [number, number])), {
           padding: [28, 28],
+          animate: false,
         });
-      }
+      };
+      fitStations();
+
+      /**
+       * תזוזה של המשתמש מזוהה מאירועי הקלט עצמם ולא מאירועי ליפט:
+       * `fitBounds` מפעיל `movestart` ו-`zoomstart` בדיוק כמו גלגלת, ואין
+       * דרך להבדיל ביניהם מתוך האירוע. לחיצה נחשבת גם היא — אין טעם להזיז
+       * את המפה מתחת למי שבדיוק פתח כרטיס תחנה.
+       */
+      const own = () => { viewOwnedRef.current = true; };
+      const INPUT = ["wheel", "mousedown", "touchstart", "keydown", "dblclick"];
+      INPUT.forEach(e => containerRef.current?.addEventListener(e, own, { passive: true }));
+
+      /**
+       * ההתאמה רצה שוב כשהמיכל משתנה — שינוי גודל חלון, סיבוב טלפון, או
+       * CSS שהוחל אחרי הבנייה. ResizeObserver ולא אירוע resize של החלון,
+       * כי הגובה כאן בא מ-`var(--map-h)` ויכול להשתנות בלי שהחלון זז,
+       * וליפט אינו שומע על זה בעצמו.
+       *
+       * ההשוואה היא בין ה-DOM לבין מה שליפט מחזיק (`map.getSize()`) ולא
+       * מול מטמון מקומי של הקריאה הקודמת. כך זה נכתב בתחילה, וזו הייתה
+       * טעות: הקריאה הראשונה של `observe` היא אסינכרונית ורצה אחרי
+       * שהפריסה התייצבה, ולכן מטמון מקומי רושם את הגודל שאחרי השינוי
+       * ובולע בדיוק את מה שהוא נועד לתפוס. השוואה מול `getSize` אינה
+       * יכולה ליצור לופ: אחרי ההתאמה שני הצדדים שווים והקריאה הבאה יוצאת.
+       *
+       * נמדד: הקטנת המיכל ל-648×350 מורידה את הזום ל-11, והגדלה בחזרה
+       * ל-1068×620 מחזירה אותו ל-12.
+       */
+      const ro = new ResizeObserver(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const known = map.getSize();
+        if (known.x === el.clientWidth && known.y === el.clientHeight) return;
+        if (!viewOwnedRef.current) fitStations();
+        else map.invalidateSize();
+      });
+      ro.observe(containerRef.current);
+      teardownRef.current = () => {
+        ro.disconnect();
+        INPUT.forEach(e => containerRef.current?.removeEventListener(e, own));
+      };
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -375,6 +462,9 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
 
     return () => {
       cancelled = true;
+      teardownRef.current();
+      teardownRef.current = () => {};
+      viewOwnedRef.current = false;
       mapRef.current?.remove();
       mapRef.current = null;
       zoomLayersRef.current = [];
@@ -493,9 +583,16 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         overlayRef.current.push(line);
         // קודם לכן fitBounds רץ ומיד אחריו setView על מיקום המשתמש, כך
         // שהקצה הרחוק של המסלול נדחף מחוץ למסך. כשיש מסלול הוא קובע.
-        map.fitBounds(L.latLngBounds(route), { padding: [40, 40] });
+        // `animate: false` מאותה סיבה כמו ב-fitStations, וכלל 3: אותו
+        // נתיב דחוי של ליפט, אותו כשל שקט. כאן הוא לא נצפה, אבל תזוזה
+        // שלא מתרחשת בלי שום סימן אינה שווה אנימציה.
+        map.fitBounds(L.latLngBounds(route), { padding: [40, 40], animate: false });
+        // ומרגע שהוא קובע, שינוי גודל מיכל לא יחזיר את התצוגה לגבולות
+        // התחנות ויבלע את המסלול. אותו דבר למיקום המשתמש.
+        viewOwnedRef.current = true;
       } else if (userLoc) {
-        map.setView([userLoc.lat, userLoc.lng], Math.max(map.getZoom(), 14));
+        map.setView([userLoc.lat, userLoc.lng], Math.max(map.getZoom(), 14), { animate: false });
+        viewOwnedRef.current = true;
       }
       syncRef.current();
     })();
