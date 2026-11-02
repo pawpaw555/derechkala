@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -283,9 +283,16 @@ export default function HomeContent() {
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [useCustomTime, setUseCustomTime] = useState(false);
+  // הקפיצה בבורר הדקות. כאן היא דקה אחת — ה-select נותן 60 אפשרויות.
+  // מזינה גם את הרשימה וגם את העיגול ב-pickerDefaults, כדי ששניהם לא
+  // יוכלו להתפצל. בעמוד התחנה אותו קבוע הוא 15.
+  const MINUTE_STEP = 1;
   const [customDay, setCustomDay] = useState(new Date().getDay());
   const [customHour, setCustomHour] = useState(8);
   const [customMinute, setCustomMinute] = useState(0);
+  // הערכים שלמעלה נדרסים בשעה הנוכחית בפתיחה הראשונה של "בחר זמן".
+  // רק הראשונה: מי שחזר ל"עכשיו" ושוב ל"בחר זמן" לא מאבד את מה שהגדיר.
+  const timeSeeded = useRef(false);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
   // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
@@ -916,7 +923,14 @@ export default function HomeContent() {
                   fontFamily: "'Rubik', sans-serif", fontSize: 13,
                   fontWeight: !useCustomTime ? 600 : 400, cursor: "pointer",
                 }}>עכשיו</button>
-                <button onClick={() => setUseCustomTime(true)} className="btn-toggle" style={{
+                <button onClick={() => {
+                  if (!timeSeeded.current) {
+                    const n = pickerDefaults(MINUTE_STEP);
+                    setCustomDay(n.day); setCustomHour(n.hour); setCustomMinute(n.minute);
+                    timeSeeded.current = true;
+                  }
+                  setUseCustomTime(true);
+                }} className="btn-toggle" style={{
                   flex: 1, padding: "9px 12px", borderRadius: 8,
                   border: `1px solid ${useCustomTime ? t.borderSelected : t.border}`,
                   background: useCustomTime ? t.resultBg : "transparent",
@@ -987,7 +1001,7 @@ export default function HomeContent() {
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
                     }}>
-                      {Array.from({length: 60}, (_, i) => (
+                      {Array.from({length: 60 / MINUTE_STEP}, (_, i) => i * MINUTE_STEP).map(i => (
                         <option key={i} value={i}>{i.toString().padStart(2, "0")}</option>
                       ))}
                     </select>

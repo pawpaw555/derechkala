@@ -497,6 +497,37 @@ export function getFrequencyMins(date: Date): number {
   const isPeak = PEAK_WINDOWS.some(([from, to]) => hour >= from && hour < to);
   return isPeak ? PEAK_FREQ_MINS : BASE_FREQ_MINS;
 }
+/**
+ * ערכי הפתיחה של בורר "בחר זמן" — היום, השעה והדקה שבהן הוא נפתח.
+ *
+ * שני הבוררים נפתחו קודם על 08:00 קבוע: עמוד תחנה על "שני 08:00" בלי
+ * קשר לשעה, ועמוד הבית על היום הנוכחי ב-08:00. נמדד 02.11.2026 מול
+ * ביטוי התאריך שבעמוד התחנה: מי שלחץ "בחר זמן" ביום שני ב-21:00
+ * וחיפש, תכנן נסיעה ל-08:00 של אותו יום — שלוש-עשרה שעות בעבר, בלי
+ * שום סימן. בעמוד הבית זה קרה לכל כניסה אחרי שמונה בבוקר.
+ *
+ * ארבעה ממשקים שנבדקו באותו יום (גוגל מפות, רכבת גרמניה, Moovit,
+ * bus.gov.il) נפתחים על השעה הנוכחית. שניים מהם גם נותנים כפתור
+ * "עכשיו" בתוך העורך.
+ *
+ * העיגול כלפי מעלה ולא מטה, כי `stepMinutes` יכול להיות 15: עיגול
+ * מטה היה מחזיר עד 14 דקות אחורה — אותו באג בקטן. `setMinutes(60)`
+ * מגלגל את השעה ואת התאריך, ולכן `getDay()` שלמטה נכון גם בחצות.
+ *
+ * `stepMinutes` חייב להיות הקפיצה שבאפשרויות ה-select של אותו עמוד,
+ * אחרת תיבחר דקה שאינה ברשימה וה-select ייפתח ריק. בשני העמודים
+ * אותו קבוע מזין גם את הרשימה וגם את הקריאה לכאן.
+ */
+export function pickerDefaults(stepMinutes: number, now: Date = new Date()): {
+  day: number;
+  hour: number;
+  minute: number;
+} {
+  const d = new Date(now);
+  d.setSeconds(0, 0);
+  d.setMinutes(Math.ceil(d.getMinutes() / stepMinutes) * stepMinutes);
+  return { day: d.getDay(), hour: d.getHours(), minute: d.getMinutes() };
+}
 export function getNextDepartures(date: Date, count: number = 3): {
   time: string;
   minsFromNow: number;
