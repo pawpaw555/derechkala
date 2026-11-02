@@ -52,6 +52,14 @@ hardcoded_hours(){
   | grep -oE '[0-2][0-9]:[0-5][0-9]|get(Hours|Minutes)\(\) *[<>=!]+ *[0-9]+' \
   | wc -l | tr -d ' '
 }
+hh_total(){ local n=0 f; for f in "$@"; do n=$(( n + $(hardcoded_hours "$f") )); done; echo "$n"; }
+# חמישה קבצים החזיקו את לוח הזמנים ככתב, אחד-עשר מופעים. כולם קוראים
+# עכשיו מ-data.ts, והבדיקה שומרת על כולם ולא רק על הקובץ שתוקן ראשון.
+# מה שהיא לא מכסה: אריחי התדירות בעמוד הקו האדום היו "3.5′" ו-"6′" —
+# מספר וסימן דקות, בלי שעה ובלי מילים. תבנית לזה דורשת את הסימן ′,
+# שאינו ASCII, וכלל 11 אוסר זאת בבלוק. השמירה עליהם היא הייבוא מ-data.ts
+# בלבד, וזה פחות מבדיקה. נרשם כאן כדי שלא ייחשב מכוסה.
+HFILES="app/hours/HoursContent.tsx app/hours/page.tsx app/HomeContent.tsx app/line-red/RedLineContent.tsx app/lib/stationContent.ts"
 HFIX=/tmp/reg-hours-fixture.tsx
 cat > "$HFIX" <<'FIXTURE'
 const a = `resumes at 19:45.`;
@@ -61,7 +69,7 @@ const d = "05:30";
 const e = 1; // kept running until 21:00
 const u = "https://derechkala.online/hours";
 FIXTURE
-ok "שעות קשיחות ב-/hours (בסיס 0, בקרה 5)" "$(hardcoded_hours app/hours/HoursContent.tsx) · $(hardcoded_hours "$HFIX")"
+ok "לוח זמנים קשיח בחמישה קבצים (בסיס 0, בקרה 5)" "$(hh_total $HFILES) · $(hardcoded_hours "$HFIX")"
 
 # כלל 11ב: ממצא נרשם עם עוגן קובץ:שורה, אחרת אי אפשר לאמת אותו מחדש.
 # הבקרה: אותה בדיקה על קובץ שהעוגנים בו הוחלפו ב-.XX מחזירה 7.

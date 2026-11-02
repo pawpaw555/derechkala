@@ -1,3 +1,5 @@
+import { PEAK_FREQ_MINS, BASE_FREQ_MINS } from "./data";
+
 export type StationContent = {
   name: string;
   city: string;
@@ -30,7 +32,9 @@ export const STATION_FAQ: { q: string; a: string }[] = [
   { q: "כמה עולה נסיעה?", a: "עד 15 ק\"מ — 8 ₪. מעל 15 ק\"מ — 14.5 ₪. תוך 90 דקות ניתן להמשיך באוטובוס ללא תוספת." },
   { q: "איך משלמים?", a: "רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת." },
   { q: "מה הקנס על נסיעה ללא תיקוף?", a: "180 ₪ בתוספת מחיר הנסיעה. מי ששילם מראש ולא תיקף — עד 100 ₪." },
-  { q: "כל כמה זמן יש רכבת?", a: "שעות שיא כל 3.5 דקות, שעות רגילות כל 6 דקות." },
+  // המופע הרחב ביותר במחלקה: מחרוזת אחת שמוגשת ב-34 עמודי תחנה, גם
+  // בבלוק הנראה וגם ב-FAQPage שגוגל קורא.
+  { q: "כל כמה זמן יש רכבת?", a: `שעות שיא כל ${PEAK_FREQ_MINS} דקות, שעות רגילות כל ${BASE_FREQ_MINS} דקות.` },
 ];
 
 export const STATION_TYPE_LABEL: Record<string, string> = {

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -10,6 +10,14 @@ import { useNearestStation, lookupPlaces, type Place } from "./lib/useNearestSta
 import NearestStationFinder from "./lib/NearestStationFinder";
 
 const Map = dynamic(() => import("./lib/Map"), { ssr: false });
+
+// פסקת השעות ושלוש תשובות בשאלות הנפוצות החזיקו את לוח הזמנים ככתב.
+// המקף כאן הוא מקף רגיל ולא קו מפריד, כמו בטקסט שהיה כאן קודם — עמוד
+// השעות מציג את אותם חלונות עם קו מפריד, וזה הבדל שנראה על המסך.
+const FIRST = hhmm(SERVICE_FIRST_MINS);
+const FRIDAY_LAST = hhmm(FRIDAY_LAST_MINS);
+const SATURDAY_FIRST = hhmm(SATURDAY_NIGHT_FIRST_MINS);
+const PEAK_LABEL = PEAK_WINDOWS.map(([f, t]) => `${hhmm(f * 60)}-${hhmm(t * 60)}`).join(" ו-");
 
 const STATION_CITIES = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
@@ -1090,7 +1098,7 @@ export default function HomeContent() {
           </p>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: t.text, marginBottom: 8 }}>שעות פעילות רכבת קלה</h3>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
-            הרכבת הקלה פועלת בימי חול מ-05:30 עד חצות, בערב שבת עד 15:40, ובמוצאי שבת מ-19:45.
+            {`הרכבת הקלה פועלת בימי חול מ-${FIRST} עד חצות, בערב שבת עד ${FRIDAY_LAST}, ובמוצאי שבת מ-${SATURDAY_FIRST}.`}
           </p>
         </div>
       </section>
@@ -1103,10 +1111,10 @@ export default function HomeContent() {
             { q: "כמה עולה נסיעה ברכבת הקלה?", a: "נסיעה עד 15 ק\"מ עולה 8 ₪. נסיעה מעל 15 ק\"מ עולה 14.5 ₪. מרגע התיקוף ניתן להמשיך לנסוע באוטובוס ללא תוספת תשלום במשך 90 דקות ובטווח של עד 15 ק\"מ." },
             { q: "איך משלמים ברכבת הקלה?", a: "ניתן לשלם עם כרטיס רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת — בשערי התחנות התת-קרקעיות או במכשירי התיקוף בתחנות העיליות. אין אפשרות לתקף בתוך הרכבת עצמה." },
             { q: "מה הקנס על נסיעה ללא תיקוף?", a: "הקנס עומד על 180 ₪ בתוספת מחיר הנסיעה. מי שרכש מנוי (חופשי חודשי, שנתי או יומי) ולא תיקף — הקנס לא יעלה על 100 ₪." },
-            { q: "מתי פועלת הרכבת הקלה?", a: "ימי ראשון עד חמישי: 05:30 עד חצות. שישי וערבי חג: 05:30 עד 15:40. מוצאי שבת: מ-19:45 עד חצות. הרכבת אינה פועלת בשבת." },
-            { q: "כל כמה זמן יש רכבת?", a: "בשעות השיא (07:00-09:00 ו-16:00-19:00) רכבת כל 3.5 דקות. בשעות הרגילות רכבת כל 6 דקות." },
+            { q: "מתי פועלת הרכבת הקלה?", a: `ימי ראשון עד חמישי: ${FIRST} עד חצות. שישי וערבי חג: ${FIRST} עד ${FRIDAY_LAST}. מוצאי שבת: מ-${SATURDAY_FIRST} עד חצות. הרכבת אינה פועלת בשבת.` },
+            { q: "כל כמה זמן יש רכבת?", a: `בשעות השיא (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
             { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך 24 ק\"מ, מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. 10 מהתחנות הן תת-קרקעיות." },
-            { q: "האם הרכבת הקלה פועלת בשבת?", a: "לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה 19:45." },
+            { q: "האם הרכבת הקלה פועלת בשבת?", a: `לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה ${SATURDAY_FIRST}.` },
             { q: "מתי ייפתחו הקו הירוק והקו הסגול?", a: "הקו הסגול צפוי לפתיחה ביולי 2028. בקו הירוק ייפתח תחילה החלק הדרומי, מראשון לציון עד לוינסקי, בדצמבר 2028 — והקו המלא עד הרצליה צפוי לפעול ב-2030. שני הקווים נמצאים כעת בבנייה." },
           ].map(({ q, a }, i) => (
             <details key={i} style={{

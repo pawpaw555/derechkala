@@ -1,9 +1,17 @@
 "use client";
 import { useTheme } from "../lib/useTheme";
-import { STATIONS } from "../lib/data";
+import { STATIONS, hhmm, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "../lib/data";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import { useNearestStation } from "../lib/useNearestStation";
 import NearestStationFinder from "../lib/NearestStationFinder";
+
+// שני אריחי התדירות ושתי תשובות בשאלות הנפוצות החזיקו את התדירות ואת
+// לוח הזמנים ככתב. האריחים לא נתפסו בספירה הראשונה של המחלקה, כי אין
+// בהם שעה ואין בהם מילים — רק המספר וסימן הדקות. המספרים עצמם לא
+// נכתבים כאן בהערה, כדי שהיא לא תפיל בדיקה שתסרוק את הקובץ הזה.
+const FRIDAY_LAST = hhmm(FRIDAY_LAST_MINS);
+const SATURDAY_FIRST = hhmm(SATURDAY_NIGHT_FIRST_MINS);
+const PEAK_LABEL = PEAK_WINDOWS.map(([f, t]) => `${hhmm(f * 60)}-${hhmm(t * 60)}`).join(" ו-");
 
 const cities = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
@@ -76,8 +84,8 @@ export default function RedLineContent() {
         {[
           { label: "תחנות", value: "34" },
           { label: "אורך", value: "24 ק\"מ" },
-          { label: "שעות עומס", value: "3.5′" },
-          { label: "שעות רגילות", value: "6′" },
+          { label: "שעות עומס", value: `${PEAK_FREQ_MINS}′` },
+          { label: "שעות רגילות", value: `${BASE_FREQ_MINS}′` },
         ].map(({ label, value }) => (
           <div key={label} style={{
             flex: 1, background: t.card, border: `1px solid ${t.border}`,
@@ -139,8 +147,8 @@ export default function RedLineContent() {
         {[
           { q: "מאיפה עד איפה עובר הקו האדום?", a: "הקו האדום עובר מתחנה מרכזית פתח תקווה עד הקוממיות בבת ים. הקו עובר דרך קריית אריה, בני ברק, רמת גן, מרכז תל אביב ויפו." },
           { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך כ-24 ק\"מ. מתוכן 10 תחנות תת-קרקעיות ו-24 תחנות עיליות." },
-          { q: "כל כמה זמן יש רכבת בקו האדום?", a: "בשעות העומס (07:00-09:00 ו-16:00-19:00) רכבת כל 3.5 דקות. בשעות הרגילות רכבת כל 6 דקות." },
-          { q: "האם הקו האדום פועל בשבת?", a: "לא. הקו האדום אינו פועל בשבת. הרכבת האחרונה בערב שבת יוצאת ב-15:40 והשירות מתחדש במוצאי שבת ב-19:45." },
+          { q: "כל כמה זמן יש רכבת בקו האדום?", a: `בשעות העומס (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
+          { q: "האם הקו האדום פועל בשבת?", a: `לא. הקו האדום אינו פועל בשבת. הרכבת האחרונה בערב שבת יוצאת ב-${FRIDAY_LAST} והשירות מתחדש במוצאי שבת ב-${SATURDAY_FIRST}.` },
           { q: "מה ההבדל בין קו אדום לקו ירוק וסגול?", a: "הקו האדום הוא הקו הפעיל היחיד כרגע. הקו הסגול צפוי לפתיחה ביולי 2028, ובקו הירוק ייפתח תחילה החלק הדרומי בדצמבר 2028." },
         ].map(({ q, a }, i) => (
           <details key={i} style={{
