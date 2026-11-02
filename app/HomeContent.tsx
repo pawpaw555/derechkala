@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -468,9 +468,8 @@ export default function HomeContent() {
     setLoading(true);
     setResult(null);
 
-    const baseDate = new Date();
+    const baseDate = useCustomTime ? dateForDay(customDay) : new Date();
     if (useCustomTime) {
-      baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
@@ -706,7 +705,7 @@ export default function HomeContent() {
                 <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
                   <span style={{ fontSize: 12, color: t.muted }}>{timeMode === "arrival" ? "מגיע ב: " : "יוצא ב: "}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
-                    {["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][customDay]} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
+                    {dayLabel(customDay)} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
                   </span>
                 </div>
               )}
@@ -973,13 +972,9 @@ export default function HomeContent() {
                       borderRadius: 7, padding: "6px 10px", color: t.text,
                       fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
                     }}>
-                      <option value={0}>ראשון</option>
-                      <option value={1}>שני</option>
-                      <option value={2}>שלישי</option>
-                      <option value={3}>רביעי</option>
-                      <option value={4}>חמישי</option>
-                      <option value={5}>שישי</option>
-                      <option value={6}>שבת</option>
+                      {dayOptions().map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

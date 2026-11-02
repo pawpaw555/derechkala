@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel, pickerDefaults } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -148,9 +148,8 @@ const content = STATION_CONTENT[stationName];
     setLoading(true);
     setResult(null);
 
-    const baseDate = new Date();
+    const baseDate = useCustomTime ? dateForDay(customDay) : new Date();
     if (useCustomTime) {
-      baseDate.setDate(baseDate.getDate() + ((customDay - baseDate.getDay() + 7) % 7));
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
@@ -389,7 +388,7 @@ const content = STATION_CONTENT[stationName];
                 <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 9, padding: "10px 14px", textAlign: "center" }}>
                   <span style={{ fontSize: 12, color: t.muted }}>{timeMode === "arrival" ? "מגיע ב: " : "יוצא ב: "}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
-                    {["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][customDay]} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
+                    {dayLabel(customDay)} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
                   </span>
                 </div>
               )}
@@ -617,13 +616,9 @@ const content = STATION_CONTENT[stationName];
                         borderRadius: 7, padding: "6px 10px", color: t.text,
                         fontSize: 13, fontFamily: "'Rubik', sans-serif", outline: "none",
                       }}>
-                        <option value={0}>ראשון</option>
-                        <option value={1}>שני</option>
-                        <option value={2}>שלישי</option>
-                        <option value={3}>רביעי</option>
-                        <option value={4}>חמישי</option>
-                        <option value={5}>שישי</option>
-                        <option value={6}>שבת</option>
+                        {dayOptions().map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
                       </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

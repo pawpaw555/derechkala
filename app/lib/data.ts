@@ -528,6 +528,56 @@ export function pickerDefaults(stepMinutes: number, now: Date = new Date()): {
   d.setMinutes(Math.ceil(d.getMinutes() / stepMinutes) * stepMinutes);
   return { day: d.getDay(), hour: d.getHours(), minute: d.getMinutes() };
 }
+
+export const DAY_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] as const;
+const MONTH_SHORT = ["ינו׳", "פבר׳", "מרץ", "אפר׳", "מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳", "דצמ׳"] as const;
+
+/**
+ * התאריך הקרוב ביותר שבו חל יום השבוע `day` (0=ראשון), היום כולל.
+ *
+ * הביטוי הזה היה כתוב ביד בשני הבוררים, וממנו נגזר התאריך שהחיפוש
+ * באמת משתמש בו. עכשיו גם התווית שהמשתמש קורא נגזרת מכאן, כדי ששתיהן
+ * לא יוכלו להגיד שני תאריכים שונים.
+ */
+function dayOffset(day: number, now: Date): number {
+  return (day - now.getDay() + 7) % 7;
+}
+export function dateForDay(day: number, now: Date = new Date()): Date {
+  const d = new Date(now);
+  d.setDate(d.getDate() + dayOffset(day, now));
+  return d;
+}
+
+/**
+ * "היום, 2 בנוב׳" · "מחר, 3 בנוב׳" · "שני, 9 בנוב׳"
+ *
+ * הבורר הראה שם יום בלבד. "שני" ביום שלישי הוא בעוד שישה ימים, והממשק
+ * לא אמר את זה בשום מקום — נמדד 02.11.2026 שבחירת "שני" ביום שלישי
+ * ב-09:00 מתכננת נסיעה בעוד 143 שעות. גוגל מפות מציגה "יום ב׳, 2 בנוב׳"
+ * ורכבת גרמניה מציגה לוח שנה עם תאריכים; אף אחת מהן לא נותנת שם יום לבד.
+ */
+export function dayLabel(day: number, now: Date = new Date()): string {
+  const d = dateForDay(day, now);
+  const offset = dayOffset(day, now);
+  const date = `${d.getDate()} ב${MONTH_SHORT[d.getMonth()]}`;
+  if (offset === 0) return `היום, ${date}`;
+  if (offset === 1) return `מחר, ${date}`;
+  return `${DAY_NAMES[day]}, ${date}`;
+}
+
+/**
+ * שבעת הימים הקרובים, לפי סדר התאריכים ולא לפי סדר ימות השבוע.
+ *
+ * הרשימה הייתה ראשון עד שבת תמיד, כך שביום שלישי היא נפתחה בראשון —
+ * שהוא בעוד חמישה ימים — והתאריכים ירדו ואז קפצו. `value` נשאר
+ * `getDay()`, ולכן שום חישוב במעלה הזרם לא משתנה.
+ */
+export function dayOptions(now: Date = new Date()): { value: number; label: string }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const value = (now.getDay() + i) % 7;
+    return { value, label: dayLabel(value, now) };
+  });
+}
 export function getNextDepartures(date: Date, count: number = 3): {
   time: string;
   minsFromNow: number;
