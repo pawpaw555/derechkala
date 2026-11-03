@@ -16,7 +16,7 @@
 // הראשון בסיס 0. השני בקרה — אם הוא 0 הייבוא נכשל והאפס שלפניו ריק.
 // שלושת הזמנים הם בקרה חיובית נוספת: הם חייבים להיות שעות אמיתיות.
 const d = await import(new URL("../app/lib/data.ts", import.meta.url).pathname);
-const { isOperating, findRoute, isNoService, hhmm } = d;
+const { isOperating, findRoute, isNoService, hhmm, pickerDefaults, dateForDay } = d;
 
 const BASE = new Date("2026-11-01T00:00:00"); // ראשון
 const PAIR = ["אבא הלל", "אלנבי"];
@@ -41,11 +41,33 @@ for (let dow = 0; dow < 7; dow++) {
   if (dow === 6) lastDep.saturday = last;  // שבת
 }
 
+// בורר הזמן: בכל דקה בשבוע, ובשתי הקפיצות שבשימוש, הוא חייב להיפתח על
+// משבצת שאפשר לנסוע בה. עד 03.11.2026 הוא רק עיגל את "עכשיו", ולכן בכל
+// דקה מחוץ לשעות השירות — כל לילה, וכל שבת עד 19:45 — הוא נפתח על זמן
+// שהמתכנן עונה עליו "אין רכבת": 3,695 דקות בשבוע בקפיצה 1 ו-3,660
+// בקפיצה 15. הקפיצות הן אלה שבקוד: עמוד הבית 1, עמוד התחנה 15.
+let picker = 0;
+for (const step of [1, 15]) {
+  for (let dow = 0; dow < 7; dow++) {
+    for (let m = 0; m < 1440; m++) {
+      const now = new Date(BASE);
+      now.setDate(BASE.getDate() + dow);
+      now.setHours(0, m, 0, 0);
+      const p = pickerDefaults(step, now);
+      const target = dateForDay(p.day, now);
+      target.setHours(p.hour, p.minute, 0, 0);
+      const r = findRoute(PAIR[0], PAIR[1], undefined, target);
+      if (r === null || isNoService(r)) picker++;
+    }
+  }
+}
+
 const fmt = v => (v === null ? "—" : hhmm(v));
 if (process.argv[2] === "counts") {
-  console.log([conflicts, days, fmt(lastDep.weekday), fmt(lastDep.friday), fmt(lastDep.saturday)].join(" · "));
+  console.log([conflicts, picker, days, fmt(lastDep.weekday), fmt(lastDep.friday), fmt(lastDep.saturday)].join(" · "));
 } else {
   console.log(`דקות סתירה בשבוע: ${conflicts}`);
+  console.log(`דקות שהבורר נפתח בהן על משבצת מתה: ${picker}`);
   console.log(`ימים שנסרקו: ${days}`);
   console.log(`יציאה אחרונה — חול ${fmt(lastDep.weekday)} · שישי ${fmt(lastDep.friday)} · מוצ״ש ${fmt(lastDep.saturday)}`);
 }

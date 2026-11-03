@@ -616,7 +616,44 @@ export function pickerDefaults(stepMinutes: number, now: Date = new Date()): {
   const d = new Date(now);
   d.setSeconds(0, 0);
   d.setMinutes(Math.ceil(d.getMinutes() / stepMinutes) * stepMinutes);
-  return { day: d.getDay(), hour: d.getHours(), minute: d.getMinutes() };
+  const m = nextServiceMoment(d);
+  // מעגלים שוב, כי תחילת שירות אינה בהכרח על רשת הקפיצה. שני המועדים
+  // הקיימים — 05:30 ו-19:45 — כן מתחלקים ב-15 וב-1, ולכן זה no-op
+  // היום; השורה כאן כדי שקפיצה אחרת בעתיד לא תיתן דקה מחוץ לרשימה.
+  m.setMinutes(Math.ceil(m.getMinutes() / stepMinutes) * stepMinutes);
+  return { day: m.getDay(), hour: m.getHours(), minute: m.getMinutes() };
+}
+
+/**
+ * הרגע הקרוב ביותר מ-`from` והלאה שבו באמת אפשר לנסוע.
+ *
+ * בלי זה בורר הזמן נפתח על משבצת שהמתכנן עונה עליה "אין רכבת". נמדד
+ * ב-03.11.2026: בעמוד התחנה הקפיצה היא 15 דקות, ולכן מ-23:46
+ * `Math.ceil(46/15)*15` יוצא 60 והיום מתגלגל — הבורר נפתח על "מחר
+ * 00:00", שהיא בדיוק המשבצת שבה היציאה האחרונה כבר יצאה. 14 דקות ביום.
+ * בעמוד הבית הקפיצה היא 1, ושם זה קרה רק ב-23:59.
+ *
+ * מחפש קדימה יום-יום ולא דקה-דקה: בכל יום יש חלון אחד רציף, ולכן די
+ * לבדוק את תחילתו. שמונה ימים הם חסם ולא ציפייה — היום הארוך ביותר בלי
+ * שירות הוא שבת, ואחריה תמיד יש מוצאי שבת.
+ */
+function nextServiceMoment(from: Date): Date {
+  const d = new Date(from);
+  d.setSeconds(0, 0);
+  for (let i = 0; i < 8; i++) {
+    const w = serviceWindow(d);
+    // ביום הראשון מתחילים מהשעה עצמה; בימים שאחריו מתחילת היום.
+    const mins = i === 0 ? d.getHours() * 60 + d.getMinutes() : 0;
+    const start = Math.max(mins, w.from);
+    if (start <= w.to) {
+      const at = new Date(d);
+      at.setHours(0, start, 0, 0);
+      if (nextDepartureMins(at) !== null) return at;
+    }
+    d.setDate(d.getDate() + 1);
+    d.setHours(0, 0, 0, 0);
+  }
+  return from;
 }
 
 export const DAY_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] as const;
