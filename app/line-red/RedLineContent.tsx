@@ -1,6 +1,7 @@
 "use client";
+import { Fragment } from "react";
 import { useTheme } from "../lib/useTheme";
-import { STATIONS, hhmm, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "../lib/data";
+import { STATIONS, areAdjacent, JUNCTION, hhmm, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "../lib/data";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import { useNearestStation } from "../lib/useNearestStation";
 import NearestStationFinder from "../lib/NearestStationFinder";
@@ -59,7 +60,15 @@ export default function RedLineContent() {
       <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 12, fontWeight: 600, letterSpacing: "0.04em" }}>סקירת המסלול</div>
         <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8, marginBottom: 12 }}>
-          הקו האדום הוא הקו הפעיל היחיד של הרכבת הקלה בגוש דן. הוא עובר מתחנה מרכזית פתח תקווה דרך קריית אריה, בני ברק, רמת גן, מרכז תל אביב ויפו, ומסתיים בהקוממיות בבת ים.
+          הקו האדום הוא הקו הפעיל היחיד של הרכבת הקלה בגוש דן. הוא עובר מתחנה מרכזית פתח תקווה דרך בני ברק, רמת גן, מרכז תל אביב ויפו, ומסתיים בהקוממיות בבת ים.
+        </p>
+        {/* הקו אינו שרשרת אחת אלא Y, ו-countStops יודע זאת מאז שהמרחק
+            חושב לפי ענפים. הפסקה שמעל אמרה "עובר דרך קריית אריה" וסתרה
+            את זה: נסיעה מפתח תקווה לבת ים אינה עוברת שם כלל. */}
+        <p style={{ fontSize: 14, color: t.text, lineHeight: 1.8, marginBottom: 12 }}>
+          קריית אריה וגשר אם המושבות יושבות על ענף נפרד, שמתפצל ב{JUNCTION}.
+          נסיעה מפתח תקווה לבת ים אינה עוברת בהן, ומעבר בין שני הענפים דורש
+          החלפה ב{JUNCTION}.
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <a href="/map" style={{
@@ -117,25 +126,55 @@ export default function RedLineContent() {
           <div key={city} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: t.muted, fontWeight: 600, marginBottom: 8, paddingRight: 4 }}>{city}</div>
             <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden" }}>
-              {cityStations.map((s, i, arr) => (
-                <a key={s.name} href={`/station/${encodeURIComponent(s.name)}`} style={{
-                  display: "flex", alignItems: "center",
-                  padding: "13px 16px",
-                  borderBottom: i < arr.length - 1 ? `1px solid ${t.border}` : "none",
-                  gap: 14, textDecoration: "none",
-                }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 10 }}>
-                    {i > 0 && <div style={{ width: 2, height: 8, background: "#b0405055" }} />}
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#b04050", border: `2px solid ${t.card}` }} />
-                    {i < arr.length - 1 && <div style={{ width: 2, height: 8, background: "#b0405055" }} />}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: t.text }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: t.muted, marginTop: 2 }}>{s.nearbyPlaces[0] || s.city}</div>
-                  </div>
-                  <span style={{ color: t.muted, fontSize: 13 }}>←</span>
-                </a>
-              ))}
+              {/*
+                המחבר מצויר מהשכנות האמיתית ולא ממקום במערך. בתוך פתח
+                תקווה יושב שנקר — סוף ענף פתח תקווה — מיד לפני קריית אריה,
+                שהיא סוף הענף האחר, ואין ביניהן מסילה. המחבר שם צייר אותן
+                כשתי תחנות עוקבות, וזאת הטענה היחידה מהסוג הזה בכל חמש
+                קבוצות העיר: נמדד 6 מחברים תקינים בפתח תקווה ואחד שבור,
+                ו-0 שבורים בארבע הקבוצות האחרות.
+              */}
+              {cityStations.map((s, i, arr) => {
+                const linkedAbove = i > 0 && areAdjacent("red", arr[i - 1].name, s.name);
+                const linkedBelow = i < arr.length - 1 && areAdjacent("red", s.name, arr[i + 1].name);
+                return (
+                  <Fragment key={s.name}>
+                    {i > 0 && !linkedAbove && (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 14,
+                        padding: "9px 16px",
+                        borderBottom: `1px solid ${t.border}`,
+                        background: dark ? "#1b1118" : "#fdf6f7",
+                      }}>
+                        <div style={{ minWidth: 10, display: "flex", justifyContent: "center" }}>
+                          <div style={{ width: 2, height: 14, background: `repeating-linear-gradient(${"#b0405055"} 0 3px, transparent 3px 6px)` }} />
+                        </div>
+                        <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.6 }}>
+                          אין מסילה בין {arr[i - 1].name} ל{s.name}. שני הענפים
+                          נפגשים ב{JUNCTION}, ונסיעה ביניהם דורשת החלפה שם.
+                        </div>
+                      </div>
+                    )}
+                    <a href={`/station/${encodeURIComponent(s.name)}`} style={{
+                      display: "flex", alignItems: "center",
+                      padding: "13px 16px",
+                      borderBottom: i < arr.length - 1 ? `1px solid ${t.border}` : "none",
+                      gap: 14, textDecoration: "none",
+                    }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 10 }}>
+                        {linkedAbove && <div style={{ width: 2, height: 8, background: "#b0405055" }} />}
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#b04050", border: `2px solid ${t.card}` }} />
+                        {linkedBelow && <div style={{ width: 2, height: 8, background: "#b0405055" }} />}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: t.text }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: t.muted, marginTop: 2 }}>{s.nearbyPlaces[0] || s.city}</div>
+                      </div>
+                      <span style={{ color: t.muted, fontSize: 13 }}>←</span>
+                    </a>
+                  </Fragment>
+                );
+              })}
             </div>
           </div>
         );
@@ -145,7 +184,7 @@ export default function RedLineContent() {
       <div style={{ fontSize: 13, color: t.muted, marginBottom: 12, fontWeight: 600, letterSpacing: "0.04em", marginTop: 8 }}>שאלות נפוצות</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
         {[
-          { q: "מאיפה עד איפה עובר הקו האדום?", a: "הקו האדום עובר מתחנה מרכזית פתח תקווה עד הקוממיות בבת ים. הקו עובר דרך קריית אריה, בני ברק, רמת גן, מרכז תל אביב ויפו." },
+          { q: "מאיפה עד איפה עובר הקו האדום?", a: "הקו האדום עובר מתחנה מרכזית פתח תקווה עד הקוממיות בבת ים, דרך בני ברק, רמת גן, מרכז תל אביב ויפו. קריית אריה וגשר אם המושבות יושבות על ענף נפרד שמתפצל באהרונוביץ', ולכן נסיעה מפתח תקווה לבת ים אינה עוברת בהן." },
           { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך כ-24 ק\"מ. מתוכן 10 תחנות תת-קרקעיות ו-24 תחנות עיליות." },
           { q: "כל כמה זמן יש רכבת בקו האדום?", a: `בשעות העומס (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
           { q: "האם הקו האדום פועל בשבת?", a: `לא. הקו האדום אינו פועל בשבת. הרכבת האחרונה בערב שבת יוצאת ב-${FRIDAY_LAST} והשירות מתחדש במוצאי שבת ב-${SATURDAY_FIRST}.` },

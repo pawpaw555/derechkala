@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, distanceMetres, formatDistance, stationLabel } from "./data";
+import { Station, distanceMetres, formatDistance, stationLabel, LINE_SEGMENTS } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
@@ -267,13 +267,33 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      const lineGroups: Record<string, [number, number][]> = { red: [], green: [], purple: [] };
-      stations.forEach(s => lineGroups[s.lineId]?.push([s.lat, s.lng]));
+      /**
+       * קו אחד לכל קטע רציף, ולא קו אחד לכל lineId.
+       *
+       * קודם לכן הקואורדינטות נדחפו בסדר של STATIONS, שהוא מערך שטוח. בקו
+       * האדום זה צייר מסילה ישרה משנקר לקריית אריה ובחזרה לגשר אם המושבות
+       * — זיגזג של 1.9 ק"מ בכל כיוון שאינו קיים במציאות, כי שנקר וקריית
+       * אריה הן שתי קצוות של שני ענפים שונים. LINE_SEGMENTS מחזיק שלושה
+       * קטעים, הצומת מופיעה בכולם, ולכן שלושת הקווים נפגשים בה.
+       *
+       * קו בלי קטעים מוגדרים נופל לסדר השטוח, שהוא הנכון לקו שהוא שרשרת.
+       */
       const lineColors: Record<string, string> = { red: "#b04050", green: "#3a9060", purple: "#6a52a8" };
-      Object.entries(lineGroups).forEach(([lineId, coords]) => {
-        if (coords.length > 1) {
-          L.polyline(coords, { color: lineColors[lineId], weight: 4, opacity: 0.7 }).addTo(map);
-        }
+      // לא `new Map(...)` — הקומפוננטה בקובץ הזה נקראת Map ומצילה את הגלובלי,
+      // ו-tsc תפס את זה כ-"target lacks a construct signature".
+      const byName: Record<string, Station> = {};
+      stations.forEach(s => { byName[s.name] = s; });
+      const draw = (names: string[], color: string) => {
+        const coords = names
+          .map(n => byName[n])
+          .filter((s): s is Station => !!s)
+          .map(s => [s.lat, s.lng] as [number, number]);
+        if (coords.length > 1) L.polyline(coords, { color, weight: 4, opacity: 0.7 }).addTo(map);
+      };
+      [...new Set(stations.map(s => s.lineId))].forEach(lineId => {
+        const segments = LINE_SEGMENTS[lineId];
+        if (segments) segments.forEach(seg => draw([...seg], lineColors[lineId]));
+        else draw(stations.filter(s => s.lineId === lineId).map(s => s.name), lineColors[lineId]);
       });
 
       // נקודות עניין אינן תלויות במוצא או ביעד, ולכן נבנות כאן פעם אחת.

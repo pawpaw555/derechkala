@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -1072,7 +1072,7 @@ export default function HomeContent() {
           </p>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: t.text, marginBottom: 8 }}>רכבת קלה פתח תקווה</h3>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 18 }}>
-            הקו האדום מתחיל בתחנה המרכזית פתח תקווה ועובר דרך קריית אריה. הקו הסגול אינו מגיע לפתח תקווה — הוא יחבר את יהוד ואור יהודה עם מרכז תל אביב, דרך גבעת שמואל הסמוכה, רמת גן וגבעתיים.
+            הקו האדום מתחיל בתחנה המרכזית פתח תקווה, ולקריית אריה יש ענף נפרד שמתפצל ב{JUNCTION} — כך שנסיעה מהתחנה המרכזית לבת ים אינה עוברת בקריית אריה. הקו הסגול אינו מגיע לפתח תקווה — הוא יחבר את יהוד ואור יהודה עם מרכז תל אביב, דרך גבעת שמואל הסמוכה, רמת גן וגבעתיים.
           </p>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: t.text, marginBottom: 8 }}>שעות פעילות רכבת קלה</h3>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>

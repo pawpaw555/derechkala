@@ -246,11 +246,48 @@ export function travelMinutes(stops: number): number {
  * מקריית אריה לתחנה המרכזית בפתח תקווה דווחה כ-7 תחנות ישיר, בעוד שבפועל
  * היא 9 תחנות עם החלפה.
  */
-const JUNCTION = "אהרונוביץ'";
+/** הצומת. מיוצאת כדי שממשק שמסביר פיצול לא יקודד את השם בכתב. */
+export const JUNCTION = "אהרונוביץ'";
 /** מהצומת צפונה לכיוון פתח תקווה (שירות R1). */
 const BRANCH_PT = ["שנקר", "שחם", "בילינסון", "דנקנר", "קרול", "פינסקר", "תחנה מרכזית פתח תקווה"];
 /** מהצומת צפונה לכיוון קריית אריה (שירות R2/R3). */
 const BRANCH_KA = ["גשר אם המושבות", "קריית אריה"];
+
+/** הגזע, מהצומת ודרומה. הצומת היא תחנה 0 בו — ראה countStops. */
+const TRUNK = STATIONS.filter(s => s.lineId === "red")
+  .map(s => s.name)
+  .filter(n => !BRANCH_PT.includes(n) && !BRANCH_KA.includes(n));
+
+/**
+ * שלושת הקטעים הרציפים של הקו, כל אחד מהקצה שלו עד הצומת. הצומת מופיעה
+ * בשלושתם, ולכן קווים שמצוירים מהם נפגשים בה ולא נקטעים.
+ *
+ * **זה מה שמציירים, לא את הסדר של STATIONS.** STATIONS הוא מערך שטוח,
+ * ובו שנקר — סוף ענף פתח תקווה — יושב מיד לפני קריית אריה, שהיא סוף הענף
+ * **האחר**. אין ביניהן מסילה ואין ביניהן נסיעה בלי החלפה באהרונוביץ',
+ * אבל כל מי שגוזר שכנות ממקום במערך מצייר אותן כשתי תחנות עוקבות.
+ *
+ * רק הקו האדום מופיע כאן כי רק לו יש תחנות. קו שיקבל תחנות ויישאר בלי
+ * קטעים לא יקבל אף מחבר, ובלוק הרגרסיה סופר תחנות שאינן מכוסות בקטע.
+ */
+export const LINE_SEGMENTS: Record<string, readonly string[][]> = {
+  red: [
+    [...BRANCH_PT].reverse().concat(JUNCTION),
+    [...BRANCH_KA].reverse().concat(JUNCTION),
+    TRUNK,
+  ],
+};
+
+/**
+ * האם שתי תחנות שכנות על המסילה. נגזר מאותם קטעים שמציירים, ולכן מה
+ * שהרשימה מחברת ומה שהמפה מקשרת אינם יכולים להיחלק.
+ */
+export function areAdjacent(lineId: string, a: string, b: string): boolean {
+  return (LINE_SEGMENTS[lineId] ?? []).some(seg => {
+    const i = seg.indexOf(a), j = seg.indexOf(b);
+    return i >= 0 && j >= 0 && Math.abs(i - j) === 1;
+  });
+}
 
 type Leg = { branch: "pt" | "ka" | "trunk"; index: number };
 
@@ -259,10 +296,7 @@ function locate(name: string): Leg | null {
   if (pt >= 0) return { branch: "pt", index: pt };
   const ka = BRANCH_KA.indexOf(name);
   if (ka >= 0) return { branch: "ka", index: ka };
-  const trunk = STATIONS.filter(s => s.lineId === "red")
-    .map(s => s.name)
-    .filter(n => !BRANCH_PT.includes(n) && !BRANCH_KA.includes(n));
-  const t = trunk.indexOf(name);
+  const t = TRUNK.indexOf(name);
   return t >= 0 ? { branch: "trunk", index: t } : null;
 }
 
