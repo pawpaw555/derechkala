@@ -569,10 +569,19 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
           }),
-        })
-          .addTo(map)
-          .bindPopup(stationPopup(s), { maxWidth: 240 });
+        }).addTo(map);
 
+        /**
+         * כשיש בורר, לחיצה בוחרת — ולכן אין כרטיס כלל.
+         *
+         * `bindPopup` של ליפט רושם מאזין לחיצה משלו ופותח את הכרטיס
+         * בעצמו, בנוסף למטפל שכאן. התוצאה הייתה שהלחיצה גם בחרה וגם
+         * פתחה כרטיס מעל המפה — נמדד popupsOpened=1 אחרי בחירה מוצלחת —
+         * והכרטיס הזה מציע "תכנן נסיעה לכאן" שמוביל לעמוד הבית, בדיוק
+         * מה שהבחירה במקום נועדה למנוע.
+         */
+        const selectable = !!onSelectRef.current;
+        if (!selectable) marker.bindPopup(stationPopup(s), { maxWidth: 240 });
         marker.on("click", () => {
           if (onSelectRef.current) onSelectRef.current(s);
           else marker.openPopup();
@@ -595,7 +604,13 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             ">${s.name}</div>`,
             iconSize: [0, 0],
           }),
-        }).bindPopup(stationPopup(s), { maxWidth: 240 });
+        });
+        // ההערה למעלה אומרת "התווית לחיצה בדיוק כמו הנקודה", ועד
+        // 03.11.2026 זה לא היה נכון כשהיה בורר: לנקודה היה מטפל בחירה
+        // ולתווית רק כרטיס. מי שלחץ על **שם** התחנה בבוחר היעד שבעמוד
+        // הבית קיבל כרטיס במקום בחירה. עכשיו שתיהן עושות אותו דבר.
+        if (selectable) label.on("click", () => onSelectRef.current?.(s));
+        else label.bindPopup(stationPopup(s), { maxWidth: 240 });
         labels.push(label);
         markersRef.current.push(label);
       });

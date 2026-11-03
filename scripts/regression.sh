@@ -34,6 +34,12 @@ ok "עמוד תחנה h2 · h1 (10 · 1)"  "$(echo "$S"|grep -o '<h2'|wc -l|tr -
 # שכן נשלח מהשרת הוא הכותרת, והיא הסימן שהבלוק קיים בעמוד. המספר השני
 # הוא בקרה — כותרת שידוע שקיימת שם מאז ומתמיד.
 ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(echo "$S"|grep -o 'התחנה על המפה'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '>כתובת<'|wc -l|tr -d ' ')"
+# לחיצה על סמן בוחרת תחנה לשדה. שתי המפות בעמוד התחנה חייבות לקבל את
+# הבורר — אחרת אחת מהן תפתח כרטיס ש"תכנן נסיעה לכאן" שבו יוצא לעמוד
+# הבית ומאבד את הכיוון שנבחר. המספר השני הוא בקרה: סה״כ המפות בקובץ.
+# selectable ב-Map.tsx הוא מה שמונע כרטיס כפול — bindPopup של ליפט פותח
+# בלחיצה בעצמו, ולכן הוא מותנה. שלושה מופעים: ההגדרה ושני השימושים.
+ok "עמוד תחנה: מפות בוחרות · מפות · selectable (2 · 2 · 3)" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
 ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב

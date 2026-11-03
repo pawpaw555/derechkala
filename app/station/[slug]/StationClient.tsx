@@ -40,6 +40,8 @@ export default function StationClient({ stationName, station }: Props) {
   /** "from" = יוצאים מהתחנה הזאת. "to" = מגיעים אליה. */
   const [direction, setDirection] = useState<"from" | "to">("from");
   const [toQuery, setToQuery] = useState("");
+  /** נלחצה במפה התחנה של העמוד עצמו — מסבירים במקום להתעלם בשקט. */
+  const [selfPick, setSelfPick] = useState(false);
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
@@ -108,17 +110,35 @@ const content = STATION_CONTENT[stationName];
   // שאיש לא קרא. עמוד התחנה אינו מציג רשימת יציאות, ולכן כל עמוד תחנה
   // פתוח הריץ חישוב וגרם לרינדור מחדש פעם בדקה ללא שום פלט.
 
+  /**
+   * התחנה של העמוד הזה אינה קצה אפשרי לנסיעה מתוכו. עד 03.11.2026 היא
+   * הופיעה בהשלמה כמו כל תחנה אחרת, ובחירה בה נתנה "נסיעה" של 0 תחנות
+   * ו-0 דקות — נמדד `findRoute("אבא הלל","אבא הלל")` → 14:00 → 14:00.
+   * מסננים כאן, במקום אחד, כי שתי רשימות התוצאות למטה קוראות מ-results.
+   */
+  const dropSelf = (r: SearchResults): SearchResults =>
+    ({ ...r, stations: r.stations.filter(s => s.name !== stationName) });
+
   const handleSearch = (val: string) => {
     setQuery(val);
+    setSelfPick(false);
     if (toStation) {
       setToStation("");
       setToQuery("");
       setResult(null);
     }
-    setResults(val.length >= 2 ? searchCombined(val) : { stations: [], landmarks: [], places: [] });
+    setResults(val.length >= 2 ? dropSelf(searchCombined(val)) : { stations: [], landmarks: [], places: [] });
   };
 
   const handleSelectStation = (s: Station) => {
+    // מהמפה אפשר ללחוץ גם על התחנה של העמוד — היא דווקא הסמן שבמרכז
+    // התצוגה הממוקדת, כלומר הקל ביותר לפגוע בו. התעלמות שקטה הייתה
+    // נראית כמו מפה תקועה, ולכן נאמר למה לא קרה כלום.
+    if (s.name === stationName) {
+      setSelfPick(true);
+      return;
+    }
+    setSelfPick(false);
     setToStation(s.name);
     setToQuery(s.name);
     setQuery(s.name);
@@ -130,6 +150,13 @@ const content = STATION_CONTENT[stationName];
   // ב-31 עמודי התחנה קיבל כלום.
   const handleSelectPlace = (p: PlaceHit) => {
     if (!p.station) return;
+    // כלל 3: אותה מחלקה. מקום שהתחנה הקרובה לו היא התחנה של העמוד
+    // מוביל לאותה נסיעה של אפס דקות.
+    if (p.station.name === stationName) {
+      setSelfPick(true);
+      return;
+    }
+    setSelfPick(false);
     setToStation(p.station.name);
     setToQuery(p.name);
     setResults({ stations: [], landmarks: [], places: [] });
@@ -302,7 +329,12 @@ const content = STATION_CONTENT[stationName];
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
             <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>התחנה על המפה</h2>
             <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-              <Map stations={STATIONS} focusStation={station} userLoc={finder.userLoc} />
+              {/* לחיצה על סמן בוחרת את התחנה לשדה במקום לפתוח כרטיס.
+                  בלי זה הכרטיס הציע "תכנן נסיעה לכאן" שמוביל לעמוד
+                  הבית — כלומר יוצא מעמוד התחנה ומאבד את הכיוון שכבר
+                  נבחר כאן. הטוגל "יציאה מכאן / הגעה לכאן" כבר קיים
+                  מעליו, ולכן נשארת בחירה אחת בלבד אחרי הלחיצה. */}
+              <Map stations={STATIONS} focusStation={station} userLoc={finder.userLoc} onSelectStation={handleSelectStation} />
             </div>
           </div>
         )}
@@ -427,7 +459,10 @@ const content = STATION_CONTENT[stationName];
 
               {/* Map */}
               <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-                <Map stations={STATIONS} userLoc={finder.userLoc} fromStation={STATIONS.find(s => s.name === origin) || null} toStation={STATIONS.find(s => s.name === dest) || null} />
+                {/* גם כאן, כדי ששתי המפות באותו עמוד לא יגיבו אחרת
+                    לאותה תנועה. מי שרואה את התוצאה ורוצה יעד אחר לוחץ
+                    עליו ומחפש שוב, במקום לצאת לעמוד הבית. */}
+                <Map stations={STATIONS} userLoc={finder.userLoc} onSelectStation={handleSelectStation} fromStation={STATIONS.find(s => s.name === origin) || null} toStation={STATIONS.find(s => s.name === dest) || null} />
               </div>
 {(() => {
                 const s = STATIONS.find(st => st.name === toStation);
@@ -469,6 +504,14 @@ const content = STATION_CONTENT[stationName];
                     fontFamily: "'Rubik', sans-serif", direction: "rtl",
                   }}
                 />
+                {selfPick && (
+                  <div role="status" style={{
+                    marginTop: 8, fontSize: 12, color: t.muted,
+                    lineHeight: 1.6, textAlign: "right",
+                  }}>
+                    זאת התחנה שאתם נמצאים בה. בחרו תחנה אחרת על המפה או הקלידו כאן.
+                  </div>
+                )}
                 {hasResults && (
                   <div style={{
                     position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0,
