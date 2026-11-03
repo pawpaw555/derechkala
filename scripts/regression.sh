@@ -27,7 +27,13 @@ ok "lint (בסיס 16)"             "$(npm run lint 2>&1 | grep -o '[0-9]* probl
 # תוכן השתנה. סופרים מופעים, ומתוך תשובה אחת ולא שתיים.
 HRS=$(curl -s $B/hours)
 ok "/hours 15:40 · 19:45"       "$(echo "$HRS"|grep -o '15:40'|wc -l|tr -d ' ') · $(echo "$HRS"|grep -o '19:45'|wc -l|tr -d ' ')"
-ok "עמוד תחנה h2 · h1"          "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
+# המספרים בתווית נוספו ב-03.11: עד אז השורה הדפיסה ספירה בלי ציפייה,
+# ולכן לא הייתה יכולה להיכשל. ה-10 כולל את "התחנה על המפה" שנוסף אז.
+ok "עמוד תחנה h2 · h1 (10 · 1)"  "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
+# כלל 10: המפה בעמוד התחנה היא ssr:false, ולכן אין לה סמן ב-HTML. מה
+# שכן נשלח מהשרת הוא הכותרת, והיא הסימן שהבלוק קיים בעמוד. המספר השני
+# הוא בקרה — כותרת שידוע שקיימת שם מאז ומתמיד.
+ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(echo "$S"|grep -o 'התחנה על המפה'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '>כתובת<'|wc -l|tr -d ' ')"
 ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב

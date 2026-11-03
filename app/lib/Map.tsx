@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, distanceMetres, formatDistance, stationLabel, LINE_SEGMENTS } from "./data";
+import { Station, distanceMetres, formatDistance, stationLabel, LINE_SEGMENTS, areAdjacent } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
@@ -21,6 +21,11 @@ type Props = {
   toStation?: Station | null;
   /** מסלול הליכה לציור על המפה, כזוגות [lat, lng]. */
   route?: [number, number][] | null;
+  /**
+   * כשנמסרת, המפה נפתחת על התחנה הזאת ועל שכנותיה במסילה — ולא על כל
+   * הקו. עמוד תחנה שואל "איפה זה", ותצוגה של 24 ק"מ אינה עונה על זה.
+   */
+  focusStation?: Station | null;
 };
 
 // כרטיס תחנה, לסמן ולתווית. היה לו גם מצב שני שהציג מרחק וזמן הליכה
@@ -113,8 +118,13 @@ const POI_LABEL_ZOOM = LABEL_ZOOM;
  * המפה שבוחרת את התחנה הקרובה.
  */
 const HIT_MAX = 10;
+/**
+ * גבול ההתקרבות בתצוגה ממוקדת־תחנה. מעל LABEL_ZOOM, כך שהשמות דלוקים
+ * ושטח הלחיצה מגיע למלוא ה-HIT_MAX — שני הדברים שתצוגת כל־הקו לא נותנת.
+ */
+const FOCUS_MAX_ZOOM = 16;
 
-export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route }: Props) {
+export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route, focusStation }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
@@ -155,6 +165,15 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   useEffect(() => {
     onSelectRef.current = onSelectStation;
   }, [onSelectStation]);
+
+  // אותה תבנית כמו onSelectRef: תצוגת הפתיחה נקבעת פעם אחת בבנייה, ולכן
+  // האפקט תלוי בשם בלבד. דרך ref כדי שהוא לא ייתלה באובייקט עצמו — קורא
+  // שיעביר `STATIONS.find(...)` בתוך ה-JSX יוצר אובייקט חדש בכל רינדור,
+  // וזה היה בונה את המפה מחדש בכל פעם.
+  const focusRef = useRef(focusStation);
+  useEffect(() => {
+    focusRef.current = focusStation;
+  }, [focusStation]);
 
   // ── אפקט א: המפה עצמה, פעם אחת ──────────────────────────────
   // קודם לכן הכל ישב באפקט אחד שתלוי ב-[userLoc, route], והניקוי שלו קרא
@@ -216,6 +235,22 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       const fitStations = () => {
         if (stations.length === 0) return;
         map.invalidateSize();
+        const focus = focusRef.current;
+        if (focus) {
+          // התחנה ושכנותיה **במסילה**, לא השכנות לפי מקום במערך: בצומת
+          // אהרונוביץ' זה שלוש שכנות משני ענפים והגזע, ובשנקר זו אחת
+          // ועוד הצומת — ולא קריית אריה, שאין אליה מסילה.
+          //
+          // fitBounds ולא זום קבוע, כי המרווח בין תחנות אינו אחיד: בבת ים
+          // הוא כ-400 מ׳ ובפתח תקווה כ-700. הגבול העליון מונע התקרבות
+          // מוגזמת בתחנת קצה, שיש לה שכנה אחת בלבד.
+          const around = [focus, ...stations.filter(s =>
+            areAdjacent(focus.lineId, focus.name, s.name))];
+          map.fitBounds(L.latLngBounds(around.map(s => [s.lat, s.lng] as [number, number])), {
+            padding: [44, 44], maxZoom: FOCUS_MAX_ZOOM, animate: false,
+          });
+          return;
+        }
         map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lng] as [number, number])), {
           padding: [28, 28],
           animate: false,
@@ -493,7 +528,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       overlayRef.current = [];
       setMapReady(false);
     };
-  }, [stations]);
+    // focusStation כאן כי הוא קובע את תצוגת הפתיחה, ותצוגת הפתיחה נקבעת
+    // פעם אחת בבנייה. ניווט בין עמודי תחנה שאינו טעינה מלאה יבנה את המפה
+    // מחדש וימקד אותה על התחנה החדשה. לפי שם, כדי ש-STATIONS.find שמחזיר
+    // אובייקט חדש בכל רינדור לא יבנה את המפה מחדש לשווא.
+  }, [stations, focusStation?.name]);
 
   // ── אפקט ב: סמני התחנות והתוויות, כשמוצא או יעד משתנים ───────
   // גודל הסמן וצבע המסגרת תלויים ב-fromStation/toStation. קודם לכן הם

@@ -292,6 +292,21 @@ const content = STATION_CONTENT[stationName];
           </div>
         )}
 
+        {/* Station map */}
+        {/* עד כאן עמוד התחנה לא הציג מפה בהגעה. המפה היחידה בו ישבה בתוך
+            בלוק התוצאות, כלומר רק אחרי שמתכננים נסיעה — נמדד 0 מיכלי
+            Leaflet ו-0 סמנים בטעינה של /station/אבא הלל. "איפה התחנה" היא
+            השאלה הראשונה בעמוד תחנה, והיא נענתה בכתובת בלבד.
+            focusStation פותח על התחנה ועל שכנותיה במסילה, ולא על 24 הק"מ. */}
+        {station && (
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>התחנה על המפה</h2>
+            <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
+              <Map stations={STATIONS} focusStation={station} userLoc={finder.userLoc} />
+            </div>
+          </div>
+        )}
+
         {/* Trip planner */}
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
           <h2 style={{ fontSize: 11, color: t.muted, marginBottom: 10, fontWeight: 500, letterSpacing: "0.04em" }}>תכנון נסיעה</h2>
