@@ -24,3 +24,34 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * סימן פוקוס לפקדי הטופס, לכל האתר.
+ *
+ * תשעה פקדים נושאים `outline: "none"` ב-style המוטבע, והכלל היחיד
+ * שהחזיר סימן היה `input:focus` — שהוגדר פעמיים, בתוך HomeContent
+ * ובתוך StationClient, כלומר בעמודים ולא באתר. מכאן שני חורים שנמדדו
+ * ב-03.11.2026 עם פוקוס מקלדת אמיתי (`:focus-visible` דולק):
+ *
+ *   ששת ה-select של בורר הזמן — plan-day/hour/min בשני העמודים.
+ *   `select` אינו נתפס ב-`input:focus`, ולכן Tab אליהם לא שינה דבר:
+ *   outline none, box-shadow none, והגבול נשאר rgb(208,208,220).
+ *
+ *   שדה חיפוש המקום ב-NearestStationFinder. הוא מכוסה בעמוד הבית
+ *   ובעמוד התחנה, וחשוף ב-/line-red וב-/map — שם אין את הכלל המקומי.
+ *
+ * הכלל יושב כאן פעם אחת, ולכן הוא חל גם על עמוד שייווצר בעתיד.
+ * `!important` כי style מוטבע גובר על גיליון סגנונות.
+ *
+ * ל-input ול-textarea `:focus`, כי לחיצה על שדה טקסט אינה נותנת שום
+ * סימן אחר שהוא פעיל. ל-select דווקא `:focus-visible`, כי לחיצה בעכבר
+ * פותחת את הרשימה וזה כבר הסימן. הערכים זהים למה שהיה ב-input, כדי
+ * שהמראה הקיים לא ישתנה — חיזוק שלהם הוא החלטת עיצוב בפני עצמה.
+ */
+input:focus,
+textarea:focus,
+select:focus-visible {
+  border-color: #b04050 !important;
+  box-shadow: 0 0 0 3px #b0405018 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}

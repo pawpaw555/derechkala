@@ -230,7 +230,7 @@ const content = STATION_CONTENT[stationName];
         @keyframes stationPulseS { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
 
         input { transition: border-color 0.2s, box-shadow 0.2s; }
-        input:focus { border-color: #b04050 !important; box-shadow: 0 0 0 3px #b0405018 !important; }
+        /* input:focus עבר ל-globals.css — ראה שם למה. */
 
         .btn-primary-s { transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease; }
         .btn-primary-s:hover { filter: brightness(1.08); box-shadow: 0 4px 12px #b0405030; }

@@ -525,7 +525,9 @@ export default function HomeContent() {
         .station-dot:nth-child(5) { animation-delay: 0.6s; }
         @keyframes stationPulse { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
 
-        input:focus { border-color: #b04050 !important; box-shadow: 0 0 0 3px #b0405018 !important; transition: all 0.2s; }
+        /* input:focus עבר ל-globals.css יחד עם select ו-textarea. כאן הוא
+           כיסה רק את העמוד הזה, ולכן ששת ה-select ושדה המאתר ב-/line-red
+           וב-/map נשארו בלי שום סימן פוקוס. */
 
         .btn-primary { transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease; }
         .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 4px 12px #b0405030; }

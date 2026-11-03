@@ -39,6 +39,13 @@ ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(e
 # הבית ומאבד את הכיוון שנבחר. המספר השני הוא בקרה: סה״כ המפות בקובץ.
 # selectable ב-Map.tsx הוא מה שמונע כרטיס כפול — bindPopup של ליפט פותח
 # בלחיצה בעצמו, ולכן הוא מותנה. שלושה מופעים: ההגדרה ושני השימושים.
+# כלל 7: סימן פוקוס. תשעה פקדים נושאים outline:"none" ב-style המוטבע,
+# והכלל שמחזיר סימן חייב לשבת ב-globals.css ולא בתוך עמוד — כשהוא ישב
+# בתוך HomeContent וב-StationClient, ששת ה-select ושדה המאתר ב-/line-red
+# וב-/map נשארו בלי שום סימן. השני חייב להיות 0: כלל בעמוד פירושו שהחור
+# חזר. השלישי הוא האוכלוסייה שהכלל אמור לכסות — אם הוא עלה, נוסף פקד
+# ויש לבדוק שהוא input/select/textarea ולא כפתור או div.
+ok "פוקוס: ב-globals · בעמודים · פקדים (1 · 0 · 9)" "$(grep -c 'select:focus-visible' app/globals.css) · $(grep -rh 'input:focus' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(/\*|\*)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
 ok "עמוד תחנה: מפות בוחרות · מפות · selectable (2 · 2 · 3)" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
 ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
