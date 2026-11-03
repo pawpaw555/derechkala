@@ -1,5 +1,5 @@
 "use client";
-import { useTheme } from "./useTheme";
+import RadioPills from "./RadioPills";
 
 export type TimeChoiceValue = "now" | "departure" | "arrival";
 
@@ -34,33 +34,20 @@ export default function TimeChoice({ value, onChange, className, padding = "8px 
    *  לא ישנה בשקט את גובה הכפתור באחד משני העמודים. */
   padding?: string;
 }) {
-  const { t } = useTheme();
-  const options: [TimeChoiceValue, string][] = [
-    ["now", "עכשיו"],
-    ["departure", "יוצא ב־"],
-    ["arrival", "מגיע ב־"],
-  ];
+  // התווית היא מה שקורא מסך מכריז לפני שלוש האפשרויות. בלעדיה הוא
+  // אומר שלושה שמות בלי לומר על מה הבחירה.
   return (
-    <div style={{ display: "flex", gap: 8 }}>
-      {options.map(([key, label]) => {
-        const on = value === key;
-        return (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            aria-pressed={on}
-            className={className}
-            style={{
-              flex: 1, padding, borderRadius: 8,
-              border: `1px solid ${on ? t.borderSelected : t.border}`,
-              background: on ? t.resultBg : "transparent",
-              color: on ? t.text : t.muted,
-              fontFamily: "'Rubik', sans-serif", fontSize: 13,
-              fontWeight: on ? 600 : 400, cursor: "pointer",
-            }}
-          >{label}</button>
-        );
-      })}
-    </div>
+    <RadioPills<TimeChoiceValue>
+      label="מתי לנסוע"
+      value={value}
+      onChange={onChange}
+      className={className}
+      padding={padding}
+      options={[
+        ["now", "עכשיו"],
+        ["departure", "יוצא ב־"],
+        ["arrival", "מגיע ב־"],
+      ]}
+    />
   );
 }

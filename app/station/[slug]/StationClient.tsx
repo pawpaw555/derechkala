@@ -11,6 +11,7 @@ import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
 import { searchCombined, PlaceHit, SearchResults } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import TimeChoice, { TimeChoiceValue } from "../../lib/TimeChoice";
+import RadioPills from "../../lib/RadioPills";
 import dynamic from "next/dynamic";
 const Map = dynamic(() => import("../../lib/Map"), { ssr: false });
 
@@ -351,21 +352,16 @@ const content = STATION_CONTENT[stationName];
               שתי מילים שימשו בשני פקדים במשמעויות שונות — כאן מקום,
               שם זמן. הפקד שמתחת אומר עכשיו "יוצא ב־ / מגיע ב־", והפקד
               הזה נשאר על "מכאן / לכאן". ההבדל במילה ולא בהקשר. */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            {([["from", "יציאה מכאן"], ["to", "הגעה לכאן"]] as const).map(([d, label]) => (
-              <button key={d} onClick={() => { setDirection(d); setResult(null); setPlanInstant(null); }}
-                aria-pressed={direction === d}
-                style={{
-                  flex: 1, padding: "9px 12px", borderRadius: 8,
-                  border: `1px solid ${direction === d ? color : t.border}`,
-                  background: direction === d ? t.resultBg : "transparent",
-                  color: direction === d ? t.text : t.muted,
-                  fontFamily: "'Rubik', sans-serif", fontSize: 13,
-                  fontWeight: direction === d ? 600 : 400, cursor: "pointer",
-                }}>
-                {label}
-              </button>
-            ))}
+          {/* כלל 3: אותה מחלקה כמו בורר הזמן — שורת כפתורים לחוצים,
+              בלי קבוצה ובלי תווית. אותו רכיב לשניהם. */}
+          <div style={{ marginBottom: 12 }}>
+            <RadioPills<"from" | "to">
+              label={`כיוון הנסיעה מתחנת ${stationName}`}
+              value={direction}
+              onChange={d => { setDirection(d); setResult(null); setPlanInstant(null); }}
+              selectedBorder={color}
+              options={[["from", "יציאה מכאן"], ["to", "הגעה לכאן"]]}
+            />
           </div>
 
           {loading ? (

@@ -46,6 +46,11 @@ ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(e
 # חזר. השלישי הוא האוכלוסייה שהכלל אמור לכסות — אם הוא עלה, נוסף פקד
 # ויש לבדוק שהוא input/select/textarea ולא כפתור או div.
 ok "פוקוס: ב-globals · בעמודים · פקדים (1 · 0 · 9)" "$(grep -c 'select:focus-visible' app/globals.css) · $(grep -rh 'input:focus' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(/\*|\*)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
+# שני הטוגלים הם בחירה אחת מתוך כמה, ולכן radiogroup ולא שורת כפתורים
+# לחוצים. השלישי הוא הבקרה ששומרת על זה: aria-pressed אמיתי אחד בלבד
+# בכל הקוד, כפתור המצב הכהה, שהוא באמת טוגל דו-מצבי. אם הוא עולה, מישהו
+# בנה טוגל חדש ביד במקום להשתמש ברכיב — וגם הניווט בחצים לא יגיע איתו.
+ok "טוגלים: radiogroup · קוראים · aria-pressed (1 · 2 · 1)" "$(grep -rh 'role=\"radiogroup\"' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ') · $(grep -rh '<RadioPills' app/ --include='*.tsx' | wc -l | tr -d ' ') · $(grep -rh 'aria-pressed' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ')"
 ok "עמוד תחנה: מפות בוחרות · מפות · selectable (2 · 2 · 3)" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
 ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
