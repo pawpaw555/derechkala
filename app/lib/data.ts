@@ -513,7 +513,11 @@ function describeNoService(date: Date): string {
   const mins = date.getHours() * 60 + date.getMinutes();
   if (t === "saturday" && mins < SATURDAY_NIGHT_FIRST_MINS)
     return `הרכבת אינה פועלת בשבת. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
-  if (t === "friday" && mins > FRIDAY_LAST_MINS)
+  // >= ולא > : בשישי בין 15:37 ל-15:40 כבר אין יציאה, אבל השעה עוד לא
+  // עברה את FRIDAY_LAST_MINS. בתנאי הקודם ארבע הדקות האלה נפלו לשורה
+  // האחרונה ואמרו "מתחדש מחר ב-05:30" — ובשישי מחר היא שבת, שבה אין
+  // שירות עד מוצאי שבת. נחשף כשהגבול העליון נכנס ל-isOperating.
+  if (t === "friday" && mins >= SERVICE_FIRST_MINS)
     return `בערב שבת הרכבת האחרונה יוצאת ב-${hhmm(FRIDAY_LAST_MINS)}. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
   if (mins < SERVICE_FIRST_MINS)
     return `הרכבת מתחילה לפעול ב-${hhmm(SERVICE_FIRST_MINS)}.`;
@@ -522,12 +526,56 @@ function describeNoService(date: Date): string {
   return `הרכבת האחרונה להיום כבר יצאה. השירות מתחדש מחר ב-${hhmm(SERVICE_FIRST_MINS)}.`;
 }
 
-export function isOperating(date: Date): boolean {
-  const dayType = getDayType(date);
+/**
+ * חלון השירות של אותו יום, בדקות מחצות: הדקה הראשונה שבה רכבת יכולה
+ * לצאת והאחרונה. ביום חול ובמוצאי שבת הגבול הוא חצות, כלומר 1439 —
+ * וזה הקורא הראשון של WEEKDAY_LAST_MINS מחוץ לתצוגה.
+ */
+function serviceWindow(date: Date): { from: number; to: number } {
+  const t = getDayType(date);
+  if (t === "saturday") return { from: SATURDAY_NIGHT_FIRST_MINS, to: WEEKDAY_LAST_MINS - 1 };
+  if (t === "friday") return { from: SERVICE_FIRST_MINS, to: FRIDAY_LAST_MINS };
+  return { from: SERVICE_FIRST_MINS, to: WEEKDAY_LAST_MINS - 1 };
+}
+
+/**
+ * היציאה הבאה באותו יום, בדקות מחצות, או null כשכבר אין.
+ *
+ * אותה רשת שמייצרת getNextDepartures: מתחילת החלון, כל frequency דקות.
+ * מכאן ששתי התשובות אינן יכולות להיחלק.
+ */
+function nextDepartureMins(date: Date): number | null {
+  const w = serviceWindow(date);
   const mins = date.getHours() * 60 + date.getMinutes();
-  if (dayType === "saturday") return mins >= SATURDAY_NIGHT_FIRST_MINS;
-  if (dayType === "friday") return mins >= SERVICE_FIRST_MINS && mins <= FRIDAY_LAST_MINS;
-  return mins >= SERVICE_FIRST_MINS;
+  if (mins < w.from || mins > w.to) return null;
+  const f = getFrequencyMins(date);
+  const dep = w.from + Math.ceil((mins - w.from) / f) * f;
+  return dep <= w.to ? dep : null;
+}
+
+/**
+ * האם רכבת עוד תצא היום. זאת השאלה ש"הרכבת הקלה פועלת עכשיו" בעמוד
+ * השעות באמת שואל.
+ *
+ * עד 03.11.2026 הענף של יום חול היה `mins >= SERVICE_FIRST_MINS` בלבד,
+ * בלי שום גבול עליון, ו-WEEKDAY_LAST_MINS היה מוגדר ולא נקרא. הגבול
+ * נאכף במקרה ובמקום אחר: getNextDepartures מוסיף דקות ל-Date, התאריך
+ * מתגלגל אחרי חצות, ושם הבדיקה נכשלת דווקא על הגבול **התחתון** של
+ * הבוקר. כך /hours הכריז "פועלת עכשיו" בזמן שהמתכנן באותו רגע ענה
+ * "הרכבת האחרונה להיום כבר יצאה".
+ *
+ * נמדד דקה-דקה לפני התיקון, כל שבעת הימים ועל ארבעה זוגות תחנות:
+ *
+ *     ראשון–חמישי   23:55–23:59   5 דק׳ ליום
+ *     שישי          15:37–15:40   4 דק׳
+ *     שבת           23:58–23:59   2 דק׳        סה״כ 31 דק׳ בשבוע
+ *
+ * החלון היה רחב 5 דקות בלי קשר לאורך הנסיעה — נבדק על 2, 10 ו-62 דקות
+ * — כי הוא נגזר מרשת היציאות ולא מהנסיעה. זו אותה מחלקה ש-1aabe49 תיקן
+ * לשבת, בכיוון ההפוך.
+ */
+export function isOperating(date: Date): boolean {
+  return nextDepartureMins(date) !== null;
 }
 export function isSaturdayNight(date: Date): boolean {
   return date.getDay() === 6 && date.getHours() * 60 + date.getMinutes() >= SATURDAY_NIGHT_FIRST_MINS;

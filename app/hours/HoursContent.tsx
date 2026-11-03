@@ -46,7 +46,13 @@ export default function HoursContent() {
   // והכרטיס אמר "לא פועלת בשבת" ומתחתיו "השירות מתחדש מהשעה 19:45" — שעה
   // שכבר עברה, בזמן שמתכנן הנסיעה הציע יציאות חיות. שבת היא לא טווח שעות
   // משלה: היא בדיוק "יום שבת ועוד לא פועלת", לפי אותו מקור יחיד.
-  const isShabat = ready && dayType === "saturday" && !operating;
+  // "שבת ולפני החידוש", ולא "שבת ולא פועלת". ב-03.11.2026 isOperating
+  // קיבל גבול עליון — הוא מחזיר false גם **אחרי** היציאה האחרונה — ואז
+  // `!operating` הפך נכון גם ב-23:58 במוצאי שבת, והכרטיס היה חוזר לומר
+  // "לא פועלת בשבת · מתחדש ב-19:45" על שעה שעברה לפני ארבע שעות. זה
+  // בדיוק הבאג ש-1aabe49 תיקן, והוא כמעט חזר מכיוון אחר.
+  const nowMins = clock.getHours() * 60 + clock.getMinutes();
+  const isShabat = ready && dayType === "saturday" && nowMins < SATURDAY_NIGHT_FIRST_MINS;
 
   return (
     <main style={{
