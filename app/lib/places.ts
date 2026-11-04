@@ -1,4 +1,6 @@
-import { STATIONS, LANDMARKS, Station, Landmark, distanceMetres, formatDistance, searchAll, normalizeHebrew } from "./data";
+import { STATIONS, LANDMARKS, distanceMetres, formatDistance, searchAll, normalizeHebrew } from "./data";
+// טיפוסים בייבוא נפרד, אחרת טוען המודולים של node מחפש אותם כערכים. scripts/load.mjs
+import type { Station, Landmark } from "./data";
 
 /**
  * מקומות שאפשר לחפש לפי האזור, לא לפי שם התחנה.

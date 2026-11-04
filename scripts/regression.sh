@@ -85,6 +85,10 @@ ok "TrainStation · FAQPage" "2 · 2" "$(echo "$S"|grep -o 'TrainStation'|wc -l|
 ok "/station/<שטות>" "404" "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב
 ok "תחנות·landmarks·pois·places" "34 · 65 · 131 · 22" "$(python3 -I scripts/sources.py counts)"
+# כלל 5ב: אותן ארבע ספירות דרך טעינת מודול במקום פירסור טקסט, ועוד הבקרה
+# החיובית — חמשת השמות שנושאים גרש חייבים לחזור. פירסור טקסט נשבר עליהם
+# ארבע פעמים ביום אחד; שני מסלולים שמסכימים הם מה שתופס את זה בפעם הבאה.
+ok "טעינת מודול מול פירסור · גרש" "שווה · 5" "$(same "$(node scripts/load.mjs 2>/dev/null | sed 's/ · גרש.*//')" "$(python3 -I scripts/sources.py counts)") · $(node scripts/load.mjs 2>/dev/null | grep -oE 'גרש: [0-9]+' | grep -oE '[0-9]+')"
 # כלל 10: שדה שהשכבה מחשבת ואף ממשק אינו קורא
 ok "שדות בלי קורא בממשק (תקרה)" "≤13" "$(le "$(python3 -I scripts/dead-fields.py count)" 13)"
 # כלל 4: תחנה שמונה את עצמה כמקום סמוך — "בלומפילד · ליד בלומפילד".
