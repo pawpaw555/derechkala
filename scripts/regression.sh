@@ -1,10 +1,38 @@
 #!/usr/bin/env bash
 # בלוק הרגרסיה של כלל 6. זהה בכל פעם, לא לפי מקרה.
+#
+# עד 04.11.2026 `ok` הייתה printf: הבלוק הדפיס 29 מספרים, תמיד הסתיים
+# בהצלחה, וההשוואה לציפייה נעשתה בעיניים שלי. כלומר הוא היה דוח ולא
+# בדיקה — מספר שהשתנה היה מודפס ועובר, אם לא שמתי לב. עכשיו הציפייה
+# היא ארגומנט, ההשוואה בקוד, והסקריפט יוצא בשגיאה על כל ✗.
+#
+# שלוש שורות שהציפייה בהן אינה מספר קבוע עברו דרך `pos`/`same`, כי
+# ציפייה קשיחה בהן הייתה נכשלת לשקר: ספירת ה-`||` בקוד נעה עם כל שינוי,
+# ומספר קריאות fitBounds יכול לגדול בלגיטימיות — מה שנדרש שם הוא שהוא
+# שווה למספר הדגלים, לא שהוא 3.
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-3011}
 B="http://localhost:$PORT"
-ok(){ printf "  %-38s %s\n" "$1" "$2"; }
+
+PASS=0
+FAIL=0
+ok(){
+  if [ "$3" = "$2" ]; then
+    PASS=$((PASS+1)); printf "  ✓ %-44s %s\n" "$1" "$3"
+  else
+    FAIL=$((FAIL+1)); printf "  ✗ %-44s %s   ← צפוי: %s\n" "$1" "$3" "$2"
+  fi
+}
+# בקרה שהתשובה שלה היא "הכלי רץ", לא מספר: ספירה שנעה עם הקוד אינה
+# ציפייה שאפשר לקבע, והשאלה האמיתית היא אם ה-grep מצא משהו בכלל.
+pos(){ if [ "$1" -gt 0 ]; then echo "כן"; else echo "לא"; fi; }
+# שני מספרים שחייבים להיות שווים זה לזה, ולא שווים לערך מסוים.
+same(){ if [ "$1" = "$2" ]; then echo "שווה"; else echo "$1≠$2"; fi; }
+# תקרה ולא ערך: כלל 6 מגדיר את lint ואת השדות המתים כ"≤ הבסיס". ציפייה
+# מדויקת שם הייתה מדווחת ככשל דווקא על שיפור — 16 בעיות שירדו ל-15 —
+# ואז הייתי מתחיל להתעלם מהשורה. ירידה עוברת, עלייה נופלת.
+le(){ if [ "$1" -le "$2" ]; then echo "≤$2"; else echo "$1>$2"; fi; }
 
 pkill -f "next start -p $PORT" 2>/dev/null
 npm run build > /tmp/reg-build.log 2>&1; BUILD=$?
@@ -19,21 +47,22 @@ done
 
 S=$(curl -s "$ST")
 echo "═══ בלוק רגרסיה ═══"
-ok "tsc"                        "$(npx tsc --noEmit 2>&1 | grep -c 'error TS')"
-ok "build"                      "$BUILD"
-ok "lint (בסיס 16)"             "$(npm run lint 2>&1 | grep -o '[0-9]* problems' | head -1)"
+ok "tsc"  "0" "$(npx tsc --noEmit 2>&1 | grep -c 'error TS')"
+ok "build" "0" "$BUILD"
+LINTN=$(npm run lint 2>&1 | grep -oE '[0-9]+ problems' | head -1 | grep -oE '[0-9]+')
+ok "lint (תקרה)" "≤16" "$(le "${LINTN:-0}" 16)"
 # grep -c סופר שורות, ו-Next קובע את מעברי השורה ב-HTML לפי שיקוליו:
 # הוספת בלוק <style> אחד הזיזה את אותן מחרוזות מ-2 שורות ל-3 בלי ששום
 # תוכן השתנה. סופרים מופעים, ומתוך תשובה אחת ולא שתיים.
 HRS=$(curl -s $B/hours)
-ok "/hours 15:40 · 19:45"       "$(echo "$HRS"|grep -o '15:40'|wc -l|tr -d ' ') · $(echo "$HRS"|grep -o '19:45'|wc -l|tr -d ' ')"
-# המספרים בתווית נוספו ב-03.11: עד אז השורה הדפיסה ספירה בלי ציפייה,
-# ולכן לא הייתה יכולה להיכשל. ה-10 כולל את "התחנה על המפה" שנוסף אז.
-ok "עמוד תחנה h2 · h1 (10 · 1)"  "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
+ok "/hours 15:40 · 19:45" "6 · 8" "$(echo "$HRS"|grep -o '15:40'|wc -l|tr -d ' ') · $(echo "$HRS"|grep -o '19:45'|wc -l|tr -d ' ')"
+# המספרים נוספו ב-03.11: עד אז השורה הדפיסה ספירה בלי ציפייה, ולכן לא
+# הייתה יכולה להיכשל. ה-10 כולל את "התחנה על המפה" שנוסף אז.
+ok "עמוד תחנה h2 · h1" "10 · 1" "$(echo "$S"|grep -o '<h2'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '<h1'|wc -l|tr -d ' ')"
 # כלל 10: המפה בעמוד התחנה היא ssr:false, ולכן אין לה סמן ב-HTML. מה
 # שכן נשלח מהשרת הוא הכותרת, והיא הסימן שהבלוק קיים בעמוד. המספר השני
 # הוא בקרה — כותרת שידוע שקיימת שם מאז ומתמיד.
-ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(echo "$S"|grep -o 'התחנה על המפה'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '>כתובת<'|wc -l|tr -d ' ')"
+ok "עמוד תחנה: כותרת המפה · בקרה כתובת" "1 · 1" "$(echo "$S"|grep -o 'התחנה על המפה'|wc -l|tr -d ' ') · $(echo "$S"|grep -o '>כתובת<'|wc -l|tr -d ' ')"
 # לחיצה על סמן בוחרת תחנה לשדה. שתי המפות בעמוד התחנה חייבות לקבל את
 # הבורר — אחרת אחת מהן תפתח כרטיס ש"תכנן נסיעה לכאן" שבו יוצא לעמוד
 # הבית ומאבד את הכיוון שנבחר. המספר השני הוא בקרה: סה״כ המפות בקובץ.
@@ -45,21 +74,21 @@ ok "עמוד תחנה: כותרת המפה · בקרה כתובת (1 · 1)" "$(e
 # וב-/map נשארו בלי שום סימן. השני חייב להיות 0: כלל בעמוד פירושו שהחור
 # חזר. השלישי הוא האוכלוסייה שהכלל אמור לכסות — אם הוא עלה, נוסף פקד
 # ויש לבדוק שהוא input/select/textarea ולא כפתור או div.
-ok "פוקוס: ב-globals · בעמודים · פקדים (1 · 0 · 9)" "$(grep -c 'select:focus-visible' app/globals.css) · $(grep -rh 'input:focus' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(/\*|\*)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
+ok "פוקוס: ב-globals · בעמודים · פקדים" "1 · 0 · 9" "$(grep -c 'select:focus-visible' app/globals.css) · $(grep -rh 'input:focus' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(/\*|\*)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
 # שני הטוגלים הם בחירה אחת מתוך כמה, ולכן radiogroup ולא שורת כפתורים
 # לחוצים. השלישי הוא הבקרה ששומרת על זה: aria-pressed אמיתי אחד בלבד
 # בכל הקוד, כפתור המצב הכהה, שהוא באמת טוגל דו-מצבי. אם הוא עולה, מישהו
 # בנה טוגל חדש ביד במקום להשתמש ברכיב — וגם הניווט בחצים לא יגיע איתו.
-ok "טוגלים: radiogroup · קוראים · aria-pressed (1 · 2 · 1)" "$(grep -rh 'role=\"radiogroup\"' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ') · $(grep -rh '<RadioPills' app/ --include='*.tsx' | wc -l | tr -d ' ') · $(grep -rh 'aria-pressed' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ')"
-ok "עמוד תחנה: מפות בוחרות · מפות · selectable (2 · 2 · 3)" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
-ok "TrainStation · FAQPage"     "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
-ok "/station/<שטות>"            "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
+ok "טוגלים: radiogroup · קוראים · aria-pressed" "1 · 2 · 1" "$(grep -rh 'role=\"radiogroup\"' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ') · $(grep -rh '<RadioPills' app/ --include='*.tsx' | wc -l | tr -d ' ') · $(grep -rh 'aria-pressed' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ')"
+ok "עמוד תחנה: מפות בוחרות · מפות · selectable" "2 · 2 · 3" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
+ok "TrainStation · FAQPage" "2 · 2" "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
+ok "/station/<שטות>" "404" "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"
 # כלל 11: הספירות באות מהפרסר היחיד, כדי שהוא יהיה בשימוש ולא ירקב
-ok "תחנות·landmarks·pois·places" "$(python3 -I scripts/sources.py counts)"
+ok "תחנות·landmarks·pois·places" "34 · 65 · 131 · 22" "$(python3 -I scripts/sources.py counts)"
 # כלל 10: שדה שהשכבה מחשבת ואף ממשק אינו קורא
-ok "שדות בלי קורא בממשק (בסיס 13)" "$(python3 -I scripts/dead-fields.py count)"
+ok "שדות בלי קורא בממשק (תקרה)" "≤13" "$(le "$(python3 -I scripts/dead-fields.py count)" 13)"
 # כלל 4: תחנה שמונה את עצמה כמקום סמוך — "בלומפילד · ליד בלומפילד".
-ok "תחנה שמונה את עצמה (בסיס 0)" "$(python3 -I scripts/place-consistency.py count)"
+ok "תחנה שמונה את עצמה" "0" "$(python3 -I scripts/place-consistency.py count)"
 # עמוד השעות החזיק עותק משלו של לוח הזמנים. שעה קשיחה בקובץ הזה פירושה
 # שהעותק חזר. התבנית הקודמת דרשה שהשעה תהיה מחרוזת כפולה שלמה, ולכן
 # פספסה את הצורה שהבאג באמת לבש — clock.getHours() < 21, מספר ולא
@@ -93,7 +122,7 @@ const d = "05:30";
 const e = 1; // kept running until 21:00
 const u = "https://derechkala.online/hours";
 FIXTURE
-ok "לוח זמנים קשיח בחמישה קבצים (בסיס 0, בקרה 5)" "$(hh_total $HFILES) · $(hardcoded_hours "$HFIX")"
+ok "לוח זמנים קשיח בחמישה קבצים · בקרה" "0 · 5" "$(hh_total $HFILES) · $(hardcoded_hours "$HFIX")"
 
 # כלל 11ב: ממצא נרשם עם עוגן קובץ:שורה, אחרת אי אפשר לאמת אותו מחדש.
 # המספר השני הוא כמה סעיפים נסרקו, והוא הבקרה: רשימת האותיות קשיחה,
@@ -103,7 +132,7 @@ ok "לוח זמנים קשיח בחמישה קבצים (בסיס 0, בקרה 5)"
 # הדו-אותיות לפני החד-אותיות, אחרת ענף `י` נבדק ראשון ונכשל על `יא.`
 # ב-03.11 הרשימה נעצרה ב-י׳, ולכן סעיף יא׳ נוסף ולא נסרק — בדיוק מה
 # שהמספר השני קיים בשבילו. `mjs` נוסף כי שתי בקרות הן סקריפטים כאלה.
-ok "ממצא בלי עוגן · סעיפים שנסרקו (0 · 12)" "$(sed -n '/ממצאי הביקורת של 01.11/,$p' seo-data/open-items.md | awk '
+ok "ממצא בלי עוגן · סעיפים שנסרקו" "0 · 12" "$(sed -n '/ממצאי הביקורת של 01.11/,$p' seo-data/open-items.md | awk '
  /^## (יא|יב|יג|יד|א|ב|ג|ד|ה|ו|ז|ח|ט|י)\. / { if (b) { s++; if (!a) n++ } b=1; a=0; next }
  /^## / { if (b) { s++; if (!a) n++ } b=0; next }
  b && /[a-zA-Z._\/-]+\.(ts|tsx|py|sh|mjs):[0-9]+/ { a=1 }
@@ -112,33 +141,34 @@ ok "ממצא בלי עוגן · סעיפים שנסרקו (0 · 12)" "$(sed -n '
 # כלל 11ב: מספר בתיעוד שמתרחק מהמציאות מטעה כל שיחה חדשה, כי CLAUDE.md
 # הוא הדבר הראשון שהיא קוראת. שני המספרים הראשונים חייבים להיות שווים.
 # בקרה: שינוי המספר ב-CLAUDE.md ל-99 מדווח 99, ומחיקת שורה מכלל 1 מדווחת 5.
-ok "תיעוד: כללים CLAUDE·CHECKLIST, מקומות בכלל 1 (23 · 23 · 6)" "$(grep -oE '[0-9]+ כללים' CLAUDE.md | grep -oE '[0-9]+') · $(grep -cE '^## [0-9]' CHECKLIST.md) · $(awk '/^## 1\./{b=1;next} /^## /{b=0} b && /^    [a-zA-Z]+\.ts /{n++} END{print n+0}' CHECKLIST.md)"
+ok "תיעוד: כללים CLAUDE·CHECKLIST, מקומות בכלל 1" "23 · 23 · 6" "$(grep -oE '[0-9]+ כללים' CLAUDE.md | grep -oE '[0-9]+') · $(grep -cE '^## [0-9]' CHECKLIST.md) · $(awk '/^## 1\./{b=1;next} /^## /{b=0} b && /^    [a-zA-Z]+\.ts /{n++} END{print n+0}' CHECKLIST.md)"
 # כלל 7ג: ערך שנופל בשקט למחרוזת ריקה מצייר תא ריק בלי שום סימן, ואז
 # נראה כמו באג אמיתי למי שקורא את העמוד. ב-02.11.2026 דיווחתי על "שעת
 # הגעה ריקה" שלא קרתה מעולם, והנפילה הזאת היא מה שהפך את הדיווח לאמין.
 # הבסיס 1 הוא `content?.address || ""` ב-StationClient; address חובה
 # בטיפוס ו-STATION_CONTENT מכסה את כל 34 התחנות, ולכן גם הוא מת — נשאר
-# ברשימה כדי שלא ייחשב מכוסה. הבקרה סופרת את כל ה-`||` בקוד: אם היא
-# מחזירה 0, ה-grep לא רץ והבסיס חסר משמעות.
-ok "נפילה שקטה ל-\"\" (בסיס 1, בקרה >0)" "$(grep -rhE '\|\|[[:space:]]*""' app/ --include='*.tsx' --include='*.ts' | grep -vE '^[[:space:]]*(//|\*)' | wc -l | tr -d ' ') · $(grep -rhE '\|\|' app/ --include='*.tsx' --include='*.ts' | wc -l | tr -d ' ')"
+# ברשימה כדי שלא ייחשב מכוסה. הבקרה היא שה-grep מצא `||` בכלל: ספירת
+# כל ה-`||` בקוד נעה עם כל שינוי, ולכן היא עוברת דרך `pos` ולא כמספר.
+ok "נפילה שקטה ל-\"\" · בקרה" "1 · כן" "$(grep -rhE '\|\|[[:space:]]*""' app/ --include='*.tsx' --include='*.ts' | grep -vE '^[[:space:]]*(//|\*)' | wc -l | tr -d ' ') · $(pos "$(grep -rhE '\|\|' app/ --include='*.tsx' --include='*.ts' | wc -l | tr -d ' ')")"
 # כלל 7ד: שטח הלחיצה של סמן נקבע ממרווח נמדד ולא מסף זום. HIT_ZOOM = 12
 # היה שער כזה, והוא נכשל בשני הכיוונים: /map במסך 1440 נפתח ב-11 או ב-12
 # לפי מה שהספיק להיות מוחל, ולכן ההילה הייתה כבויה בחלק מהטעינות ובלעה
 # שכנים באחרות — 25 זוגות נחתכים, 11.7 פיקסל בגרוע. אם סף זום חוזר הוא
 # יחזור בשקט, כי החפיפה נראית כמו לחיצה שעבדה. שורות הערה מנוכות, אחרת
 # ההערה שמתעדת את הסף המוסר מפילה את הבדיקה שמונעת את חזרתו.
-# המספר השני הוא בקרה חיובית שרצה בכל הרצה: המדידה עצמה. אם היא 0,
+# השני הוא בקרה חיובית שרצה בכל הרצה: שהמדידה עצמה קיימת. אם היא לא,
 # שטח הלחיצה אינו נמדד כלל והאפס שלפניה חסר משמעות. השלישי הוא בקרה
 # שהתבנית תופסת — אותה פקודה על מתקן עם סף מושתל.
 ZFIX=/tmp/reg-hitzoom-fixture.tsx
 printf 'const HIT_ZOOM = 12;\n' > "$ZFIX"
-ok "שטח לחיצה: סף זום · מדידה · בקרה (0 · >0 · 1)" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'HIT_ZOOM') · $(grep -c 'latLngToContainerPoint' app/lib/Map.tsx) · $(grep -c 'HIT_ZOOM' "$ZFIX")"
+ok "שטח לחיצה: סף זום · מדידה · בקרה" "0 · כן · 1" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'HIT_ZOOM') · $(pos "$(grep -c 'latLngToContainerPoint' app/lib/Map.tsx)") · $(grep -c 'HIT_ZOOM' "$ZFIX")"
 # כלל 7ה: כל קריאת fitBounds חייבת להיות animate:false. בלי זה ליפט דוחה
 # את התזוזה ל-requestAnimationFrame ומחזיר true, והיא לא מתרחשת בשתי
 # טעינות מכל שלוש — זום פתיחה דו-יציב באותו מיכל, בלי שום הודעת שגיאה.
-# סופרים את שתי הקריאות ואת אלה שיש בהן animate, ושני המספרים חייבים
-# להיות שווים: קריאה שלישית שתיווסף בלי הדגל תפיל את השורה.
-ok "fitBounds: קריאות · מהן animate:false (חייב שווה)" "$(grep -c 'map.fitBounds(' app/lib/Map.tsx) · $(grep -A3 'map.fitBounds(' app/lib/Map.tsx | grep -c 'animate: false')"
+# הדרישה היא שוויון ולא מספר: קריאה רביעית לגיטימית תהיה 4 מול 4 ותעבור,
+# ורביעית בלי הדגל תהיה 4 מול 3 ותפיל את השורה. ציפייה קשיחה של 3 הייתה
+# מפילה גם את הלגיטימית, ואז הייתי מתחיל להתעלם מהשורה.
+ok "fitBounds: קריאות מול animate:false" "שווה" "$(same "$(grep -c 'map.fitBounds(' app/lib/Map.tsx)" "$(grep -A3 'map.fitBounds(' app/lib/Map.tsx | grep -c 'animate: false')")"
 # המתנה מלאכותית של 2 עד 3 שניות עטפה את שני המתכננים והסתירה תוצאה
 # שהקוד כבר החזיק: לוח הזמנים בקוד, אין קריאת רשת, החישוב 22–31ms.
 # זה יחזור בשקט, כי המתנה עם אנימציה נראית כמו עבודה ולא כמו עיכוב.
@@ -162,22 +192,22 @@ delay_count(){ local n=0 f; for f in "$@"; do n=$(( n + $(grep -vE '^[[:space:]]
 # החלון נוסף כאן ב-04.11 על בסיס מדידה שגויה של כלי והוסר, כלל 7ו.
 RFIX=/tmp/reg-resize-fixture.tsx
 printf 'if (known.x === el.clientWidth) return;\n' > "$RFIX"
-ok "התאמת מיכל: fittedSizeRef · getSize · בקרה · מאזין חלון (5 · 0 · 1 · 0)" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'fittedSizeRef') · $(grep -c 'known\.x' app/lib/Map.tsx) · $(grep -c 'known\.x' "$RFIX") · $(grep -c 'addEventListener("resize"' app/lib/Map.tsx)"
-ok "המתנה מלאכותית (0, בקרה 2 · 4)" "$(delay_count $PFILES) · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PFILES | paste -sd+ - | bc)"
+ok "התאמת מיכל: fittedSizeRef · getSize · בקרה · מאזין חלון" "5 · 0 · 1 · 0" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'fittedSizeRef') · $(grep -c 'known\.x' app/lib/Map.tsx) · $(grep -c 'known\.x' "$RFIX") · $(grep -c 'addEventListener("resize"' app/lib/Map.tsx)"
+ok "המתנה מלאכותית · שתי בקרות" "0 · 2 · 4" "$(delay_count $PFILES) · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PFILES | paste -sd+ - | bc)"
 # כלל 11: הספירה באה מהמודול עצמו ולא מפרסר, כדי שהוא יהיה בשימוש.
 # הקו האדום הוא Y, ושנקר יושב במערך השטוח מיד לפני קריית אריה — סוף ענף
 # אחד ליד סוף הענף האחר. כל מי שגוזר שכנות ממקום במערך מצייר ביניהן
 # מסילה שאינה קיימת. אם מישהו יחזיר את הסדר השטוח, הערך הרביעי יתהפך.
-ok "קטעי הקו: לא-מכוסות·תחנות·תפרים·שנקר↔ק״א·שחם↔שנקר (0·34·1·false·true)" "$(node --no-warnings scripts/segments.mjs counts)"
+ok "קטעי הקו: לא-מכוסות·תחנות·תפרים·שנקר↔ק״א·שחם↔שנקר" "0 · 34 · 1 · false · true" "$(node --no-warnings scripts/segments.mjs counts)"
 # כלל 4: "פועלת עכשיו" ב-/hours והמתכנן חייבים להסכים. סריקה של כל 1440
 # הדקות בשבעת הימים, כי זו מחלקה שאי אפשר לתפוס ב-grep — שתי פונקציות
 # שמסכימות 10,049 פעם ונחלקות 31. שלושת הזמנים הם בקרה: אם הייבוא נכשל
 # הם יהיו "—" והאפס שלפניהם חסר משמעות.
-ok "שירות: סתירות·בורר·ימים·חול·שישי·מוצ״ש (0·0·7·23:54·15:36·23:57)" "$(node --no-warnings scripts/service-edges.mjs counts)"
+ok "שירות: סתירות·בורר·ימים·חול·שישי·מוצ״ש" "0 · 0 · 7 · 23:54 · 15:36 · 23:57" "$(node --no-warnings scripts/service-edges.mjs counts)"
 # והאמירה עצמה בעמוד: הערת התפר מופיעה פעם אחת בדיוק. הבקרה היא מספר
 # קישורי התחנות באותה תשובה — אם הוא 0, ה-curl נכשל והאחד שלפניו שקר.
 RL=$(curl -s $B/line-red)
-ok "/line-red: הערת תפר · קישורי תחנות (1 · 34)" "$(echo "$RL"|grep -o 'אין מסילה בין'|wc -l|tr -d ' ') · $(echo "$RL"|grep -o 'href="/station/'|wc -l|tr -d ' ')"
+ok "/line-red: הערת תפר · קישורי תחנות" "1 · 34" "$(echo "$RL"|grep -o 'אין מסילה בין'|wc -l|tr -d ' ') · $(echo "$RL"|grep -o 'href="/station/'|wc -l|tr -d ' ')"
 # הבדיקה הקודמת שאלה "האם מופיע כאן 'קריית אריה'" על מקטע שלא הכיל שום
 # שם תחנה: התבנית עצרה על `תחנה הבאה</div>`. היא החזירה 0 בכל מצב, גם
 # אם הקוד היה שבור. עכשיו שולפים את השם עצמו ומשווים — טענה שיכולה להיכשל.
@@ -187,8 +217,14 @@ h=sys.stdin.read(); i=h.find('תחנה הבאה')
 if i==-1: print('לא נמצא'); raise SystemExit
 parts=[x.strip() for x in html.unescape(re.sub('<[^>]*>','|',h[i:i+400])).split('|') if x.strip()]
 print(parts[1] if len(parts)>1 else 'לא נמצא')"; }
-ok "שנקר → אהרונוביץ'"           "$(next_station '%D7%A9%D7%A0%D7%A7%D7%A8')"
-ok "בילינסון → שחם"              "$(next_station '%D7%91%D7%99%D7%9C%D7%99%D7%A0%D7%A1%D7%95%D7%9F')"
+ok "שנקר → הבאה" "אהרונוביץ'" "$(next_station '%D7%A9%D7%A0%D7%A7%D7%A8')"
+ok "בילינסון → הבאה" "שחם" "$(next_station '%D7%91%D7%99%D7%9C%D7%99%D7%A0%D7%A1%D7%95%D7%9F')"
 C=""; for p in / /map /line-red /line-green /line-purple /hours /privacy; do C="$C$(curl -s -o /dev/null -w '%{http_code}' $B$p) "; done
-ok "שבעת העמודים"               "$C"
-ok "שגיאות שרת"                 "$(grep -ci 'error\|unhandled' /tmp/reg-srv.log)"
+ok "שבעת העמודים" "200 200 200 200 200 200 200" "${C% }"
+ok "שגיאות שרת" "0" "$(grep -ci 'error\|unhandled' /tmp/reg-srv.log)"
+
+if [ "$FAIL" -gt 0 ]; then
+  printf "\n═══ %s עברו · %s נכשלו ═══\n" "$PASS" "$FAIL"
+  exit 1
+fi
+printf "\n═══ כל %s הבדיקות עברו ═══\n" "$PASS"
