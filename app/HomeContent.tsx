@@ -281,7 +281,6 @@ export default function HomeContent() {
   const [fromStation, setFromStation] = useState<Station | null>(null);
   const [toStation, setToStation] = useState<Station | null>(null);
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
-  const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [useCustomTime, setUseCustomTime] = useState(false);
   // הקפיצה בבורר הדקות. כאן היא דקה אחת — ה-select נותן 60 אפשרויות.
@@ -476,29 +475,27 @@ export default function HomeContent() {
     const fromStation = fromReady;
     const toStation = toReady;
     if (!fromStation || !toStation) return;
-    setLoading(true);
-    setResult(null);
-
     const baseDate = useCustomTime ? dateForDay(customDay) : new Date();
     if (useCustomTime) {
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
-    setTimeout(() => {
-      // שני הענפים עוברים דרך פונקציה אחת כל אחד, כדי שהחישוב לא ישוכפל
-      // ויתפצל. הנקודה שנבחרה נשמרת, כי רשימת "עזיבות הבאות" מתחת לכרטיס
-      // בנתה את עצמה משעת ההגעה המבוקשת וסתרה אותו.
-      if (useCustomTime && timeMode === "arrival") {
-        const r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
-        setResult(r);
-        setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
-      } else {
-        const departures = getNextDepartures(baseDate, 1);
-        setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
-        setPlanInstant(baseDate);
-      }
-      setLoading(false);
-    }, 2000 + Math.random() * 1000);
+    // החישוב סינכרוני ומקומי — לוח הזמנים כבר בקוד, אין קריאת רשת. כאן
+    // ישבה המתנה מלאכותית של 2 עד 3 שניות שהסתירה תוצאה מוכנה, ואיתה
+    // מצב loading ואנימציית נקודות שלא חיכו לכלום.
+    //
+    // שני הענפים עוברים דרך פונקציה אחת כל אחד, כדי שהחישוב לא ישוכפל
+    // ויתפצל. הנקודה שנבחרה נשמרת, כי רשימת "עזיבות הבאות" מתחת לכרטיס
+    // בנתה את עצמה משעת ההגעה המבוקשת וסתרה אותו.
+    if (useCustomTime && timeMode === "arrival") {
+      const r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
+      setResult(r);
+      setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
+    } else {
+      const departures = getNextDepartures(baseDate, 1);
+      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
+      setPlanInstant(baseDate);
+    }
   };
 
   // הלוגיקה המשותפת יושבת ב-useNearestStation, כדי שעמוד הבית ועמוד
@@ -516,14 +513,6 @@ export default function HomeContent() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: ${t.subtle}; }
         a { text-decoration: none; }
-
-        .station-dot { animation: stationPulse 0.6s ease-in-out infinite alternate; }
-        .station-dot:nth-child(1) { animation-delay: 0s; }
-        .station-dot:nth-child(2) { animation-delay: 0.15s; }
-        .station-dot:nth-child(3) { animation-delay: 0.3s; }
-        .station-dot:nth-child(4) { animation-delay: 0.45s; }
-        .station-dot:nth-child(5) { animation-delay: 0.6s; }
-        @keyframes stationPulse { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
 
         /* input:focus עבר ל-globals.css יחד עם select ו-textarea. כאן הוא
            כיסה רק את העמוד הזה, ולכן ששת ה-select ושדה המאתר ב-/line-red
@@ -635,25 +624,7 @@ export default function HomeContent() {
           display: "flex", flexDirection: "column", gap: 10,
           textAlign: "right", boxShadow: t.shadow,
         }}>
-          {loading ? (
-            <div style={{ padding: "32px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-              <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
-                <div style={{ flex: 1, height: 2, background: "#b04050", opacity: 0.15, borderRadius: 1 }} />
-                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 10px" }}>
-                  {[0,1,2,3,4].map(i => (
-                    <div key={i} className="station-dot" style={{
-                      width: 14, height: 14, borderRadius: "50%",
-                      background: "#b04050", border: "3px solid #fff",
-                      boxShadow: "0 0 0 2px #b04050",
-                    }} />
-                  ))}
-                </div>
-              </div>
-              <div style={{ fontSize: 14, color: t.muted, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>
-                מחפש את הנסיעה הטובה ביותר...
-              </div>
-            </div>
-          ) : result && isNoService(result) ? (
+          {result && isNoService(result) ? (
             <div role="alert" style={{
               background: t.card, border: "1px solid #b0405055", borderRadius: 12,
               padding: "16px 18px", textAlign: "right",

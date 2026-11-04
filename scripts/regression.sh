@@ -139,6 +139,19 @@ ok "שטח לחיצה: סף זום · מדידה · בקרה (0 · >0 · 1)" "$(
 # סופרים את שתי הקריאות ואת אלה שיש בהן animate, ושני המספרים חייבים
 # להיות שווים: קריאה שלישית שתיווסף בלי הדגל תפיל את השורה.
 ok "fitBounds: קריאות · מהן animate:false (חייב שווה)" "$(grep -c 'map.fitBounds(' app/lib/Map.tsx) · $(grep -A3 'map.fitBounds(' app/lib/Map.tsx | grep -c 'animate: false')"
+# המתנה מלאכותית של 2 עד 3 שניות עטפה את שני המתכננים והסתירה תוצאה
+# שהקוד כבר החזיק: לוח הזמנים בקוד, אין קריאת רשת, החישוב 22–31ms.
+# זה יחזור בשקט, כי המתנה עם אנימציה נראית כמו עבודה ולא כמו עיכוב.
+# התבנית תופסת גם את setLoading, הצד השני של אותה המתנה — מצב טעינה
+# בלי מה לטעון. שורות הערה מנוכות, אחרת ההערות שמתעדות את ההסרה
+# מפילות את הבדיקה שמונעת את חזרתה.
+# שתי בקרות חיוביות: מתקן עם ההמתנה מושתלת, ומספר ה-handlePlan בשני
+# הקבצים. אם אחת מהן יורדת, ה-grep לא רץ והאפס שלפניו חסר משמעות.
+PFILES="app/HomeContent.tsx app/station/[slug]/StationClient.tsx"
+DFIX=/tmp/reg-delay-fixture.tsx
+printf 'setLoading(true);\nsetTimeout(() => { setLoading(false); }, 2000 + Math.random() * 1000);\n' > "$DFIX"
+delay_count(){ local n=0 f; for f in "$@"; do n=$(( n + $(grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -cE '2000 \+ Math\.random|setLoading') )); done; echo "$n"; }
+ok "המתנה מלאכותית (0, בקרה 2 · 4)" "$(delay_count $PFILES) · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PFILES | paste -sd+ - | bc)"
 # כלל 11: הספירה באה מהמודול עצמו ולא מפרסר, כדי שהוא יהיה בשימוש.
 # הקו האדום הוא Y, ושנקר יושב במערך השטוח מיד לפני קריית אריה — סוף ענף
 # אחד ליד סוף הענף האחר. כל מי שגוזר שכנות ממקום במערך מצייר ביניהן

@@ -68,7 +68,6 @@ export default function StationClient({ stationName, station }: Props) {
     setUseCustomTime(true);
   };
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
-  const [loading, setLoading] = useState(false);
   const finder = useNearestStation();
   const [routeHere, setRouteHere] = useState<{ key: string; metres: number } | null>(null);
 
@@ -184,26 +183,22 @@ const content = STATION_CONTENT[stationName];
     const to = STATIONS.find(s => s.name === dest);
     if (!from || !to) return;
 
-    setLoading(true);
-    setResult(null);
-
     const baseDate = useCustomTime ? dateForDay(customDay) : new Date();
     if (useCustomTime) {
       baseDate.setHours(customHour, customMinute, 0, 0);
     }
 
-    setTimeout(() => {
-      if (useCustomTime && timeMode === "arrival") {
-        const r = findRouteByArrival(origin, dest, baseDate);
-        setResult(r);
-        setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
-      } else {
-        const departures = getNextDepartures(baseDate, 1);
-        setResult(findRoute(origin, dest, departures[0]?.minsFromNow, baseDate));
-        setPlanInstant(baseDate);
-      }
-      setLoading(false);
-    }, 2000 + Math.random() * 1000);
+    // החישוב סינכרוני ומקומי — ראה את אותה הערה ב-HomeContent. גם כאן
+    // ישבה המתנה מלאכותית של 2 עד 3 שניות, ואיתה מצב loading שלא חיכה לכלום.
+    if (useCustomTime && timeMode === "arrival") {
+      const r = findRouteByArrival(origin, dest, baseDate);
+      setResult(r);
+      setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
+    } else {
+      const departures = getNextDepartures(baseDate, 1);
+      setResult(findRoute(origin, dest, departures[0]?.minsFromNow, baseDate));
+      setPlanInstant(baseDate);
+    }
   };
 
   const hasResults = results.stations.length > 0 || results.landmarks.length > 0 || results.places.length > 0;
@@ -222,14 +217,6 @@ const content = STATION_CONTENT[stationName];
         * { box-sizing: border-box; margin: 0; padding: 0; }
         a { text-decoration: none; }
         input::placeholder { color: ${t.subtle}; }
-        .station-dot-s { animation: stationPulseS 0.6s ease-in-out infinite alternate; }
-        .station-dot-s:nth-child(1) { animation-delay: 0s; }
-        .station-dot-s:nth-child(2) { animation-delay: 0.15s; }
-        .station-dot-s:nth-child(3) { animation-delay: 0.3s; }
-        .station-dot-s:nth-child(4) { animation-delay: 0.45s; }
-        .station-dot-s:nth-child(5) { animation-delay: 0.6s; }
-        @keyframes stationPulseS { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.3); } }
-
         input { transition: border-color 0.2s, box-shadow 0.2s; }
         /* input:focus עבר ל-globals.css — ראה שם למה. */
 
@@ -364,25 +351,7 @@ const content = STATION_CONTENT[stationName];
             />
           </div>
 
-          {loading ? (
-            <div style={{ padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-              <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
-                <div style={{ flex: 1, height: 2, background: color, opacity: 0.15, borderRadius: 1 }} />
-                <div style={{ position: "absolute", left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 10px" }}>
-                  {[0,1,2,3,4].map(i => (
-                    <div key={i} className="station-dot-s" style={{
-                      width: 12, height: 12, borderRadius: "50%",
-                      background: color, border: "3px solid #fff",
-                      boxShadow: `0 0 0 2px ${color}`,
-                    }} />
-                  ))}
-                </div>
-              </div>
-              <div style={{ fontSize: 13, color: t.muted, fontWeight: 500, fontFamily: "'Rubik', sans-serif" }}>
-                מחפש את הנסיעה הטובה ביותר...
-              </div>
-            </div>
-          ) : result && isNoService(result) ? (
+          {result && isNoService(result) ? (
             <div role="alert" style={{
               background: t.card, border: "1px solid #b0405055", borderRadius: 12,
               padding: "16px 18px", textAlign: "right",
