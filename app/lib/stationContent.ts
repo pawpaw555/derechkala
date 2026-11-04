@@ -1,9 +1,12 @@
 import { PEAK_FREQ_MINS, BASE_FREQ_MINS } from "./data";
 
+/** שלושת הסוגים, בסדר שבו הם מוצגים לקורא. */
+export const STATION_TYPES = ["עילית", "תת קרקעית", "בשיקוע"] as const;
+
 export type StationContent = {
   name: string;
   city: string;
-  stationType: string;
+  stationType: (typeof STATION_TYPES)[number];
   /**
    * פורמט קנוני: "כניסה A: רחוב מספר, כניסה B: רחוב מספר, עיר".
    * StationClient מפצל על `/,\s*(?=כניסה)/` ומציג כל כניסה בשורה. רשומה
@@ -302,7 +305,7 @@ export const STATION_CONTENT: Record<string, StationContent> = {
     city: "תל אביב",
     stationType: "תת קרקעית",
     address: "כניסה A: שדרות מנחם בגין 125, כניסה B: שדרות מנחם בגין 144, תל אביב - יפו",
-    locationSummary: "תחנה תת קרקעית על דרך מנחם בגין, בסמוך לקריה, לאיכילוב, לעזריאלי ולתל אביב השלום.",
+    locationSummary: "תחנה תת קרקעית על דרך מנחם בגין, בסמוך לקריה, לאיכילוב, לעזריאלי ולתחנת רכבת תל אביב השלום.",
     intro: "תחנת שאול המלך משרתת את אחד האזורים המבוקשים ביותר בתל אביב. התחנה ממוקמת ליד הקריה, איכילוב, מרכז עזריאלי, מידטאון ותחנת רכבת תל אביב השלום, ולכן היא מתאימה למי שמגיע לעבודה, לפגישות, לביקור רפואי או לקניות באזור מרכז העיר.",
     pois: [
       { name: "בית חולים איכילוב", type: "מרכז רפואי" },
@@ -656,3 +659,35 @@ export const STATION_CONTENT: Record<string, StationContent> = {
     nextStation: null,
   },
 };
+
+/** כמה תחנות מכל סוג. נגזר מהרשומות. */
+export const STATION_TYPE_COUNTS: Record<(typeof STATION_TYPES)[number], number> =
+  STATION_TYPES.reduce((acc, t) => {
+    acc[t] = Object.values(STATION_CONTENT).filter(c => c.stationType === t).length;
+    return acc;
+  }, {} as Record<(typeof STATION_TYPES)[number], number>);
+
+/** שמות התחנות בשיקוע, לציון בסוגריים. */
+export const TRENCH_STATIONS = Object.values(STATION_CONTENT)
+  .filter(c => c.stationType === "בשיקוע")
+  .map(c => c.name);
+
+/**
+ * "23 עיליות, 10 תת-קרקעיות ואחת בשיקוע (אליפלט)" — נגזר, לא נכתב.
+ *
+ * הטענה הזאת ישבה קשיחה בארבעה מקומות בשלושה נוסחים: `/map` בשני עותקים
+ * (ה-FAQ הנראה וה-JSON-LD) אמר את האמת, עמוד הבית אמר חצי ממנה, ו-`/line-red`
+ * מנה את אליפלט בין העיליות — שגוי, כי היא בשיקוע. מי שתיקן מקום אחד
+ * לא היה מתקן את השאר. כלל 1.
+ *
+ * רכיבי הממשק הם "use client", והקובץ הזה שוקל 54 KB — ולכן המחרוזת
+ * נגזרת ב-page.tsx שהוא רכיב שרת, ועוברת כ-prop. ייבוא ישיר היה מכניס
+ * את כל התוכן לחבילת הלקוח של עמוד הבית בשביל שלושה מספרים.
+ */
+export const STATION_TYPE_BREAKDOWN = (() => {
+  const u = STATION_TYPE_COUNTS["תת קרקעית"];
+  const e = STATION_TYPE_COUNTS["עילית"];
+  const t = TRENCH_STATIONS.length;
+  const trench = t === 1 ? "ואחת בשיקוע" : `ו-${t} בשיקוע`;
+  return `${e} עיליות, ${u} תת-קרקעיות ${trench} (${TRENCH_STATIONS.join(", ")})`;
+})();

@@ -1,7 +1,7 @@
 "use client";
 import { Fragment } from "react";
 import { useTheme } from "../lib/useTheme";
-import { STATIONS, areAdjacent, JUNCTION, hhmm, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS } from "../lib/data";
+import { STATIONS, areAdjacent, JUNCTION, hhmm, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM } from "../lib/data";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import { useNearestStation } from "../lib/useNearestStation";
 import NearestStationFinder from "../lib/NearestStationFinder";
@@ -16,7 +16,8 @@ const PEAK_LABEL = PEAK_WINDOWS.map(([f, t]) => `${hhmm(f * 60)}-${hhmm(t * 60)}
 
 const cities = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
-export default function RedLineContent() {
+/** `typeBreakdown` נגזר ב-page.tsx. ראו STATION_TYPE_BREAKDOWN. */
+export default function RedLineContent({ typeBreakdown }: { typeBreakdown: string }) {
   const { t, dark } = useTheme();
   const redStations = STATIONS.filter(s => s.lineId === "red");
   const finder = useNearestStation();
@@ -53,7 +54,7 @@ export default function RedLineContent() {
         }}>
           פעיל
         </div>
-        <span style={{ fontSize: 13, color: t.muted }}>34 תחנות · 24 ק"מ · פתח תקווה עד בת ים</span>
+        <span style={{ fontSize: 13, color: t.muted }}>{STATIONS.length} תחנות · {LINE_LENGTH_KM} ק&quot;מ · פתח תקווה עד בת ים</span>
       </div>
 
       {/* Route overview */}
@@ -92,7 +93,7 @@ export default function RedLineContent() {
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
         {[
           { label: "תחנות", value: "34" },
-          { label: "אורך", value: "24 ק\"מ" },
+          { label: "אורך", value: `${LINE_LENGTH_KM} ק"מ` },
           { label: "שעות עומס", value: `${PEAK_FREQ_MINS}′` },
           { label: "שעות רגילות", value: `${BASE_FREQ_MINS}′` },
         ].map(({ label, value }) => (
@@ -185,7 +186,7 @@ export default function RedLineContent() {
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
         {[
           { q: "מאיפה עד איפה עובר הקו האדום?", a: "הקו האדום עובר מתחנה מרכזית פתח תקווה עד הקוממיות בבת ים, דרך בני ברק, רמת גן, מרכז תל אביב ויפו. קריית אריה וגשר אם המושבות יושבות על ענף נפרד שמתפצל באהרונוביץ', ולכן נסיעה מפתח תקווה לבת ים אינה עוברת בהן." },
-          { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך כ-24 ק\"מ. מתוכן 10 תחנות תת-קרקעיות ו-24 תחנות עיליות." },
+          { q: "כמה תחנות יש בקו האדום?", a: `${STATIONS.length} תחנות לאורך כ-${LINE_LENGTH_KM} ק"מ. מתוכן ${typeBreakdown}.` },
           { q: "כל כמה זמן יש רכבת בקו האדום?", a: `בשעות העומס (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
           { q: "האם הקו האדום פועל בשבת?", a: `לא. הקו האדום אינו פועל בשבת. הרכבת האחרונה בערב שבת יוצאת ב-${FRIDAY_LAST} והשירות מתחדש במוצאי שבת ב-${SATURDAY_FIRST}.` },
           { q: "מה ההבדל בין קו אדום לקו ירוק וסגול?", a: "הקו האדום הוא הקו הפעיל היחיד כרגע. הקו הסגול צפוי לפתיחה ביולי 2028, ובקו הירוק ייפתח תחילה החלק הדרומי בדצמבר 2028." },

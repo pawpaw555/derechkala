@@ -3,6 +3,10 @@ import Link from "next/link";
 import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import MapContent from "./MapContent";
+// נגזר כאן, ברכיב שרת, כדי ששני העותקים — ה-FAQ הנראה וה-JSON-LD —
+// יאמרו את אותה מחרוזת, ושהתוכן של 54 KB לא ייכנס לחבילת הלקוח.
+import { STATION_TYPE_BREAKDOWN } from "../lib/stationContent";
+import { STATIONS, LINE_LENGTH_KM } from "../lib/data";
 import MapWrapper from "./MapWrapper";
 
 export const metadata: Metadata = {
@@ -31,8 +35,8 @@ export default function MapPage() {
           "@context": "https://schema.org",
           "@type": "FAQPage",
           "mainEntity": [
-            { "@type": "Question", "name": "איפה עובר הקו האדום?", "acceptedAnswer": { "@type": "Answer", "text": "הקו האדום עובר מתחנה מרכזית פתח תקווה דרך בני ברק, רמת גן ומרכז תל אביב ועד הקוממיות בבת ים. האורך הכולל הוא כ-24 ק\"מ עם 34 תחנות." } },
-            { "@type": "Question", "name": "כמה תחנות יש בקו האדום?", "acceptedAnswer": { "@type": "Answer", "text": "34 תחנות, מתוכן 23 עיליות, 10 תת-קרקעיות ואחת בשיקוע (אליפלט)." } },
+            { "@type": "Question", "name": "איפה עובר הקו האדום?", "acceptedAnswer": { "@type": "Answer", "text": `הקו האדום עובר מתחנה מרכזית פתח תקווה דרך בני ברק, רמת גן ומרכז תל אביב ועד הקוממיות בבת ים. האורך הכולל הוא כ-${LINE_LENGTH_KM} ק"מ עם ${STATIONS.length} תחנות.` } },
+            { "@type": "Question", "name": "כמה תחנות יש בקו האדום?", "acceptedAnswer": { "@type": "Answer", "text": `${STATIONS.length} תחנות, מתוכן ${STATION_TYPE_BREAKDOWN}.` } },
             { "@type": "Question", "name": "האם הקו הירוק פעיל?", "acceptedAnswer": { "@type": "Answer", "text": "לא. הקו הירוק בבנייה. החלק הדרומי, מראשון לציון עד לוינסקי, צפוי לפתיחה בדצמבר 2028, והקו המלא עד הרצליה ב-2030." } },
             { "@type": "Question", "name": "האם הקו הסגול פעיל?", "acceptedAnswer": { "@type": "Answer", "text": "לא. הקו הסגול נמצא בבנייה וצפוי לפתיחה ביולי 2028." } },
             { "@type": "Question", "name": "איך מוצאים את התחנה הקרובה אליי?", "acceptedAnswer": { "@type": "Answer", "text": "לחצו על הכפתור \"מצא את התחנה הקרובה אליי\" ואפשרו גישה למיקום. האתר יזהה את התחנה הקרובה אליכם ביותר." } },
@@ -61,7 +65,7 @@ export default function MapPage() {
         </h1>
 
         {/* All interactive + themed content */}
-        <MapContent />
+        <MapContent typeBreakdown={STATION_TYPE_BREAKDOWN} />
 
       </section>
       <SiteFooter />

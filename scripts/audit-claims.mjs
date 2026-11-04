@@ -138,6 +138,14 @@ for (const [file, src] of FILES) {
 }
 
 // ── דיווח ────────────────────────────────────────────────────────────
+// מצב `count` לבלוק: סתירות · קבצים שנסרקו. מספר הקבצים הוא הבקרה —
+// אם ההליכה על התיקיות נשברה הוא יורד, ו-0 סתירות מתוך 0 קבצים נראה
+// בדיוק כמו אתר תקין.
+if (process.argv[2] === "count") {
+  console.log("%d · %d", hard.length, FILES.length);
+  process.exit(0);
+}
+
 const show = (t, rows) => {
   console.log("\n── %s (%d) ──", t, rows.length);
   for (const [f, l, msg] of rows) console.log("  %s:%d  %s", f, l, msg);

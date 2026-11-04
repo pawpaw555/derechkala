@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useTheme } from "../lib/useTheme";
-import { STATIONS } from "../lib/data";
+import { STATIONS, LINE_LENGTH_KM } from "../lib/data";
 import MapClient from "./MapClient";
 
 const cities = ["פתח תקווה", "בני ברק", "רמת גן", "תל אביב", "בת ים"];
 
-export default function MapContent() {
+/** `typeBreakdown` נגזר ב-page.tsx. ראו STATION_TYPE_BREAKDOWN. */
+export default function MapContent({ typeBreakdown }: { typeBreakdown: string }) {
   const { t } = useTheme();
 
   return (
@@ -75,8 +76,8 @@ export default function MapContent() {
       <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 16, marginTop: 32 }}>שאלות נפוצות</h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {[
-          { q: "איפה עובר הקו האדום?", a: "הקו האדום עובר מתחנה מרכזית פתח תקווה דרך בני ברק, רמת גן ומרכז תל אביב ועד הקוממיות בבת ים. האורך הכולל הוא כ-24 ק\"מ עם 34 תחנות." },
-          { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות, מתוכן 23 עיליות, 10 תת-קרקעיות ואחת בשיקוע (אליפלט)." },
+          { q: "איפה עובר הקו האדום?", a: `הקו האדום עובר מתחנה מרכזית פתח תקווה דרך בני ברק, רמת גן ומרכז תל אביב ועד הקוממיות בבת ים. האורך הכולל הוא כ-${LINE_LENGTH_KM} ק"מ עם ${STATIONS.length} תחנות.` },
+          { q: "כמה תחנות יש בקו האדום?", a: `${STATIONS.length} תחנות, מתוכן ${typeBreakdown}.` },
           { q: "האם הקו הירוק פעיל?", a: "לא. הקו הירוק בבנייה. החלק הדרומי, מראשון לציון עד לוינסקי, צפוי לפתיחה בדצמבר 2028, והקו המלא עד הרצליה ב-2030." },
           { q: "האם הקו הסגול פעיל?", a: "לא. הקו הסגול נמצא בבנייה וצפוי לפתיחה ביולי 2028." },
           { q: "איך מוצאים את התחנה הקרובה אליי?", a: "לחצו על הכפתור \"מצא את התחנה הקרובה אליי\" ואפשרו גישה למיקום. האתר יזהה את התחנה הקרובה אליכם ביותר." },

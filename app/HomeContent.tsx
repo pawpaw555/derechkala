@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -271,7 +271,8 @@ function instantFromTime(sameDay: Date, hhmm: string): Date {
   return d;
 }
 
-export default function HomeContent() {
+/** `typeBreakdown` נגזר ב-page.tsx. ראו STATION_TYPE_BREAKDOWN. */
+export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }) {
   const EMPTY_RESULTS: SearchResults = { stations: [], landmarks: [], places: [] };
   const [swapSpinning, setSwapSpinning] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
@@ -1037,11 +1038,11 @@ export default function HomeContent() {
         <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: "24px 22px" }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 16 }}>הרכבת הקלה בגוש דן</h2>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 18 }}>
-            הרכבת הקלה של גוש דן, המכונה דנקל, מחברת את ערי המטרופולין: תל אביב, פתח תקווה, בני ברק, רמת גן, בת ים ויפו. נכון לאפריל 2026, הקו האדום הוא הקו הפעיל היחיד עם 34 תחנות. הקו הירוק והקו הסגול נמצאים בבנייה ומתוכננים לפתיחה ב-2028.
+            הרכבת הקלה של גוש דן, המכונה דנקל, מחברת את ערי המטרופולין: תל אביב, פתח תקווה, בני ברק, רמת גן, בת ים ויפו. הקו האדום הוא הקו הפעיל היחיד, עם {STATIONS.length} תחנות לאורך {LINE_LENGTH_KM} ק&quot;מ. הקו הירוק והקו הסגול נמצאים בבנייה ומתוכננים לפתיחה ב-2028.
           </p>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: t.text, marginBottom: 8 }}>תחנות רכבת קלה בתל אביב</h3>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 18 }}>
-            הקו האדום עובר דרך מרכז תל אביב עם תחנות מרכזיות כמו סבידור מרכז, אבן גבירול/ארלוזורוב ואלנבי. הקו הירוק מחבר את צפון העיר דרך תל אביב אוניברסיטה ועד פלורנטין בדרום.
+            הקו האדום עובר דרך מרכז תל אביב עם תחנות מרכזיות כמו ארלוזורוב, שאול המלך, קרליבך ואלנבי. הקו הירוק מחבר את צפון העיר דרך תל אביב אוניברסיטה ועד פלורנטין בדרום.
           </p>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: t.text, marginBottom: 8 }}>רכבת קלה פתח תקווה</h3>
           <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8, marginBottom: 18 }}>
@@ -1064,7 +1065,7 @@ export default function HomeContent() {
             { q: "מה הקנס על נסיעה ללא תיקוף?", a: "הקנס עומד על 180 ₪ בתוספת מחיר הנסיעה. מי שרכש מנוי (חופשי חודשי, שנתי או יומי) ולא תיקף — הקנס לא יעלה על 100 ₪." },
             { q: "מתי פועלת הרכבת הקלה?", a: `ימי ראשון עד חמישי: ${FIRST} עד חצות. שישי וערבי חג: ${FIRST} עד ${FRIDAY_LAST}. מוצאי שבת: מ-${SATURDAY_FIRST} עד חצות. הרכבת אינה פועלת בשבת.` },
             { q: "כל כמה זמן יש רכבת?", a: `בשעות השיא (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
-            { q: "כמה תחנות יש בקו האדום?", a: "34 תחנות לאורך 24 ק\"מ, מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. 10 מהתחנות הן תת-קרקעיות." },
+            { q: "כמה תחנות יש בקו האדום?", a: `${STATIONS.length} תחנות לאורך ${LINE_LENGTH_KM} ק"מ, מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. מתוכן ${typeBreakdown}.` },
             { q: "האם הרכבת הקלה פועלת בשבת?", a: `לא. הרכבת הקלה אינה פועלת בשבת. השירות מתחדש במוצאי שבת מהשעה ${SATURDAY_FIRST}.` },
             { q: "מתי ייפתחו הקו הירוק והקו הסגול?", a: "הקו הסגול צפוי לפתיחה ביולי 2028. בקו הירוק ייפתח תחילה החלק הדרומי, מראשון לציון עד לוינסקי, בדצמבר 2028 — והקו המלא עד הרצליה צפוי לפעול ב-2030. שני הקווים נמצאים כעת בבנייה." },
           ].map(({ q, a }, i) => (

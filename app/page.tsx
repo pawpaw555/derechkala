@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { STATION_TYPE_BREAKDOWN } from "./lib/stationContent";
 import HomeContent from "./HomeContent";
 import { SITE_URL } from "./lib/constants";
 
@@ -14,5 +15,6 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <HomeContent />;
+  // נגזר ברכיב שרת. ראו STATION_TYPE_BREAKDOWN ב-stationContent.ts.
+  return <HomeContent typeBreakdown={STATION_TYPE_BREAKDOWN} />;
 }

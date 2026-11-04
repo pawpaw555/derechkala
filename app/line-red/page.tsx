@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { STATION_TYPE_BREAKDOWN } from "../lib/stationContent";
 import { SITE_NAME, SITE_URL, OG_IMAGE } from "../lib/constants";
 import RedLineContent from "./RedLineContent";
 
@@ -20,5 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default function RedLinePage() {
-  return <RedLineContent />;
+  // נגזר ברכיב שרת. ראו STATION_TYPE_BREAKDOWN ב-stationContent.ts —
+  // כאן נמנתה אליפלט בין העיליות, שגוי, כי היא בשיקוע.
+  return <RedLineContent typeBreakdown={STATION_TYPE_BREAKDOWN} />;
 }
