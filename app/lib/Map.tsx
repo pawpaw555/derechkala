@@ -172,6 +172,12 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
    * מיקום. מרגע שכן, אסור להתאים אותה מחדש מתחתיו.
    */
   const viewOwnedRef = useRef(false);
+  /**
+   * גודל המיכל שעבורו נעשתה ההתאמה האחרונה. נכתב ב-`fitStations` ונקרא
+   * ב-`ResizeObserver`, ואסור להחליף אותו ב-`map.getSize()` — למה, בהערה
+   * שליד הצופה.
+   */
+  const fittedSizeRef = useRef<{ x: number; y: number } | null>(null);
   /** מנתק את המשקיף על המיכל ואת מאזיני הקלט. נאסף באפקט א'. */
   const teardownRef = useRef<() => void>(() => {});
   // אפקט א' יוצר את המפה אחרי await, ולכן אפקטים ב' ו-ג' רצים לפניו
@@ -252,6 +258,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       const fitStations = () => {
         if (stations.length === 0) return;
         map.invalidateSize();
+        // הגודל שההתאמה הזאת נעשתה עבורו. זה מה שה-ResizeObserver משווה
+        // מולו, ולכן הוא נרשם כאן — בנקודה שבה ההתאמה באמת קרתה — ולא
+        // בתוך הצופה. ראה את ההערה שם.
+        const fitSize = map.getSize();
+        fittedSizeRef.current = { x: fitSize.x, y: fitSize.y };
         const focus = focusRef.current;
         if (focus) {
           // התחנה ושכנותיה **במסילה**, לא השכנות לפי מקום במערך: בצומת
@@ -291,24 +302,48 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
        * כי הגובה כאן בא מ-`var(--map-h)` ויכול להשתנות בלי שהחלון זז,
        * וליפט אינו שומע על זה בעצמו.
        *
-       * ההשוואה היא בין ה-DOM לבין מה שליפט מחזיק (`map.getSize()`) ולא
-       * מול מטמון מקומי של הקריאה הקודמת. כך זה נכתב בתחילה, וזו הייתה
-       * טעות: הקריאה הראשונה של `observe` היא אסינכרונית ורצה אחרי
-       * שהפריסה התייצבה, ולכן מטמון מקומי רושם את הגודל שאחרי השינוי
-       * ובולע בדיוק את מה שהוא נועד לתפוס. השוואה מול `getSize` אינה
-       * יכולה ליצור לופ: אחרי ההתאמה שני הצדדים שווים והקריאה הבאה יוצאת.
+       * ההשוואה היא מול `fittedSizeRef` — הגודל שעבורו `fitStations` עשה
+       * את ההתאמה האחרונה. **לא** מול `map.getSize()`, ולא מול מטמון
+       * שנכתב כאן בתוך הצופה. שתי הגרסאות האלה נוסו וכל אחת נכשלה אחרת:
        *
-       * נמדד: הקטנת המיכל ל-648×350 מורידה את הזום ל-11, והגדלה בחזרה
-       * ל-1068×620 מחזירה אותו ל-12.
+       * מטמון שנכתב בתוך הצופה בולע את השינוי הראשון, כי הקריאה הראשונה
+       * של `observe` אסינכרונית ורצה אחרי שהפריסה התייצבה — היא רושמת את
+       * הגודל שאחרי השינוי ומשווה אותו לעצמו.
+       *
+       * `map.getSize()` יכול לבלוע שינוי שמגיע משינוי גודל חלון, כי ליפט
+       * מקדים את הצופה: `trackResize: true` הוא ברירת מחדל, וב-`_onResize`
+       * הוא קורא ל-`invalidateSize` ב-rAF הבא (`leaflet-src.js:4437`
+       * ו-`:4446`). אז `getSize()` כבר שווה ל-DOM, התנאי קורא "שום דבר לא
+       * השתנה", והצופה יוצא בלי להתאים. **נצפה** ב-04.11 במכשור בנקודת
+       * הקריאה: `dom` 470×350 ו-`known` 470×350, שווים, ויציאה.
+       *
+       * `fittedSizeRef` נכתב ב-`fitStations` עצמו, ולכן הוא עונה על השאלה
+       * הנכונה: "האם המיכל שונה מזה שההתאמה נעשתה עבורו". הוא אינו יכול
+       * ליצור לופ — אחרי ההתאמה שני הצדדים שווים והקריאה הבאה יוצאת, והוא
+       * גם אינו יכול לבלוע את השינוי הראשון כמו מטמון שנכתב כאן.
+       *
+       * **מה שלא נמדד, ואסור להציג כנמדד:** האפקט מקצה לקצה בדפדפן אמיתי.
+       * אמולציית הרוחב של חלונית הדפדפן כאן משנה את גודל המיכל בלי לשגר
+       * אירוע `resize` — נמדד ב-04.11, אפס אירועים בשלושה גילומים מתוך
+       * ארבעה, עם בקרה חיובית שהמאזין כן עובד כשהאירוע נורה. בגילום
+       * היחיד שבו האירוע נורה, הזום כן עלה מ-13 ל-14. לכן התיקון כאן נשען
+       * על התנאי שנצפה שגוי ולא על תרחיש משתמש שהוכח. ראה open-items יב׳.
+       *
+       * נמדד קודם, על תצוגת כל־הקו: הקטנת המיכל ל-648×350 מורידה את הזום
+       * ל-11, והגדלה בחזרה ל-1068×620 מחזירה אותו ל-12.
        */
-      const ro = new ResizeObserver(() => {
+      const refit = () => {
         const el = containerRef.current;
         if (!el) return;
-        const known = map.getSize();
-        if (known.x === el.clientWidth && known.y === el.clientHeight) return;
+        const fitted = fittedSizeRef.current;
+        if (fitted && fitted.x === el.clientWidth && fitted.y === el.clientHeight) return;
         if (!viewOwnedRef.current) fitStations();
-        else map.invalidateSize();
-      });
+        else {
+          map.invalidateSize();
+          fittedSizeRef.current = { x: el.clientWidth, y: el.clientHeight };
+        }
+      };
+      const ro = new ResizeObserver(refit);
       ro.observe(containerRef.current);
       teardownRef.current = () => {
         ro.disconnect();
@@ -537,6 +572,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       teardownRef.current();
       teardownRef.current = () => {};
       viewOwnedRef.current = false;
+      fittedSizeRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
       zoomLayersRef.current = [];

@@ -112,7 +112,7 @@ ok "ממצא בלי עוגן · סעיפים שנסרקו (0 · 12)" "$(sed -n '
 # כלל 11ב: מספר בתיעוד שמתרחק מהמציאות מטעה כל שיחה חדשה, כי CLAUDE.md
 # הוא הדבר הראשון שהיא קוראת. שני המספרים הראשונים חייבים להיות שווים.
 # בקרה: שינוי המספר ב-CLAUDE.md ל-99 מדווח 99, ומחיקת שורה מכלל 1 מדווחת 5.
-ok "תיעוד: כללים CLAUDE·CHECKLIST, מקומות בכלל 1 (22 · 22 · 6)" "$(grep -oE '[0-9]+ כללים' CLAUDE.md | grep -oE '[0-9]+') · $(grep -cE '^## [0-9]' CHECKLIST.md) · $(awk '/^## 1\./{b=1;next} /^## /{b=0} b && /^    [a-zA-Z]+\.ts /{n++} END{print n+0}' CHECKLIST.md)"
+ok "תיעוד: כללים CLAUDE·CHECKLIST, מקומות בכלל 1 (23 · 23 · 6)" "$(grep -oE '[0-9]+ כללים' CLAUDE.md | grep -oE '[0-9]+') · $(grep -cE '^## [0-9]' CHECKLIST.md) · $(awk '/^## 1\./{b=1;next} /^## /{b=0} b && /^    [a-zA-Z]+\.ts /{n++} END{print n+0}' CHECKLIST.md)"
 # כלל 7ג: ערך שנופל בשקט למחרוזת ריקה מצייר תא ריק בלי שום סימן, ואז
 # נראה כמו באג אמיתי למי שקורא את העמוד. ב-02.11.2026 דיווחתי על "שעת
 # הגעה ריקה" שלא קרתה מעולם, והנפילה הזאת היא מה שהפך את הדיווח לאמין.
@@ -151,6 +151,18 @@ PFILES="app/HomeContent.tsx app/station/[slug]/StationClient.tsx"
 DFIX=/tmp/reg-delay-fixture.tsx
 printf 'setLoading(true);\nsetTimeout(() => { setLoading(false); }, 2000 + Math.random() * 1000);\n' > "$DFIX"
 delay_count(){ local n=0 f; for f in "$@"; do n=$(( n + $(grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -cE '2000 \+ Math\.random|setLoading') )); done; echo "$n"; }
+# כלל 7ה: התנאי ב-ResizeObserver חייב להשוות מול הגודל שההתאמה נעשתה
+# עבורו, ולא מול map.getSize(). ליפט מעדכן את getSize בעצמו ב-_onResize
+# לפני שהצופה רץ (trackResize ברירת מחדל, leaflet-src.js:4437 ו-:4446),
+# ואז התנאי קורא "שום דבר לא השתנה" ויוצא בלי להתאים. נצפה ב-04.11
+# בנקודת הקריאה: dom 470×350 ו-known 470×350, שווים, יציאה.
+# הראשון הוא fittedSizeRef בקוד ולא בהערות. השני חייב להיות 0 — השוואה
+# מול getSize בתוך הצופה פירושה שהבאג חזר. השלישי בקרה, אותה פקודה על
+# מתקן עם ההשוואה הישנה מושתלת. הרביעי הוא 0 בכוונה: מאזין resize של
+# החלון נוסף כאן ב-04.11 על בסיס מדידה שגויה של כלי והוסר, כלל 7ו.
+RFIX=/tmp/reg-resize-fixture.tsx
+printf 'if (known.x === el.clientWidth) return;\n' > "$RFIX"
+ok "התאמת מיכל: fittedSizeRef · getSize · בקרה · מאזין חלון (5 · 0 · 1 · 0)" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'fittedSizeRef') · $(grep -c 'known\.x' app/lib/Map.tsx) · $(grep -c 'known\.x' "$RFIX") · $(grep -c 'addEventListener("resize"' app/lib/Map.tsx)"
 ok "המתנה מלאכותית (0, בקרה 2 · 4)" "$(delay_count $PFILES) · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PFILES | paste -sd+ - | bc)"
 # כלל 11: הספירה באה מהמודול עצמו ולא מפרסר, כדי שהוא יהיה בשימוש.
 # הקו האדום הוא Y, ושנקר יושב במערך השטוח מיד לפני קריית אריה — סוף ענף
