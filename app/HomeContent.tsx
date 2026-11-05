@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, FARE_ANSWER, SURCHARGE_ANSWER, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -1060,9 +1060,9 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
         <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 16 }}>שאלות נפוצות</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { q: "כמה עולה נסיעה ברכבת הקלה?", a: "נסיעה עד 15 ק\"מ עולה 8 ₪. נסיעה מעל 15 ק\"מ עולה 14.5 ₪. מרגע התיקוף ניתן להמשיך לנסוע באוטובוס ללא תוספת תשלום במשך 90 דקות ובטווח של עד 15 ק\"מ." },
+            { q: "כמה עולה נסיעה ברכבת הקלה?", a: FARE_ANSWER },
             { q: "איך משלמים ברכבת הקלה?", a: "ניתן לשלם עם כרטיס רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת — בשערי התחנות התת-קרקעיות או במכשירי התיקוף בתחנות העיליות. אין אפשרות לתקף בתוך הרכבת עצמה." },
-            { q: "מה הקנס על נסיעה ללא תיקוף?", a: "הקנס עומד על 180 ₪ בתוספת מחיר הנסיעה. מי שרכש מנוי (חופשי חודשי, שנתי או יומי) ולא תיקף — הקנס לא יעלה על 100 ₪." },
+            { q: "מה הקנס על נסיעה ללא תיקוף?", a: SURCHARGE_ANSWER },
             { q: "מתי פועלת הרכבת הקלה?", a: `ימי ראשון עד חמישי: ${FIRST} עד חצות. שישי וערבי חג: ${FIRST} עד ${FRIDAY_LAST}. מוצאי שבת: מ-${SATURDAY_FIRST} עד חצות. הרכבת אינה פועלת בשבת.` },
             { q: "כל כמה זמן יש רכבת?", a: `בשעות השיא (${PEAK_LABEL}) רכבת כל ${PEAK_FREQ_MINS} דקות. בשעות הרגילות רכבת כל ${BASE_FREQ_MINS} דקות.` },
             { q: "כמה תחנות יש בקו האדום?", a: `${STATIONS.length} תחנות לאורך ${LINE_LENGTH_KM} ק"מ, מתחנה מרכזית פתח תקווה ועד הקוממיות בבת ים. מתוכן ${typeBreakdown}.` },

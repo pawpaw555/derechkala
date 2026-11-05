@@ -1,4 +1,4 @@
-import { PEAK_FREQ_MINS, BASE_FREQ_MINS } from "./data";
+import { PEAK_FREQ_MINS, BASE_FREQ_MINS, FARE_ANSWER, SURCHARGE_ANSWER } from "./data";
 
 /** שלושת הסוגים, בסדר שבו הם מוצגים לקורא. */
 export const STATION_TYPES = ["עילית", "תת קרקעית", "בשיקוע"] as const;
@@ -32,9 +32,9 @@ export type StationContent = {
 // Shown on every station page. Single source for both the rendered
 // FAQ block and the FAQPage JSON-LD.
 export const STATION_FAQ: { q: string; a: string }[] = [
-  { q: "כמה עולה נסיעה?", a: "עד 15 ק\"מ — 8 ₪. מעל 15 ק\"מ — 14.5 ₪. תוך 90 דקות ניתן להמשיך באוטובוס ללא תוספת." },
+  { q: "כמה עולה נסיעה?", a: FARE_ANSWER },
   { q: "איך משלמים?", a: "רב-קו או אפליקציה (Moovit, Pango, HopOn). חובה לתקף לפני עלייה לרכבת." },
-  { q: "מה הקנס על נסיעה ללא תיקוף?", a: "180 ₪ בתוספת מחיר הנסיעה. מי ששילם מראש ולא תיקף — עד 100 ₪." },
+  { q: "מה הקנס על נסיעה ללא תיקוף?", a: SURCHARGE_ANSWER },
   // המופע הרחב ביותר במחלקה: מחרוזת אחת שמוגשת ב-34 עמודי תחנה, גם
   // בבלוק הנראה וגם ב-FAQPage שגוגל קורא.
   { q: "כל כמה זמן יש רכבת?", a: `שעות שיא כל ${PEAK_FREQ_MINS} דקות, שעות רגילות כל ${BASE_FREQ_MINS} דקות.` },
