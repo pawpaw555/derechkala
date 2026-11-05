@@ -18,6 +18,7 @@ export default function NearestStationFinder({
   hideButton,
   hideResult,
   buttonLabel = "מצא את התחנה הקרובה אליי",
+  hintLabel = "או הקלידו לאן אתם רוצים להגיע",
 }: {
   finder: Finder;
   onFound?: (s: Station) => void;
@@ -29,6 +30,14 @@ export default function NearestStationFinder({
   hideResult?: boolean;
   /** בעמוד תחנה השאלה היא "איפה אני", לא "איזו תחנה קרובה אליי". */
   buttonLabel?: string;
+  /**
+   * השדה מקבל כל כתובת ומחזיר את התחנה הקרובה אליה — גם כשהכתובת היא
+   * היעד ולא המוצא. ברירת המחדל מנוסחת ליעד, כי שם הביקוש: שאילתה
+   * שנושאת שם מקום ממירה פי שלושה מגנרית באותו מיקום (נמדד 04.11.2026,
+   * `seo-data/open-items.md` סעיף 2). בעמוד תחנה השאלה הפוכה — שם
+   * מחשבים מרחק ממך אל התחנה — ולכן הוא מעביר את הניסוח הישן.
+   */
+  hintLabel?: string;
 }) {
   const { t, dark } = useTheme();
   const {
@@ -68,7 +77,7 @@ export default function NearestStationFinder({
             fontFamily: "'Rubik', sans-serif", opacity: locating ? 0.7 : 1,
           }}
         >{locating ? "מאתר..." : buttonLabel}</button>
-        <span style={{ fontSize: 12, color: t.muted }}>או הקלידו איפה אתם</span>
+        <span style={{ fontSize: 12, color: t.muted }}>{hintLabel}</span>
       </div>
       )}
 

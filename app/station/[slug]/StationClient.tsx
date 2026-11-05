@@ -757,7 +757,7 @@ const content = STATION_CONTENT[stationName];
                 <div style={{ fontSize: 12, color: t.muted, marginBottom: 10, lineHeight: 1.6 }}>
                   כדי לראות את המרחק וזמן ההליכה עד התחנה, אתרו את מיקומכם או הקלידו אותו.
                 </div>
-                <NearestStationFinder finder={finder} hideResult buttonLabel="אתרו את המיקום שלי" />
+                <NearestStationFinder finder={finder} hideResult buttonLabel="אתרו את המיקום שלי" hintLabel="או הקלידו איפה אתם" />
               </div>
             )}
 

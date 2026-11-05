@@ -17,8 +17,11 @@ type PhotonFeature = {
   geometry: { coordinates: [number, number] };
 };
 
-export const LOC_DENIED_MSG = "הדפדפן חוסם גישה למיקום. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
-export const LOC_RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הדרך המהירה: הקלידו איפה אתם בשדה החיפוש.";
+// הניסוח ניטרלי בכוונה: השדה מוגש גם כ"לאן אתם רוצים להגיע" (עמוד המפה
+// והקו האדום) וגם כ"איפה אתם" (עמוד תחנה), והודעה שנועלת כיוון אחד
+// סותרת את התווית שמוצגת לידה. `NearestStationFinder.hintLabel`.
+export const LOC_DENIED_MSG = "הדפדפן חוסם גישה למיקום. הדרך המהירה: הקלידו את הכתובת בשדה החיפוש.";
+export const LOC_RETRY_MSG = "לא קיבלנו מיקום מהדפדפן. הדרך המהירה: הקלידו את הכתובת בשדה החיפוש.";
 
 export type Platform = "ios" | "android" | "mac" | "other";
 
