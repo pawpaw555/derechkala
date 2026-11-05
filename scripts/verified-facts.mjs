@@ -178,6 +178,24 @@ export const FACTS = [
     },
   },
   {
+    id: "addresses",
+    claim: "34 כתובות התחנות, כולל הכניסות",
+    grade: 1,
+    sources: [
+      { ...DANKAL, says: "כתובת בפאנל נפרד לכל אחת מ-34 התחנות; 34 מתוך 34 זהות בתוכן לשלנו" },
+      { name: "OSM", how: "Overpass", read: "05.11.2026", says: "צמתי railway=subway_entrance: אבא הלל 3 · שאול המלך 3 · ביאליק 3 · אלנבי 3 · יהודית 4 — מספר הכניסות בלבד, בלי כתובת" },
+    ],
+    note:
+      "מקור חיצוני אחד לכתובת עצמה. OSM מאשר את **מספר** הכניסות ולא את הרחוב והמספר. " +
+      "שני פערים הוכרעו ומתועדים ב-scripts/addresses.mjs: שגיאת כתיב אצל דנקל בגשר אם " +
+      "המושבות, וכניסה שלישית באבא הלל שהכתובת שלה אצל דנקל שגויה ולכן לא יובאה.",
+    check: () => {
+      const miss = content.filter(c => !c.addressSource).length;
+      const wrong = content.filter(c => c.addressSource && !/דנקל/.test(c.addressSource)).length;
+      return [`${content.filter(c => c.address).length}/${miss}/${wrong}`, "34/0/0"];
+    },
+  },
+  {
     id: "rail-interchange",
     claim: "4 תחנות רכבת ישראל בטווח הליכה מהקו",
     grade: 2,
