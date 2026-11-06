@@ -11,16 +11,16 @@
 // שימו לב: סטטוס 200 אינו הוכחה שעמוד קיים. ‎bus.gov.il/Fares מחזיר
 // 200 ומפנה ל-‎/home. לכן נבדק תוכן ולא קוד תשובה.
 import { load } from "./load.mjs";
+import { liveText } from "./net.mjs";
 
 const FARE_URL = "https://www.dankal.co.il/חובת-התיקוף/";
 const SURCHARGE_URL = "https://www.dankal.co.il/מידע-על-חיוב-מוגדל/";
 
 async function text(url) {
-  const res = await fetch(url, {
+  const html = await liveText("דנקל", url, {
     headers: { "user-agent": "derechkala-verify/1.0" },
     signal: AbortSignal.timeout(20000),
   });
-  const html = await res.text();
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<[^>]+>/g, " ")

@@ -15,6 +15,7 @@
 // משמיטה פסיק לפני העיר, ושתי הצורות של הגרש מופיעות בשני הצדדים.
 // השוואת מחרוזות החזירה 12 "הפרשים" שרובם היו פיסוק. כלל 11א.
 import { load } from "./load.mjs";
+import { liveText } from "./net.mjs";
 
 const SOURCE = {
   name: "דנקל",
@@ -108,11 +109,10 @@ export function parts(s) {
  * החילוץ נשבר, הוא מדווח על עצמו ולא על העולם.
  */
 async function live() {
-  const res = await fetch(SOURCE.url, {
+  const raw = await liveText("דף התחנות של דנקל", SOURCE.url, {
     headers: { "user-agent": "derechkala-verify/1.0" },
     signal: AbortSignal.timeout(30000),
   });
-  const raw = await res.text();
   const ents = (s) =>
     s
       .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d))

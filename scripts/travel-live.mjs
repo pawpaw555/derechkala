@@ -12,6 +12,7 @@
 // עוקבות ובין 10:00 ל-17:00. הענף נבדק בסובלנות של 60 שניות, כי שם
 // נמדד הפרש אמיתי בין תבניות נסיעה — 390 שניות מול 363.
 import { load } from "./load.mjs";
+import { liveText } from "./net.mjs";
 
 const URL = "https://www.dankal.co.il/%d7%aa%d7%9b%d7%a0%d7%95%d7%9f-%d7%9e%d7%a1%d7%9c%d7%95%d7%9c-%d7%a0%d7%a1%d7%99%d7%a2%d7%94/";
 const REFERER = "/%D7%AA%D7%9B%D7%A0%D7%95%D7%9F-%D7%9E%D7%A1%D7%9C%D7%95%D7%9C-%D7%A0%D7%A1%D7%99%D7%A2%D7%94/";
@@ -34,8 +35,22 @@ const ents = (s) =>
 let session = null;
 async function init() {
   if (session) return session;
-  const g = await fetch(URL, { headers: UA, signal: AbortSignal.timeout(30000) });
-  const html = await g.text();
+  // הקוקי נדרש ל-POST, ולכן כאן fetch ישיר ולא liveText — עטוף בניסיון
+  // חוזר משלו באותה צורה, כי כשל כאן נראה בדיוק כמו כשל שם.
+  let g, html;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      g = await fetch(URL, { headers: UA, signal: AbortSignal.timeout(30000) });
+      html = await g.text();
+      break;
+    } catch (err) {
+      if (attempt === 2) {
+        console.log("אין תשובה מהרשת · מתכנן דנקל · %s", err?.cause?.code ?? err?.name ?? "שגיאה");
+        process.exit(1);
+      }
+      await new Promise((s) => setTimeout(s, 2500));
+    }
+  }
   const cookie = (g.headers.getSetCookie?.() || []).map((c) => c.split(";")[0]).join("; ");
   const nonce = html.match(/name="jPlanner"[^>]*value="([^"]+)"/)?.[1];
   const codes = new Map();
@@ -61,13 +76,12 @@ async function trip(a, b, time = "10:00") {
     _wp_http_referer: REFERER,
     toOrFrom: "depart",
   });
-  const r = await fetch(URL, {
+  const h = await liveText("מתכנן דנקל", URL, {
     method: "POST",
     headers: { ...UA, "content-type": "application/x-www-form-urlencoded", cookie },
     body,
     signal: AbortSignal.timeout(40000),
   });
-  const h = await r.text();
   for (const m of h.matchAll(/Routes\['(\d+)'\]\s*=\s*'([^']*)'/g)) {
     try {
       const legs = JSON.parse(ents(m[2])).map((l) => (l || []).filter(Boolean)).filter((l) => l.length);
