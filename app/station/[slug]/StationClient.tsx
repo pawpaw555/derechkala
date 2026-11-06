@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -408,6 +408,7 @@ const content = STATION_CONTENT[stationName];
                   }}>
                     <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
                     לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
+                    זמן הנסיעה שלמעלה כולל המתנה משוערת של {JUNCTION_WAIT_MINS} דקות להחלפה.
                   </div>
                 )}
               </div>

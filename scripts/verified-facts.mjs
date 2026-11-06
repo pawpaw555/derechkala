@@ -222,6 +222,46 @@ export const FACTS = [
     },
   },
   {
+    id: "junction-wait",
+    claim: "המתנה של 7 דקות בהחלפה בצומת, ב-28 זוגות",
+    grade: 1,
+    sources: [
+      {
+        name: "דנקל · מתכנן המסלולים",
+        url: "https://www.dankal.co.il/תכנון-מסלול-נסיעה/",
+        how: "POST, לוח הזמנים בגוף התשובה",
+        read: "06.11.2026",
+        says: "שמונה מדידות על שלושה זוגות בשלוש שעות: 5.9 · 6.9 · 7.5 · 7.5 · 7.6 · 7.6 · 7.6 · 8.5 — ממוצע 7.4",
+      },
+    ],
+    note:
+      "חל רק על זרוע פתח תקווה מול זרוע קריית אריה: 28 מתוך 1122 הזוגות. הכרטיס כבר " +
+      "אמר 'נדרשת החלפה' ונתן שעת הגעה בלי המתנה, כלומר סתר את עצמו. **כל שמונה המדידות " +
+      "הן בכיוון אחד** — חמש שאילתות בכיוון ההפוך לא החזירו מסלול, והערך מוחל על שניהם.",
+    check: () => {
+      const names = m.STATIONS.map(s => s.name);
+      const onBranch = n => n in m.BRANCH_SECS && !(n in m.TRUNK_SECS);
+      let both = 0, changeOnly = 0, waitOnly = 0;
+      for (const a of names) for (const b of names) {
+        if (a === b) continue;
+        const c = m.countStops(a, b);
+        let ride = null;
+        if (onBranch(a) || onBranch(b)) {
+          const bs = onBranch(a) ? a : b, ts = onBranch(a) ? b : a;
+          if (ts in m.TRUNK_SECS)
+            ride = Math.round((m.BRANCH_SECS[bs] + Math.abs(m.TRUNK_SECS[ts] - m.TRUNK_SECS[m.JUNCTION])) / 60);
+        }
+        const hasWait = ride !== null && m.travelMinutes(a, b) === ride + m.JUNCTION_WAIT_MINS;
+        if (c?.change && hasWait) both++;
+        else if (c?.change) changeOnly++;
+        else if (hasWait) waitOnly++;
+      }
+      // ההמתנה חייבת לחול בדיוק על הזוגות שהכרטיס מצהיר עליהם החלפה.
+      // שני האפסים הם העיקר: לא זוג בלי המתנה, ולא המתנה בלי הצהרה.
+      return [`${both}/${changeOnly}/${waitOnly}/${m.JUNCTION_WAIT_MINS}`, "28/0/0/7"];
+    },
+  },
+  {
     id: "rail-interchange",
     claim: "4 תחנות רכבת ישראל בטווח הליכה מהקו",
     grade: 2,

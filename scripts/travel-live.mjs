@@ -40,7 +40,7 @@ async function init() {
   let g, html;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      g = await fetch(URL, { headers: UA, signal: AbortSignal.timeout(30000) });
+      g = await fetch(URL, { headers: UA, signal: AbortSignal.timeout(60000) });
       html = await g.text();
       break;
     } catch (err) {
@@ -80,12 +80,12 @@ async function trip(a, b, time = "10:00") {
     method: "POST",
     headers: { ...UA, "content-type": "application/x-www-form-urlencoded", cookie },
     body,
-    signal: AbortSignal.timeout(40000),
+    signal: AbortSignal.timeout(60000),
   });
   for (const m of h.matchAll(/Routes\['(\d+)'\]\s*=\s*'([^']*)'/g)) {
     try {
       const legs = JSON.parse(ents(m[2])).map((l) => (l || []).filter(Boolean)).filter((l) => l.length);
-      if (legs.length) return legs[0];
+      if (legs.length) return legs;
     } catch {}
   }
   return null;
@@ -101,9 +101,22 @@ const offsets = (leg) => {
 
 const m = await load();
 
-const trunkLeg = await trip("תחנה מרכזית פתח תקווה", "הקוממיות");
+const trunkTrip = await trip("תחנה מרכזית פתח תקווה", "הקוממיות");
+const trunkLeg = trunkTrip?.[0] ?? null;
 await new Promise((s) => setTimeout(s, 1500));
-const branchLeg = await trip("קריית אריה", "אלנבי");
+const branchTrip = await trip("קריית אריה", "אלנבי");
+const branchLeg = branchTrip?.[0] ?? null;
+
+/**
+ * המודל שלנו אומר שנסיעה מהענף **דרומה** היא רגל אחת רצופה, בלי
+ * החלפה — ולכן בלי המתנה. שמונה מדידות ב-06.11.2026 הסכימו, ומדידה
+ * בודדת מ-05.11 הראתה שתי רגליים ונותרה חריגה שלא הוסברה.
+ *
+ * מספר הרגליים כאן הוא התשובה, והוא כבר בידינו מאותה שליפה. אם דנקל
+ * תתחיל לדרוש החלפה גם דרומה, השורה הזאת תיפול — ואז 28 הזוגות של
+ * JUNCTION_WAIT_MINS הם לא כל המקרים.
+ */
+const branchLegCount = branchTrip?.length ?? 0;
 
 // הבקרה: מה המתכנן החזיר בכלל. אם החילוץ נשבר הוא מדווח על עצמו ולא
 // על לוח הזמנים — 0 הפרשים מתוך 0 היסטים נראה כמו טבלה תקינה.
@@ -114,7 +127,7 @@ const branchLeg = await trip("קריית אריה", "אלנבי");
 // ציפייה של 35 כאן נכשלה לשקר: ניחשתי סכום במקום למדוד אותו.
 const trunkLen = trunkLeg?.length ?? 0;
 const branchLen = branchLeg?.length ?? 0;
-const controlOk = trunkLen === 32 && branchLen >= 3;
+const controlOk = trunkLen === 32 && branchLen >= 3 && branchLegCount === 1;
 
 const bad = [];
 let checked = 0;
@@ -162,8 +175,8 @@ console.log(
   bad.length, checked, endToEnd
 );
 console.log(
-  "בקרה: הגשר %d תחנות (נדרש 32) · רגל הענף %d (נדרש ≥3) · %s",
-  trunkLen, branchLen, controlOk ? "עברה" : "נכשלה"
+  "בקרה: הגשר %d תחנות (נדרש 32) · רגל הענף %d (נדרש ≥3) · רגליים בענף %d (נדרש 1) · %s",
+  trunkLen, branchLen, branchLegCount, controlOk ? "עברה" : "נכשלה"
 );
 console.log("הגשר נבדק בדיוק מלא · הענף בסובלנות %d שניות", BRANCH_TOLERANCE_SECS);
 process.exit(ok ? 0 : 1);

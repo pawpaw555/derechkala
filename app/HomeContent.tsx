@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, FARE_ANSWER, SURCHARGE_ANSWER, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, FARE_ANSWER, SURCHARGE_ANSWER, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
@@ -682,6 +682,7 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
                   }}>
                     <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
                     לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
+                    זמן הנסיעה שלמעלה כולל המתנה משוערת של {JUNCTION_WAIT_MINS} דקות להחלפה.
                   </div>
                 )}
               </div>

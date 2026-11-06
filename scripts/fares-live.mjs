@@ -19,7 +19,7 @@ const SURCHARGE_URL = "https://www.dankal.co.il/מידע-על-חיוב-מוגד�
 async function text(url) {
   const html = await liveText("דנקל", url, {
     headers: { "user-agent": "derechkala-verify/1.0" },
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(60000),
   });
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")

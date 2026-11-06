@@ -111,7 +111,7 @@ export function parts(s) {
 async function live() {
   const raw = await liveText("דף התחנות של דנקל", SOURCE.url, {
     headers: { "user-agent": "derechkala-verify/1.0" },
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(60000),
   });
   const ents = (s) =>
     s
