@@ -9,14 +9,21 @@
 //
 // לכן הבדיקה כאן היא היחידה בבלוק שמשווה שני צדדים שונים: מה שהקוד
 // מחזיק מול מה שהשרת הגיש. השוואה מלאה, לא נוכחות של מספר.
+import { pathToFileURL } from "node:url";
 import { load } from "./load.mjs";
+import { liveText } from "./net.mjs";
 
-const BASE = process.argv[2] || process.env.BASE || "http://localhost:3011";
+// רק ארגומנט שנראה ככתובת נחשב לבסיס. `node faq-rendered.mjs count`
+// לקח קודם את המילה "count" ככתובת, ה-fetch נפל, והסקריפט מת בשקט —
+// אותה מחלקה בדיוק שתוקנה ב-net.mjs, הפעם בטיפול בארגומנטים.
+const urlArg = process.argv.slice(2).find((a) => /^https?:\/\//.test(a));
+const BASE = urlArg || process.env.BASE || "http://localhost:3011";
 const STATION = "/station/%D7%90%D7%91%D7%90%20%D7%94%D7%9C%D7%9C";
 
 async function text(path) {
-  const res = await fetch(BASE + path, { signal: AbortSignal.timeout(20000) });
-  const html = await res.text();
+  const html = await liveText(`השרת המקומי ${path}`, BASE + path, {
+    signal: AbortSignal.timeout(20000),
+  });
   return html
     .replace(/&quot;/g, '"')
     .replace(/&#x27;|&#39;/g, "'")
@@ -24,26 +31,105 @@ async function text(path) {
     .replace(/&nbsp;/g, " ");
 }
 
+/** בלוקי ה-JSON-LD של העמוד, מפורסרים. */
+function jsonLd(html) {
+  const out = [];
+  for (const [, body] of html.matchAll(
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g
+  )) {
+    try {
+      const d = JSON.parse(body);
+      for (const item of Array.isArray(d) ? d : [d]) out.push(item);
+    } catch {}
+  }
+  return out;
+}
+
+/**
+ * המסמך **הנראה**: ה-HTML בלי בלוקי ה-JSON-LD, כטקסט.
+ *
+ * זאת הנקודה שבה הבדיקה הזאת נכשלה קודם. היא שאלה "האם המחרוזת קיימת
+ * ב-HTML" — ומחרוזת שיושבת רק ב-JSON-LD עונה כן. כלומר אם הבלוק הנראה
+ * היה נשבר לגמרי, הבדיקה הייתה עוברת. נוכחות אינה מיקום.
+ */
+function visible(html) {
+  const stripped = html.replace(
+    /<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
+    " "
+  );
+  return stripped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+}
+
+/**
+ * שני העמודים שנושאים FAQPage: שם ה-FAQ יושב **פעמיים** — פעם גלוי
+ * לקורא ופעם ב-JSON-LD שגוגל קורא — ואין קשר מובנה ביניהם.
+ *
+ * הפער הזה נמסר על ידי הסשן שעבד על המפה: ב-/map שני העותקים נכתבים
+ * ביד בשני קבצים (MapContent.tsx ו-map/page.tsx), והבדיקה כאן לא נגעה
+ * בהם בכלל. כל פריט ב-JSON-LD חייב להופיע במסמך הנראה — אחרת גוגל
+ * מקבל תשובה שהקורא אינו רואה, או להפך.
+ */
+export function compareFaqPage(page, html, visibleText) {
+  const gaps = [];
+  const faq = jsonLd(html).find((x) => x["@type"] === "FAQPage");
+  if (!faq) return { gaps: [`${page} · אין FAQPage ב-JSON-LD`], pairs: 0, found: false };
+  const items = faq.mainEntity ?? [];
+  if (!items.length) return { gaps: [`${page} · FAQPage ריק`], pairs: 0, found: false };
+  for (const item of items) {
+    const name = item?.name ?? "";
+    const answer = item?.acceptedAnswer?.text ?? "";
+    if (!name || !visibleText.includes(name))
+      gaps.push(`${page} · שאלה שאינה גלויה: ${name.slice(0, 40)}`);
+    if (!answer || !visibleText.includes(answer))
+      gaps.push(`${page} · תשובה שאינה גלויה: ${name.slice(0, 30)}`);
+  }
+  return { gaps, pairs: items.length * 2, found: true };
+}
+
+// הגוף רץ רק כשהקובץ מופעל ישירות, כדי שבדיקה תוכל לייבא את
+// compareFaqPage ולהאכיל אותה קלט מבוקר בלי להריץ את כל השליפות.
+const isMain = process.argv[1]
+  ? import.meta.url === pathToFileURL(process.argv[1]).href
+  : false;
+if (!isMain) {
+  // ייבוא בלבד. שום שליפה, שום יציאה.
+} else {
+
 const m = await load();
-const [station, home] = await Promise.all([text(STATION), text("/")]);
+const [station, home, map] = await Promise.all([text(STATION), text("/"), text("/map")]);
+const vis = { station: visible(station), home: visible(home), map: visible(map) };
 
 const missing = [];
 let checked = 0;
 
 for (const { q, a } of m.STATION_FAQ) {
   checked++;
-  if (!station.includes(a)) missing.push(`עמוד תחנה · ${q}`);
+  if (!vis.station.includes(a)) missing.push(`עמוד תחנה · ${q}`);
 }
 // שתי המחרוזות שעמוד הבית חולק עם עמודי התחנה. שאר ה-FAQ של עמוד הבית
 // יושב בתוך HomeContent ואינו מיוצא, ולכן אין לו צד שני להשוות אליו.
 for (const [name, a] of [["FARE_ANSWER", m.FARE_ANSWER], ["SURCHARGE_ANSWER", m.SURCHARGE_ANSWER]]) {
   checked++;
-  if (!home.includes(a)) missing.push(`עמוד הבית · ${name}`);
+  if (!vis.home.includes(a)) missing.push(`עמוד הבית · ${name}`);
 }
 
-// הבקרה: מחרוזת שידוע בוודאות שקיימת בכל אחד משני העמודים. אם היא
-// נעדרת, ה-fetch נכשל וה-0 שלפניה חסר משמעות.
-const control = station.includes("הקו האדום") && home.includes("הקו האדום");
+
+let faqPages = 0;
+for (const [page, html, v] of [["/map", map, vis.map], ["עמוד תחנה", station, vis.station]]) {
+  const { gaps, pairs, found } = compareFaqPage(page, html, v);
+  if (found) faqPages++;
+  checked += pairs;
+  missing.push(...gaps);
+}
+
+// הבקרה: מחרוזת שידוע בוודאות שקיימת בכל שלושת העמודים, ושני עמודים
+// נושאי FAQPage. אם אחד מהם נעדר, ה-fetch נכשל או המבנה השתנה, וה-0
+// שלפניו חסר משמעות.
+const control =
+  vis.station.includes("הקו האדום") &&
+  vis.home.includes("הקו האדום") &&
+  vis.map.includes("הקו האדום") &&
+  faqPages === 2;
 
 if (process.argv.includes("count") || process.env.COUNT) {
   console.log("%d/%d · בקרה: %s", missing.length, checked, control ? "כן" : "לא");
@@ -57,3 +143,5 @@ if (process.argv.includes("count") || process.env.COUNT) {
 }
 
 process.exit(missing.length === 0 && control ? 0 : 1);
+
+}
