@@ -22,6 +22,7 @@ export default function MapClient() {
           fromStation={null}
           toStation={null}
           route={finder.route}
+          pickPoint
         />
       </div>
     </>

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, distanceMetres, formatDistance, stationLabel, LINE_SEGMENTS, areAdjacent } from "./data";
+import { Station, distanceMetres, formatDistance, walkMinutes, isWalkable, stationLabel, LINE_SEGMENTS, areAdjacent } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
@@ -26,6 +26,16 @@ type Props = {
    * הקו. עמוד תחנה שואל "איפה זה", ותצוגה של 24 ק"מ אינה עונה על זה.
    */
   focusStation?: Station | null;
+  /**
+   * כשנמסרת, לחיצה על **גוף** המפה מסמנת את הנקודה שנלחצה בפין, שולפת
+   * לה כתובת, ואומרת איזו תחנה משרתת אותה.
+   *
+   * זו הצטרפות מפורשת ולא ברירת מחדל, כי יש מפות שבהן הלחיצה הזאת
+   * מתחרה במה שכבר קיים: במפה עם `onSelectStation` הלחיצה כבר בוחרת
+   * תחנה, ובמפת התוצאה של המתכנן המשתמש כבר בחר מוצא ויעד. נכון
+   * ל-05.11.2026 רק `/map` מעבירה אותה.
+   */
+  pickPoint?: boolean;
 };
 
 // כרטיס תחנה, לסמן ולתווית. היה לו גם מצב שני שהציג מרחק וזמן הליכה
@@ -141,7 +151,7 @@ const HIT_MAX = 10;
  */
 const FOCUS_MAX_ZOOM = 16;
 
-export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route, focusStation }: Props) {
+export default function Map({ stations, userLoc, onSelectStation, fromStation, toStation, route, focusStation, pickPoint }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectStation);
@@ -184,7 +194,18 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   // ורואים mapRef ריק. בלי הדגל הזה הם חזרו מוקדם ולא רצו שוב, והמפה
   // נשארה בלי 34 סמני התחנות ובלי התוויות שלהן.
   const [mapReady, setMapReady] = useState(false);
-
+  /**
+   * הנקודה שהמשתמש בחר על גוף המפה, כש-`pickPoint` דולקת.
+   * `label` null פירושו שאין כתובת — או שהיא עוד נשלפת (`pending`), או
+   * שהמקור לא ידע לומר. שני המצבים נראים שונה לקורא, ולכן הם שני שדות
+   * ולא ערך אחד שמנחשים לפיו.
+   */
+  const [picked, setPicked] = useState<
+    { lat: number; lng: number; label: string | null; pending: boolean; cardAtTop: boolean } | null
+  >(null);
+  const pinRef = useRef<Marker | null>(null);
+  /** שליפת הכתובת האחרונה, כדי שלחיצה חדשה תבטל את הקודמת. */
+  const addrAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     onSelectRef.current = onSelectStation;
   }, [onSelectStation]);
@@ -727,6 +748,121 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
     return () => { cancelled = true; };
   }, [mapReady, userLoc, route]);
 
+  // ── אפקט ד: לחיצה על גוף המפה מסמנת נקודה ───────────────────
+  /**
+   * הוחזר ב-05.11.2026, אחרי ש-`7b7152d` הסיר ב-31.10 צורה קודמת שלו.
+   * שם הלחיצה פתחה מיד כרטיס של התחנה הקרובה, ובעל האתר אמר שזה נקרא
+   * כאילו המפה עונה למי שלא שאל אותה. **ההבדל הוא הסדר:** קודם מסומן
+   * מה שהמשתמש בחר, ורק מתחת לזה נאמר איזו תחנה משרתת את המקום.
+   *
+   * הסיבה שבגללה זה חוזר נמדדה ב-04–05.11: בנייד שטח הלחיצה לתחנה הוא
+   * 13 פיקסל והמרווח לשכנה 7.6, ו-32 מתוך 34 התחנות חופפות לסמן אחר.
+   * 90% משטח המפה אינם לחיצים. הסעיף המלא ב-`seo-data/open-items.md` 5.
+   *
+   * `map.on("click")` ולא מאזין DOM על `.leaflet-container`, ושני
+   * ההבדלים נקראו מהמקור של ליפט 1.9.4:
+   *   `:4475`  גרירה מסמנת dragging ומונעת את הקליק שאחריה
+   *   `:4488`  המפה נוספת כיעד רק כשאין יעד אחר — כלומר לחיצה שנחתה
+   *            על סמן או על תווית אינה מגיעה לכאן כלל
+   * מאזין DOM אינו נותן אף אחת מהשתיים: ב-02.11 נמדד שגרירה של 413
+   * פיקסל יורה `click` רגיל על אותו אלמנט.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !pickPoint) return;
+    let cancelled = false;
+
+    const onClick = async (e: { latlng: { lat: number; lng: number } }) => {
+      const { lat, lng } = e.latlng;
+      const L = await import("leaflet");
+      if (cancelled || !mapRef.current) return;
+
+      if (pinRef.current) map.removeLayer(pinRef.current);
+      pinRef.current = L.marker([lat, lng], {
+        // הפין גבוה מרוחבו וקצהו למטה, כדי שהוא יצביע על הנקודה עצמה
+        // ולא ישב עליה. iconAnchor בתחתית הוא מה שעושה את זה.
+        icon: L.divIcon({
+          className: "",
+          iconSize: [20, 28],
+          iconAnchor: [10, 28],
+          html: `<div class="mk-pin"></div>`,
+        }),
+        keyboard: false,
+      }).addTo(map);
+
+      // הכרטיס עובר למעלה כשהנקודה בחצי התחתון, אחרת הוא מכסה בדיוק את
+      // מה שהמשתמש זה עתה בחר. נמדד במוקאפ: כרטיס תחתון על מפה בגובה
+      // 350 הסתיר את הפין בכל לחיצה מתחת לאמצע.
+      const cardAtTop = map.latLngToContainerPoint([lat, lng]).y > map.getSize().y / 2;
+      setPicked({ lat, lng, label: null, pending: true, cardAtTop });
+
+      addrAbortRef.current?.abort();
+      const ac = new AbortController();
+      addrAbortRef.current = ac;
+      try {
+        // Photon ולא Nominatim, ושלוש בקרות ב-05.11.2026 הכריעו:
+        //   ים פתוח        Photon 0 תוצאות · Nominatim המציא רשומה
+        //                  ברמת המדינה, 200 ק״מ משם
+        //   נקודה ברמת גן  Photon "רוקח ישראל" · Nominatim "שביל יונתן"
+        //   בקרה, חולדה    שניהם "חולדה, תל אביב" — מסכימים
+        // מקור שמודה שאין לו תשובה עדיף על מקור שתמיד עונה. ומספר הבית
+        // אינו מוצג גם כשהוא מגיע: שם הרחוב הוא מה שאומר למשתמש איפה
+        // הוא, ומספר בית שגוי נראה מדויק יותר מרחוב בלי מספר.
+        // `lang=default` הוא אותו פרמטר שהחיפוש כבר שולח, והוא מה שמחזיר
+        // שמות בעברית — Photon דוחה `lang=he` במפורש.
+        const r = await fetch(
+          `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=default`,
+          { signal: ac.signal }
+        );
+        const d = await r.json();
+        const p = (d.features || [])[0]?.properties;
+        const label =
+          p && p.countrycode === "IL"
+            ? [p.street || p.name, p.city || p.district || p.county].filter(Boolean).join(", ") || null
+            : null;
+        if (!cancelled && !ac.signal.aborted) {
+          setPicked(prev => (prev && prev.lat === lat && prev.lng === lng ? { ...prev, label, pending: false } : prev));
+        }
+      } catch {
+        if (!cancelled && !ac.signal.aborted) {
+          setPicked(prev => (prev && prev.lat === lat && prev.lng === lng ? { ...prev, pending: false } : prev));
+        }
+      }
+    };
+
+    map.on("click", onClick);
+    return () => {
+      cancelled = true;
+      map.off("click", onClick);
+      addrAbortRef.current?.abort();
+      if (pinRef.current) { map.removeLayer(pinRef.current); pinRef.current = null; }
+      setPicked(null);
+    };
+  }, [mapReady, pickPoint]);
+
+  /** התחנה הקרובה לנקודה שנבחרה, ומה שנגזר ממנה. */
+  const pickedNearest = (() => {
+    if (!picked) return null;
+    // ה-prop עצמו ולא ref: זה מתרחש בזמן רינדור, ו-ref שנקרא ברינדור
+    // יכול להחזיק ערך מסבב קודם.
+    const list = stations;
+    if (!list.length) return null;
+    let best = list[0];
+    let bestM = distanceMetres({ lat: picked.lat, lng: picked.lng }, { lat: best.lat, lng: best.lng });
+    list.forEach(s => {
+      const m = distanceMetres({ lat: picked.lat, lng: picked.lng }, { lat: s.lat, lng: s.lng });
+      if (m < bestM) { bestM = m; best = s; }
+    });
+    return { station: best, metres: bestM };
+  })();
+
+  const closePick = () => {
+    addrAbortRef.current?.abort();
+    const map = mapRef.current;
+    if (map && pinRef.current) { map.removeLayer(pinRef.current); pinRef.current = null; }
+    setPicked(null);
+  };
+
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `1px solid ${t.border}` }}>
       {/*
@@ -759,6 +895,15 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         .mk-rail { width: 10px; height: 10px; background: #334155;
               border: 2px solid #fff;
               box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.45); }
+        /* הפין של הנקודה שנבחרה. בכוונה בלי המחלקה mk: שם יושבים
+           transition וגם ההגדלה של map-far, ופין שמשנה גודל עם הזום
+           כבר אינו מצביע על אותו פיקסל.
+           ואין כאן גרש אחורי בכוונה — הבלוק הזה הוא template literal,
+           וגרש אחורי בתוך הערה סוגר אותו ומפיל את הקומפילציה. */
+        .mk-pin { width: 20px; height: 20px; background: #b04050;
+              border: 2px solid #ffffff; border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              box-shadow: 0 2px 5px rgba(0,0,0,.45); }
         .map-far .mk-station, .map-far .mk-rail { transform: scale(1.3); }
         .map-far .mk-poi { transform: rotate(45deg) scale(1.3); }
         @media (prefers-reduced-motion: reduce) { .mk { transition: none; } }
@@ -785,7 +930,11 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           <span style={{ width: 9, height: 9, background: "#334155", display: "inline-block" }} />
           רכבת ישראל
         </span>
-        <span style={{ color: t.muted, marginRight: "auto" }}>לחצו על שם או על נקודה לפרטים.</span>
+        {/* הרמז תלוי ביכולת: מפה בלי pickPoint אינה עונה ללחיצה על
+            הרקע, ורמז שמבטיח התנהגות שאינה קיימת גרוע מאין רמז. */}
+        <span style={{ color: t.muted, marginRight: "auto" }}>
+          {pickPoint ? "לחצו על תחנה, או על כל מקום במפה." : "לחצו על שם או על נקודה לפרטים."}
+        </span>
       </div>
       <div style={{ position: "relative" }}>
         {/* הגובה הוא משתנה כדי שעמוד המפה יוכל להגדיל אותו במסך רחב בלי
@@ -807,6 +956,68 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
             }}>
               🔍 התקרבו כדי לראות את שמות התחנות
             </span>
+          </div>
+        )}
+        {/* כרטיס הנקודה שנבחרה. הוא יושב בתוך המפה ולא מתחתיה, כדי
+            שהקשר בינו לבין הפין יהיה ויזואלי ולא דורש גלילה. */}
+        {picked && pickedNearest && (
+          <div style={{
+            // נצמד לקצה הימני ונעצר ב-360: בנייד הוא ממילא כמעט מלוא
+            // הרוחב, ובמסך רחב כרטיס שנמתח על 1052 פיקסל בשביל שתי
+            // שורות טקסט הוא רצועה ולא כרטיס.
+            position: "absolute", right: 8, width: "calc(100% - 16px)", maxWidth: 360,
+            zIndex: 1000,
+            ...(picked.cardAtTop ? { top: 8 } : { bottom: 8 }),
+            background: t.card, borderRadius: 12,
+            border: `1px solid ${t.border}`, boxShadow: "0 2px 14px rgba(0,0,0,.22)",
+            fontFamily: "'Rubik', sans-serif", direction: "rtl", textAlign: "right",
+            padding: "9px 11px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: t.text, lineHeight: 1.35 }}>
+                  {picked.pending ? "מאתר כתובת…" : picked.label || "הנקודה שבחרתם"}
+                </div>
+                {/* הקואורדינטה נשארת גם כשיש כתובת, כמו בגוגל מפות: היא
+                    הדבר היחיד כאן שנמדד ולא נשלף ממקור שיכול לטעות. */}
+                <div style={{ fontSize: 10, color: t.muted, marginTop: 2, letterSpacing: .2 }}>
+                  {picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closePick}
+                aria-label="סגירת הנקודה שנבחרה"
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: "0 2px",
+                  fontSize: 18, lineHeight: 1, color: t.muted, flexShrink: 0,
+                }}
+              >×</button>
+            </div>
+            <div style={{ borderTop: `1px solid ${t.border}`, marginTop: 8, paddingTop: 8 }}>
+              <div style={{ fontSize: 13, color: t.text }}>
+                <span style={{ color: t.muted }}>התחנה הקרובה · </span>
+                <strong>{pickedNearest.station.name}</strong>
+              </div>
+              <div style={{ fontSize: 12, color: t.muted, marginTop: 2 }}>
+                {formatDistance(pickedNearest.metres)}
+                {isWalkable(pickedNearest.metres)
+                  ? ` · כ-${walkMinutes(pickedNearest.metres)} דק׳ הליכה`
+                  : " — רחוק מכדי ללכת"}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <a href={`/station/${encodeURIComponent(pickedNearest.station.name)}`} style={{
+                  flex: 1, textAlign: "center", background: pickedNearest.station.lineColor,
+                  color: "#fff", borderRadius: 7, padding: "7px 6px",
+                  fontSize: 12, fontWeight: 600, textDecoration: "none",
+                }}>פרטי התחנה</a>
+                <a href={`/?to=${encodeURIComponent(pickedNearest.station.name)}`} style={{
+                  flex: 1, textAlign: "center", border: `1px solid ${t.border}`,
+                  color: t.text, borderRadius: 7, padding: "7px 6px",
+                  fontSize: 12, fontWeight: 600, textDecoration: "none",
+                }}>תכנן נסיעה לכאן</a>
+              </div>
+            </div>
           </div>
         )}
       </div>
