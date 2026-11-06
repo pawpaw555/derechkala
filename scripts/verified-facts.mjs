@@ -196,6 +196,32 @@ export const FACTS = [
     },
   },
   {
+    id: "travel-time",
+    claim: "זמני הנסיעה מלוח הזמנים — 65 דקות מקצה לקצה",
+    grade: 1,
+    sources: [
+      {
+        name: "דנקל · מתכנן המסלולים",
+        url: "https://www.dankal.co.il/תכנון-מסלול-נסיעה/",
+        how: "POST, לוח הזמנים בגוף התשובה",
+        read: "05.11.2026",
+        says: "arrivalTime לכל תחנה; פתח תקווה מרכזית 10:03 עד הקוממיות 11:08 = 65.0 דקות, זהה בשלוש יציאות עוקבות וב-17:00",
+      },
+    ],
+    note:
+      "החליף את `stops * 2`, נוסחה מומצאת בלי מקור שהזינה את שעת ההגעה בכל חיפוש " +
+      "מסלול. היא טעתה 5% מקצה לקצה אבל עד **41%** בנסיעות קצרות. המספרים הם זמנים " +
+      "**מתוכננים**, לא מדידה. ההמתנה בהחלפה בצומת אינה כלולה — פער פתוח.",
+    check: () => {
+      const names = m.STATIONS.map(s => s.name);
+      const uncovered = names.filter(n => names.some(t => m.travelMinutes(n, t) === null)).length;
+      const e2e = m.travelMinutes("תחנה מרכזית פתח תקווה", "הקוממיות");
+      const short = m.travelMinutes("אלנבי", "שלמה (סלמה)");
+      const branch = m.travelMinutes("קריית אריה", "הקוממיות");
+      return [`${uncovered}/${e2e}/${short}/${branch}`, "0/65/7/58"];
+    },
+  },
+  {
     id: "rail-interchange",
     claim: "4 תחנות רכבת ישראל בטווח הליכה מהקו",
     grade: 2,

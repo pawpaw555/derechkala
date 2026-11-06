@@ -231,9 +231,109 @@ export function searchAll(query: string): {
   const hiddenCount = (allStations.length - stations.length) + (allLandmarks.length - landmarks.length);
   return { stations, landmarks, hiddenCount };
 }
-/** זמן הנסיעה לפי מספר התחנות. מקור יחיד — גם לתכנון קדימה וגם אחורה. */
-export function travelMinutes(stops: number): number {
-  return stops * 2;
+/**
+ * שניות מתחנה מרכזית פתח תקווה לאורך הגשר הראשי, לפי לוח הזמנים.
+ *
+ * קודם לכן זמן הנסיעה היה `stops * 2` — נוסחה מומצאת בלי שום מקור,
+ * שהזינה את שעת ההגעה בכל חיפוש מסלול באתר, בשני הכיוונים. היא נתנה
+ * 62 דקות מקצה לקצה במקום 65, אבל זה החלק הקטן: בנסיעות קצרות, שהן
+ * המקרה הנפוץ, היא טעתה עד **41%** — "אלנבי → שלמה" יצא 4 דקות במקום
+ * 6.8. שתי דקות אחידות לכל עצירה התעלמו מכך שהקטע התת-קרקעי מהיר
+ * בהרבה מהקטע הרחובי בשדרות ירושלים, שם מרווח אחד לוקח 3.5 דקות.
+ *
+ * מקור: מתכנן המסלולים של דנקל, https://www.dankal.co.il/תכנון-מסלול-נסיעה/
+ * — נקרא ב-05.11.2026. התשובה שלו מוסרת את לוח הזמנים תחנה-תחנה עם
+ * `arrivalTime` מדויק לכל אחת, והמספרים כאן הם ההפרש מהתחנה הראשונה
+ * בנסיעה של 10:03 ביום חמישי.
+ *
+ * **אלה זמנים מתוכננים, ולא מדידה של נסיעה אמיתית.**
+ *
+ * היציבות נמדדה: ההיסטים על הגשר **זהים לשנייה** בשלוש יציאות עוקבות
+ * באותה שליפה, וגם בין שליפה ב-10:00 לשליפה ב-17:00 — אפס שניות הפרש.
+ * הענף דווקא כן משתנה בין תבניות נסיעה: קריית אריה עד הצומת יצא 390
+ * שניות בשליפות שהתחילו בקריית אריה ו-363 בשליפה שהתחילה בגשר אם
+ * המושבות. לכן BRANCH_SECS הוא מדגם, ו-travel-live.mjs בודק אותו
+ * בסובלנות של דקה ואת הגשר בדיוק מלא.
+ *
+ * הכיוון כמעט אינו משנה — 65.0 דקות מפתח תקווה לבת ים ו-65.3 בהפוך.
+ *
+ * scripts/travel-live.mjs משווה את הטבלה למתכנן בכל הרצה של הבלוק.
+ */
+export const TRUNK_SECS: Record<string, number> = {
+  "תחנה מרכזית פתח תקווה": 0,
+  "פינסקר": 95,
+  "קרול": 205,
+  "דנקנר": 325,
+  "בילינסון": 422,
+  "שחם": 533,
+  "שנקר": 673,
+  "אהרונוביץ'": 803,
+  "בן גוריון": 948,
+  "ביאליק": 1076,
+  "אבא הלל": 1206,
+  "ארלוזורוב": 1304,
+  "שאול המלך": 1412,
+  "יהודית": 1520,
+  "קרליבך": 1627,
+  "אלנבי": 1754,
+  "אליפלט": 1951,
+  "שלמה (סלמה)": 2162,
+  "אצטדיון בלומפילד": 2279,
+  "ארליך": 2402,
+  "איסקוב": 2506,
+  'הבעש"ט': 2594,
+  "מחרוזת": 2753,
+  "העצמאות": 2879,
+  "רוטשילד": 2988,
+  "ז'בוטינסקי": 3202,
+  "בלפור": 3363,
+  "בנימין": 3452,
+  "יוספטל": 3549,
+  'כ"ט בנובמבר': 3682,
+  "העמל": 3797,
+  "הקוממיות": 3901,
+};
+
+/**
+ * שניות מהתחנה בענף עד הצומת באהרונוביץ'. שתי התחנות שאינן על הגשר.
+ * אהרונוביץ' עצמה היא 0 כאן, והיא מופיעה גם ב-TRUNK_SECS.
+ */
+export const BRANCH_SECS: Record<string, number> = {
+  "קריית אריה": 390,
+  "גשר אם המושבות": 195,
+  "אהרונוביץ'": 0,
+};
+
+/**
+ * זמן הנסיעה בין שתי תחנות, מלוח הזמנים. מקור יחיד — גם לתכנון קדימה
+ * וגם אחורה.
+ *
+ * מחזיר null כששם אינו מוכר, במקום ליפול לאפס או לנוסחה: שעת הגעה
+ * שגויה בשקט היא בדיוק מה שהוחלף כאן. שורה בבלוק מוודאת שכל 34
+ * התחנות מכוסות, ולכן null אינו אמור לקרות בפועל.
+ *
+ * **אינו כולל את ההמתנה בהחלפה** בצומת. גם הנוסחה הקודמת לא כללה
+ * אותה, וזה נשאר פער פתוח ולא רגרסיה: המתכנן של דנקל מראה המתנה של
+ * כ-8.5 דקות באהרונוביץ' בנסיעה מקריית אריה דרומה, כך שמי שמגיע משתי
+ * תחנות הענף רואה אצלנו זמן קצר מהאמת. רשום ב-claim-inventory.
+ */
+export function travelMinutes(fromName: string, toName: string): number | null {
+  const onBranch = (n: string) => n in BRANCH_SECS && !(n in TRUNK_SECS);
+  const a = fromName, b = toName;
+
+  if (onBranch(a) && onBranch(b)) {
+    return Math.round(Math.abs(BRANCH_SECS[a] - BRANCH_SECS[b]) / 60);
+  }
+  if (onBranch(a) || onBranch(b)) {
+    const branchStop = onBranch(a) ? a : b;
+    const trunkStop = onBranch(a) ? b : a;
+    if (!(trunkStop in TRUNK_SECS)) return null;
+    const toJunction = BRANCH_SECS[branchStop];
+    const alongTrunk = Math.abs(TRUNK_SECS[trunkStop] - TRUNK_SECS[JUNCTION]);
+    return Math.round((toJunction + alongTrunk) / 60);
+  }
+  if (!(a in TRUNK_SECS) || !(b in TRUNK_SECS)) return null;
+  return Math.round(Math.abs(TRUNK_SECS[a] - TRUNK_SECS[b]) / 60);
 }
 
 /**
@@ -413,7 +513,10 @@ export function findRoute(fromName: string, toName: string, nextMins?: number, b
   // קודם לכן היו כאן שתי הגרלות: תוספת של 0 עד 3 דקות לזמן הנסיעה, ועוד
   // 1 עד 5 דקות המתנה כשלא נמסרה. אותו חיפוש החזיר תשובה אחרת בכל פעם,
   // והמספרים התגלגלו מחדש בכל רינדור.
-  const travelMins = travelMinutes(stops);
+  // null פירושו שם שאינו בטבלת לוח הזמנים. אין נפילה לנוסחה ולא לאפס:
+  // שעת הגעה שגויה בשקט היא בדיוק מה שהוחלף כאן.
+  const travelMins = travelMinutes(fromName, toName);
+  if (travelMins === null) return null;
   const base = baseDate ?? new Date();
   // כשהקורא לא מסר זמן המתנה זה אומר שלא נמצאה יציאה — שואלים ישירות
   // במקום להניח אפס. בלי זה, ב-23:58 הרשימה אמרה "אין יציאות" והכרטיס
@@ -840,7 +943,8 @@ export function findRouteByArrival(
 ): ReturnType<typeof findRoute> {
   const counted = countStops(fromName, toName);
   if (!counted) return null;
-  const travel = travelMinutes(counted.stops);
+  const travel = travelMinutes(fromName, toName);
+  if (travel === null) return null;
   const headway = getFrequencyMins(arriveBy);
   const searchFrom = new Date(arriveBy.getTime() - (travel + headway + 2) * 60 * 1000);
 
