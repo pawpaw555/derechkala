@@ -101,10 +101,33 @@ const offsets = (leg) => {
 
 const m = await load();
 
-const trunkTrip = await trip("תחנה מרכזית פתח תקווה", "הקוממיות");
+/**
+ * המתכנן של דנקל מתכנן **להיום בלבד** — נמדד ב-07.11.2026 שתאריך
+ * בשדה, בשדה נפרד או משולב בשעה אינו משנה דבר.
+ *
+ * ולכן הבדיקה נפלה בשבת: היא שאלה על 10:00, אין שירות, והמתכנן החזיר
+ * אפס מסלולים. הבקרה דיווחה על זה נכון ("0 מתוך 0" לא עבר בשקט), אבל
+ * שורה שנופלת בכל שבת היא שורה מהבהבת — בדיוק מה שהכלל אוסר.
+ *
+ * לכן נשאלות שתי שעות: 10:00, ואם אין שירות אז 21:00. במוצאי שבת
+ * השירות מתחדש ב-19:45, ונמדד ש-21:00 מחזיר 32 תחנות. השעה שנענתה
+ * מודפסת, כי "לא נבדק" ו"נבדק ב-21:00" אינם אותו דבר.
+ */
+const TIMES = ["10:00", "21:00"];
+async function tripAnyTime(a, b) {
+  for (const t of TIMES) {
+    const legs = await trip(a, b, t);
+    if (legs?.length) return { legs, at: t };
+  }
+  return { legs: null, at: null };
+}
+
+const trunkAsked = await tripAnyTime("תחנה מרכזית פתח תקווה", "הקוממיות");
+const trunkTrip = trunkAsked.legs;
 const trunkLeg = trunkTrip?.[0] ?? null;
 await new Promise((s) => setTimeout(s, 1500));
-const branchTrip = await trip("קריית אריה", "אלנבי");
+const branchAsked = await tripAnyTime("קריית אריה", "אלנבי");
+const branchTrip = branchAsked.legs;
 const branchLeg = branchTrip?.[0] ?? null;
 
 /**
@@ -177,6 +200,10 @@ console.log(
 console.log(
   "בקרה: הגשר %d תחנות (נדרש 32) · רגל הענף %d (נדרש ≥3) · רגליים בענף %d (נדרש 1) · %s",
   trunkLen, branchLen, branchLegCount, controlOk ? "עברה" : "נכשלה"
+);
+console.log(
+  "נשאל בשעה: גשר %s · ענף %s",
+  trunkAsked.at ?? "—", branchAsked.at ?? "—"
 );
 console.log("הגשר נבדק בדיוק מלא · הענף בסובלנות %d שניות", BRANCH_TOLERANCE_SECS);
 process.exit(ok ? 0 : 1);
