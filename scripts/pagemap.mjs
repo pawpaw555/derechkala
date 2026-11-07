@@ -18,7 +18,20 @@ import { readFileSync } from "node:fs";
 const ROOT = new URL("..", import.meta.url).pathname;
 const INVENTORY = "seo-data/claim-inventory-2026-11-04.md";
 
-/** העמוד בטבלה → הקובץ שמחזיק את ה-FAQ שלו. */
+/**
+ * העמוד בטבלה → הקובץ שמחזיק את ה-FAQ שלו.
+ *
+ * ⚠ `app/map/MapContent.tsx` הוא קובץ של סשן אחר. הבדיקה הזאת קוראת
+ * ממנו תחביר, ולכן יש כאן **תלות חוצת-בעלות**: שינוי בצורת מערך
+ * ה-FAQ שם משפיע על בדיקה שיושבת כאן.
+ *
+ * נמדד ב-07.11.2026 שזה לא תיאורטי: הסרת רווח אחד (`{ q:` ל-`{q:`)
+ * גרמה לשורה לדווח **"הטבלה אומרת 6 · בקוד 5"** — כלומר טענה
+ * עובדתית שגויה שנראית כמו תיעוד שהתיישן, ולא כמו פרסר שפספס.
+ *
+ * לכן התבנית סובלנית לרווחים, ויש בקרה: עמוד שמחזיר אפס שאלות
+ * מדווח כ**פרסר שבור** ולא כסתירה. התלות אותרה על ידי הסשן שחוקר.
+ */
 const PAGES = [
   ["/", "app/HomeContent.tsx"],
   ["/map", "app/map/MapContent.tsx"],
@@ -36,8 +49,14 @@ for (const [page, file] of PAGES) {
   const stated = row.match(/(\d+)\s+שאלות/)?.[1];
   if (!stated) { bad.push([page, "אין מספר שאלות בשורה"]); continue; }
   const src = readFileSync(ROOT + file, "utf8");
-  const actual = (src.match(/\{ q:/g) || []).length;
+  // סובלני לרווחים: `{ q:`, `{q:`, `{  q :` — כולם אותו דבר.
+  const actual = (src.match(/\{\s*q\s*:/g) || []).length;
   checked++;
+  // הבקרה: עמוד בלי שאלות בכלל אינו "סתירה", הוא פרסר שלא מצא כלום.
+  if (actual === 0) {
+    bad.push([page, `לא נמצאה אף שאלה ב-${file} — **הפרסר שבור, לא הטבלה**`]);
+    continue;
+  }
   if (Number(stated) !== actual)
     bad.push([page, `הטבלה אומרת ${stated} · בקוד ${actual} (${file})`]);
 }
