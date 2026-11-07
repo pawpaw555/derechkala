@@ -140,8 +140,12 @@ async function searchByHouseNumber(q: string): Promise<Place[]> {
       const a = x.address || {}
       const street = [a.road, a.house_number].filter(Boolean).join(" ");
       const city = a.city || a.town || a.village || a.municipality;
+      // אותה כפילות כמו ב-lookupPlaces: בערים קטנות suburb זהה ל-city,
+      // והתווית יצאה "יוספטל · בת ים · בת ים". תוקן כאן אחרי שתוקן שם —
+      // מופע אחד תוקן ואז נסרקה המחלקה, ונמצא שני.
+      const area = a.suburb && a.suburb !== city ? a.suburb : null;
       return {
-        label: [street, a.suburb, city].filter(Boolean).join(" · ") || x.display_name.split(",").slice(0, 3).join(" · "),
+        label: [street, area, city].filter(Boolean).join(" · ") || x.display_name.split(",").slice(0, 3).join(" · "),
         lat: Number(x.lat),
         lng: Number(x.lon),
       };
@@ -171,8 +175,17 @@ export async function lookupPlaces(q: string): Promise<Place[]> {
       .map((f: PhotonFeature) => {
         const p = f.properties ?? {};
         const street = [p.street || p.name, p.housenumber].filter(Boolean).join(" ");
+        // שני תיקונים שנמצאו בבדיקה ידנית של בעל האתר ב-07.11.2026:
+        //
+        // 1. Photon מחזיר district ו-city זהים בערים קטנות, והתווית יצאה
+        //    "יוספטל · בת ים · בת ים". מוצג רק אחד מהם.
+        // 2. לתחנת אוטובוס יש `name` ("בת ים - יוספטל") ו-`street` נפרד
+        //    ("איילון דרום"). הקוד הציג רק את הרחוב, והתוצאה נראתה
+        //    אקראית למי שחיפש כתובת. עכשיו השם מופיע כשהוא שונה מהרחוב.
+        const area = p.district && p.district !== p.city ? p.district : null;
+        const named = p.name && p.name !== p.street && p.street ? p.name : null;
         return {
-          label: [street, p.district, p.city].filter(Boolean).join(" · ") || p.name || q,
+          label: [named, street, area, p.city].filter(Boolean).join(" · ") || p.name || q,
           rank: wanted && p.housenumber === wanted ? 2 : p.housenumber ? 1 : 0,
           lat: f.geometry.coordinates[1],
           lng: f.geometry.coordinates[0],
