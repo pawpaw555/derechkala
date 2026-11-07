@@ -292,6 +292,10 @@ ok "תשובות FAQ: חסרות/נבדקו · בקרה" "0/26 · בקרה: כן
 ok "מנתב ההליכה: שרת · נתיב · ישן · בקרה" "1 · 1 · 0 · 1" "$(grep -c 'routing.openstreetmap.de/routed-foot' app/lib/useNearestStation.ts) · $(grep -c 'route/v1/driving' app/lib/useNearestStation.ts) · $(grep -vE '^\s*(//|\*)' app/lib/useNearestStation.ts | grep -c 'router.project-osrm.org') · $(grep -c 'export async function fetchFootRoute' app/lib/useNearestStation.ts)"
 # ועמוד הפרטיות אומר לקורא לאן הנקודות שלו נשלחות. היעד השתנה, והמשפט
 # חייב להשתנות איתו — אחרת העמוד מצהיר על שרת שכבר לא בשימוש.
+# ובנוסף: קריאת ניתוב אחת בכל הקוד, ושני צרכנים שעוברים דרכה.
+# אם מישהו יוסיף נתיב שני — עמוד שמודד אחרת מהשאר — זה ייתפס כאן.
+# הבקרה היא מספר הצרכנים: אם הוא 0, ה-grep שבור ולא הקוד.
+ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
 ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
 ok "בדיקת ה-FAQ נבדקת: נכשלו/מקרים" "0/6" "$(node scripts/faq-selftest.mjs count 2>/dev/null)"
