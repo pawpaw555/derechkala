@@ -295,6 +295,11 @@ ok "מנתב ההליכה: שרת · נתיב · ישן · בקרה" "1 · 1 · 
 # ובנוסף: קריאת ניתוב אחת בכל הקוד, ושני צרכנים שעוברים דרכה.
 # אם מישהו יוסיף נתיב שני — עמוד שמודד אחרת מהשאר — זה ייתפס כאן.
 # הבקרה היא מספר הצרכנים: אם הוא 0, ה-grep שבור ולא הקוד.
+# והשאלה שאף בדיקה לא שאלה במשך חודשים: האם השרת בכלל **מכבד את
+# הפרופיל**. השרת הקודם זרק את הנתיב — `banana` ו-`zzz-not-a-profile`
+# החזירו את אותה תשובה כמו `foot`, וזהה למה ש-routed-car מחזיר היום.
+# כאן נשאלות הליכה ונסיעה ונדרש שיהיו שונות, ושההליכה בקצב הליכה.
+ok "פרופיל הניתוב: שונים · קצב · בקרה" "שונים · קצב הליכה · בקרה: כן" "$(node scripts/router-profile.mjs count 2>/dev/null)"
 ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
 ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
