@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -752,6 +752,13 @@ const content = STATION_CONTENT[stationName];
               }}>
                 מהמיקום שלך: <strong>{formatDistance(toHere)}</strong>
                 {showWalkHere ? ` · כ-${walkMinutes(toHere)} דק׳ הליכה` : walkableHere ? "" : " — רחוק מכדי ללכת"}
+                {/* הענף האמצעי כאן היה `""`: מרחק בלי זמן ובלי הסבר. walkNote
+                    אומר למה, ואותו משפט בדיוק מופיע בפאנל. */}
+                {walkNote(estHere) && (
+                  <div style={{ fontSize: 11, color: t.muted, marginTop: 6, lineHeight: 1.6 }}>
+                    {walkNote(estHere)}
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>

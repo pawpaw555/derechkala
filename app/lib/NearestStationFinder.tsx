@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Station, distanceMetres, formatDistance, walkMinutes, walkEstimate, isWalkable } from "./data";
+import { Station, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable } from "./data";
 import { useTheme } from "./useTheme";
 import { detectPlatform } from "./useNearestStation";
 import NavigationLinks from "./NavigationLinks";
@@ -222,6 +222,13 @@ export default function NearestStationFinder({
           {vague && (
             <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, lineHeight: 1.6 }}>
               הדפדפן דיווח על מיקום משוער ברדיוס של כ-{formatDistance(accuracy!)}. אם זו אינה התחנה הנכונה, הקלידו איפה אתם.
+            </div>
+          )}
+          {/* אותה מחלקה של ההודעה שמעל: כשזמן ההליכה נפסל הוצג מרחק בלי
+              זמן ובלי הסבר. המשפט יושב ב-walkNote, משותף עם עמוד התחנה. */}
+          {walkNote(est) && (
+            <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, lineHeight: 1.6 }}>
+              {walkNote(est)}
             </div>
           )}
           <NavigationLinks station={station} from={userLoc} transitFirst={metres !== null && !walkable} />

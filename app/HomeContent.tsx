@@ -6,7 +6,7 @@ import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SiteHeader } from "./lib/SiteComponents";
-import { useNearestStation, lookupPlaces, type Place } from "./lib/useNearestStation";
+import { useNearestStation, lookupPlaces, houseNumberNote, type Place } from "./lib/useNearestStation";
 import NearestStationFinder from "./lib/NearestStationFinder";
 import TimeChoice, { TimeChoiceValue } from "./lib/TimeChoice";
 
@@ -219,8 +219,14 @@ function InputField({ id, label, value, onChange, placeholder, selected, results
               <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>מחפש מקומות…</div>
             ) : geoResults.length > 0 ? (
               <>
+                {/*
+                  ההחלפה השקטה, במקום השני: הכותרת הכריזה "מצאנו את המקום"
+                  מעל תוצאות שאינן מה שהוקלד. אם ביקשת מספר בית ואין אותו,
+                  המשפט נאמר כאן באותן מילים בדיוק כמו בפאנל — houseNumberNote
+                  הוא המקור היחיד שלהן.
+                */}
                 <div style={{ padding: "8px 14px", fontSize: 11, color: t.muted, background: t.resultBg }}>
-                  לא תחנה — אבל מצאנו את המקום
+                  {houseNumberNote(value, geoResults) ?? "לא תחנה — אבל מצאנו את המקום"}
                 </div>
                 {geoResults.map(g => {
                   const st = findNearestStation(g.lat, g.lng);

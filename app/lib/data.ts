@@ -780,6 +780,29 @@ export function isWalkable(metres: number | null): boolean {
   return metres !== null && metres <= WALKABLE_MAX_M;
 }
 
+/**
+ * מה נאמר למשתמש על המרחק שמוצג, כשהמוצג אינו מה שחושב.
+ *
+ * `walkEstimate` פוסלת מסלול לא סביר ומחזירה במקומו את הקו האווירי
+ * **בלי זמן**. עד 07.11.2026 שני המקומות שמציגים את המספר הזה — הפאנל
+ * ועמוד התחנה — פשוט השמיטו את הזמן ולא אמרו דבר: המשתמש ראה מרחק
+ * שלפעמים מופיע עם זמן ולפעמים בלי, בלי שום הסבר להבדל.
+ *
+ * זאת אותה מחלקה שבעל האתר תפס בחיפוש הכתובת: **הצגנו משהו אחר ממה
+ * שחושב, ולא אמרנו שהחלפנו.** שם זה היה מספר בית, כאן זה המרחק.
+ *
+ * מעל `WALKABLE_MAX_M` אין הודעה — הממשק כבר אומר "רחוק מכדי ללכת",
+ * ושני משפטים על אותו מספר גרועים מאחד.
+ *
+ * טהורה בכוונה, ולכן `scripts/silent-selftest.mjs` בודק אותה בבלוק.
+ */
+export function walkNote(est: { metres: number | null; trustTime: boolean }): string | null {
+  if (est.metres === null) return null;
+  if (!isWalkable(est.metres)) return null;
+  if (est.trustTime) return null;
+  return "המרחק הוא קו אווירי — מסלול ההליכה שחזר נראה עקיף מדי, ולכן לא מוצג זמן. קישורי הניווט נותנים את המסלול המדויק.";
+}
+
 export function findNearestStation(lat: number, lng: number): Station {
   let best = STATIONS[0];
   let bestDist = Infinity;

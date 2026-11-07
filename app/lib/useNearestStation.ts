@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { findNearestStation } from "./data";
 // טיפוס בייבוא נפרד, אחרת טוען המודולים של node מחפש אותו כערך —
-// אותה תקלה שתוקנה ב-places.ts. בלי זה scripts/search-selftest.mjs
+// אותה תקלה שתוקנה ב-places.ts. בלי זה scripts/silent-selftest.mjs
 // נופל ב-"does not provide an export named Station".
 import type { Station } from "./data";
 
@@ -20,7 +20,7 @@ export type Place = { label: string; lat: number; lng: number; housenumber?: str
  * הקוד כבר ידע לעשות את זה נכון במקום אחד — כשהמיקום מעורפל הוא אומר
  * "ככל הנראה התחנה הקרובה אליך". זאת אותה התנהגות, במקום שני.
  *
- * טהורה בכוונה: אין בה רשת ואין בה React, ולכן `search-selftest.mjs`
+ * טהורה בכוונה: אין בה רשת ואין בה React, ולכן `silent-selftest.mjs`
  * בודק אותה בבלוק על קלט מבוקר.
  */
 export function missingHouseNumber(q: string, places: Place[]): string | null {
@@ -28,6 +28,20 @@ export function missingHouseNumber(q: string, places: Place[]): string | null {
   if (!wanted) return null;
   if (!places.length) return null;
   return places.some(p => p.housenumber === wanted) ? null : wanted;
+}
+
+/**
+ * אותו משפט בדיוק, בשני המקומות שמציגים תוצאות מקום: הפאנל
+ * (NearestStationFinder) ושדה המוצא בעמוד הבית (InputField).
+ *
+ * המשפט נולד בפאנל ב-07.11.2026, ושדה המוצא **נשאר שותק** — הוא אפילו
+ * הכריז "לא תחנה — אבל מצאנו את המקום" מעל תוצאות שאינן מה שהוקלד.
+ * אילו הייתי מעתיק את המשפט לשם, היה כאן אותו טקסט פעמיים, והתיקון
+ * הבא היה נוחת באחד מהם. לכן המשפט יושב כאן, ושני המקומות קוראים לו.
+ */
+export function houseNumberNote(q: string, places: Place[]): string | null {
+  const miss = missingHouseNumber(q, places);
+  return miss ? `מספר ${miss} לא נמצא במפה. אלה המקומות הקרובים ביותר:` : null;
 }
 
 /** הצורה שאנחנו באמת קוראים מתשובת Photon. */
@@ -312,8 +326,8 @@ export function useNearestStation() {
       else {
         // ההחלפה השקטה שבעל האתר תפס: תוצאות הוצגו במקום מה שהוקלד,
         // בלי לומר זאת. אם ביקשת מספר בית ואין אותו — נאמר.
-        const miss = missingHouseNumber(q, merged);
-        if (miss) setPlaceMsg(`מספר ${miss} לא נמצא במפה. אלה המקומות הקרובים ביותר:`);
+        const note = houseNumberNote(q, merged);
+        if (note) setPlaceMsg(note);
       }
       setResults(merged);
     } catch {
