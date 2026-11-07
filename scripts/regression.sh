@@ -303,10 +303,14 @@ ok "מנתב ההליכה: שרת · נתיב · ישן · בקרה" "1 · 1 · 
 # האווירי. `airMetres >= 400 ||` מקצר לפני בדיקת היחס, ולכן מעל 400
 # אין סינון כלל — ושם ישבו 7 מתוך 7 הזמנים המנופחים. **זה אינו מצב
 # רצוי**, והשורה כאן נועלת אותו כדי שלא ישתנה בשקט לפני שמוכרע.
-ok "שומר ההליכה: ארוך · קצר (א-סימטריה ידועה)" "true · false" "$(node --input-type=module -e '
+ok "שומר ההליכה: ארוך · קצר · בקרה (א-סימטריה ידועה)" "true · false · true" "$(node --input-type=module -e '
 import { load } from "./scripts/load.mjs";
 const m = await load();
-console.log(m.walkEstimate(788, 2668).trustTime + " · " + m.walkEstimate(399, 2668).trustTime);
+// שני המקרים נושאים את **אותו יחס** עד האלפית — 3.3858 מול 3.3835 —
+// ולכן המשתנה היחיד שנותר הוא המרחק האווירי. גרסה קודמת של השורה
+// השוותה (788,2668) ל-(399,2668): שם היחס קפץ ל-6.69 והשאיר הסבר
+// חלופי קביל. השלישי הוא בקרה חיובית: מסלול סביר חייב לעבור.
+console.log([m.walkEstimate(788, 2668).trustTime, m.walkEstimate(399, 1350).trustTime, m.walkEstimate(300, 350).trustTime].join(" · "));
 ' 2>/dev/null)"
 ok "פרופיל הניתוב: שונים · קצב · בקרה" "שונים · קצב הליכה · בקרה: כן" "$(node scripts/router-profile.mjs count 2>/dev/null)"
 ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
