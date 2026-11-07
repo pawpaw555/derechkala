@@ -299,6 +299,15 @@ ok "מנתב ההליכה: שרת · נתיב · ישן · בקרה" "1 · 1 · 
 # הפרופיל**. השרת הקודם זרק את הנתיב — `banana` ו-`zzz-not-a-profile`
 # החזירו את אותה תשובה כמו `foot`, וזהה למה ש-routed-car מחזיר היום.
 # כאן נשאלות הליכה ונסיעה ונדרש שיהיו שונות, ושההליכה בקצב הליכה.
+# הא-סימטריה בשומר: אותו יחס בדיוק, תוצאה הפוכה, רק בגלל המרחק
+# האווירי. `airMetres >= 400 ||` מקצר לפני בדיקת היחס, ולכן מעל 400
+# אין סינון כלל — ושם ישבו 7 מתוך 7 הזמנים המנופחים. **זה אינו מצב
+# רצוי**, והשורה כאן נועלת אותו כדי שלא ישתנה בשקט לפני שמוכרע.
+ok "שומר ההליכה: ארוך · קצר (א-סימטריה ידועה)" "true · false" "$(node --input-type=module -e '
+import { load } from "./scripts/load.mjs";
+const m = await load();
+console.log(m.walkEstimate(788, 2668).trustTime + " · " + m.walkEstimate(399, 2668).trustTime);
+' 2>/dev/null)"
 ok "פרופיל הניתוב: שונים · קצב · בקרה" "שונים · קצב הליכה · בקרה: כן" "$(node scripts/router-profile.mjs count 2>/dev/null)"
 ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
 ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
