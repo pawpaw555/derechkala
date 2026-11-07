@@ -285,6 +285,14 @@ ok "תשובות FAQ: חסרות/נבדקו · בקרה" "0/26 · בקרה: כן
 # מתיישן בשקט: /map אמר 5 אחרי שנוספה שאלה שישית, וסשן אחר הוא שתפס.
 # נשקלה הרחבת audit-claims לקבצי .md ונדחתה — נמדד שהיא מחזירה שלוש
 # "סתירות" שכולן שקריות, כי התיעוד מצטט בכוונה טעויות שתוקנו.
+# הכתובת של מנתב ההליכה היא עובדה ולא קוד. השרת הקודם החזיר ניתוב
+# רכב כי הוא מתעלם מהפרופיל, ו"foot" בנתיב נראה נכון ולא עשה דבר.
+# שלושה שדות: השרת הנכון, הנתיב שהוא endpoint ולא פרופיל, והשרת
+# הישן שאינו חוזר. הבקרה היא שהקריאה עצמה קיימת בקובץ.
+ok "מנתב ההליכה: שרת · נתיב · ישן · בקרה" "1 · 1 · 0 · 1" "$(grep -c 'routing.openstreetmap.de/routed-foot' app/lib/useNearestStation.ts) · $(grep -c 'route/v1/driving' app/lib/useNearestStation.ts) · $(grep -vE '^\s*(//|\*)' app/lib/useNearestStation.ts | grep -c 'router.project-osrm.org') · $(grep -c 'export async function fetchFootRoute' app/lib/useNearestStation.ts)"
+# ועמוד הפרטיות אומר לקורא לאן הנקודות שלו נשלחות. היעד השתנה, והמשפט
+# חייב להשתנות איתו — אחרת העמוד מצהיר על שרת שכבר לא בשימוש.
+ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
 ok "בדיקת ה-FAQ נבדקת: נכשלו/מקרים" "0/6" "$(node scripts/faq-selftest.mjs count 2>/dev/null)"
 # כניסה C של שאול המלך נוספה ב-05.11.2026, והפיצול לשורות הוא מקום

@@ -61,8 +61,40 @@ export function parseCoords(v: string): { lat: number; lng: number } | null {
 }
 
 /**
- * מסלול הליכה לפי דרכים, מ-OSRM על נתוני OpenStreetMap, ללא מפתח.
- * המרחק מדויק; משך הזמן שהוא מחזיר אינו קצב הליכה ולכן אינו בשימוש.
+ * שרת הניתוב. **הכתובת היא העובדה כאן, לא הקוד.**
+ *
+ * עד 07.11.2026 זה היה `router.project-osrm.org` עם `/route/v1/foot/`,
+ * והשרת הזה **מתעלם מהפרופיל בכתובת**. נמדד: אותן שתי נקודות ב-foot,
+ * walking, driving, car ו-bike החזירו תוצאה זהה בייט לבייט — 1803.5 מ׳
+ * ו-210.9 שנ׳, קצב 513 מ׳ לדקה. כלומר כל "מרחק הליכה" באתר היה מרחק
+ * נסיעה ברכב, מנופח על ידי חד-סטריים ואיסורי פנייה. על 22 המקומות
+ * המאומתים היחס למרחק האווירי היה 4.49 בממוצע, ומכללת שנקר הוצגה
+ * כ-2668 מ׳ ו"33 דקות הליכה" במקום 931 מ׳ ו-12 דקות.
+ *
+ * `routing.openstreetmap.de` של FOSSGIS מריץ פרופילים נפרדים באמת:
+ *
+ *     routed-foot    387 מ׳ ·  73 מ׳/דק׳
+ *     routed-bike    442 מ׳ · 144 מ׳/דק׳
+ *     routed-car    1804 מ׳ · 513 מ׳/דק׳   ← מה שהתקבל קודם
+ *
+ * שימו לב ש**הנתיב בכתובת נשאר `driving`** — זה שם ה-endpoint של OSRM,
+ * והפרופיל נקבע על ידי השירות (`routed-foot`). כתיבת `foot` שם היא
+ * בדיוק הטעות שהייתה כאן קודם: היא נראית נכונה ואינה עושה דבר.
+ *
+ * אומת בשלושה מנועים על 22 מסלולים: routed-foot ו-Valhalla נחלקים
+ * ב-9.5% בממוצע, לעומת 23.2% בין BRouter ל-Valhalla, והקצב המשתמע
+ * הוא 77 מ׳ לדקה — ליד WALK_PACE_M_PER_MIN שהוא 80.
+ *
+ * מדיניות (routing.openstreetmap.de/about.html): בקשה אחת לשנייה,
+ * בלי שימוש כבד, חובת ייחוס ו-user-agent תקין, בלי התחייבות לזמינות.
+ * השרת הקודם היה תחת אותה מדיניות. זמן תגובה נמדד 0.21 שנ׳.
+ */
+const FOOT_ROUTER = "https://routing.openstreetmap.de/routed-foot";
+
+/**
+ * מסלול הליכה לפי דרכים, על נתוני OpenStreetMap, ללא מפתח.
+ * המרחק מדויק; משך הזמן שהוא מחזיר אינו בשימוש — הזמן נגזר
+ * מ-WALK_PACE_M_PER_MIN, שאומת בנפרד מול שני מנועים.
  *
  * כל עמוד שמציג מרחק למשתמש חייב לעבור דרך כאן. מרחק אווירי מקצר את
  * ההליכה בפועל בעשרות אחוזים — מ-Dizengoff 72 לארלוזורוב הוא 2.1 ק"מ
@@ -74,7 +106,7 @@ export async function fetchFootRoute(
 ): Promise<{ coords: [number, number][]; metres: number } | null> {
   try {
     const r = await fetch(
-      `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`
+      `${FOOT_ROUTER}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`
     );
     const g = (await r.json())?.routes?.[0];
     if (!g?.geometry?.coordinates?.length) return null;
