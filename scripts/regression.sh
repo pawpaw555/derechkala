@@ -322,6 +322,12 @@ console.log([
 ok "פרופיל הניתוב: שונים · קצב · בקרה" "שונים · קצב הליכה · בקרה: כן" "$(node scripts/router-profile.mjs count 2>/dev/null)"
 ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
 ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
+# ההחלפה השקטה בחיפוש. בעל האתר הקליד "יוספטל 82" וקיבל את 92, את
+# הקניון ואת תחנת האוטובוס — **בלי שנאמר לו שלא מצאנו את 82**. מספר
+# 82 אינו קיים במפה, אז אין מה למצוא; אבל מי שמקבל כתובת אחרת בלי
+# הסבר חושב שהאתר שבור. הבדיקה על פונקציה טהורה, בלי רשת ובלי דפדפן,
+# והמקרה האחרון הוא בקרה שהיא מסוגלת לירות בכלל.
+ok "החלפה שקטה בחיפוש: נכשלו/מקרים" "0/7" "$(node scripts/search-selftest.mjs count 2>/dev/null)"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
 ok "בדיקת ה-FAQ נבדקת: נכשלו/מקרים" "0/6" "$(node scripts/faq-selftest.mjs count 2>/dev/null)"
 # כניסה C של שאול המלך נוספה ב-05.11.2026, והפיצול לשורות הוא מקום

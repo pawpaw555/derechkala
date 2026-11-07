@@ -1,8 +1,34 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Station, findNearestStation } from "./data";
+import { findNearestStation } from "./data";
+// טיפוס בייבוא נפרד, אחרת טוען המודולים של node מחפש אותו כערך —
+// אותה תקלה שתוקנה ב-places.ts. בלי זה scripts/search-selftest.mjs
+// נופל ב-"does not provide an export named Station".
+import type { Station } from "./data";
 
-export type Place = { label: string; lat: number; lng: number };
+export type Place = { label: string; lat: number; lng: number; housenumber?: string };
+
+/**
+ * המשתמש ביקש מספר בית ואף תוצאה לא נושאת אותו — מחזיר את המספר.
+ *
+ * **נולד מבדיקה ידנית של בעל האתר ב-07.11.2026.** הוא הקליד
+ * "יוספטל 82 בת ים", והאתר הציג את יוספטל 92, את הקניון ואת תחנת
+ * האוטובוס — **בלי לומר שהוא לא מצא את 82**. מספר 82 פשוט אינו קיים
+ * ב-OpenStreetMap, אז אין מה למצוא; אבל מי שמקליד כתובת ומקבל כתובת
+ * אחרת בלי הסבר חושב שהאתר שבור, והוא צודק שהוא חושב כך.
+ *
+ * הקוד כבר ידע לעשות את זה נכון במקום אחד — כשהמיקום מעורפל הוא אומר
+ * "ככל הנראה התחנה הקרובה אליך". זאת אותה התנהגות, במקום שני.
+ *
+ * טהורה בכוונה: אין בה רשת ואין בה React, ולכן `search-selftest.mjs`
+ * בודק אותה בבלוק על קלט מבוקר.
+ */
+export function missingHouseNumber(q: string, places: Place[]): string | null {
+  const wanted = (q.match(/\d+/) || [])[0];
+  if (!wanted) return null;
+  if (!places.length) return null;
+  return places.some(p => p.housenumber === wanted) ? null : wanted;
+}
 
 /** הצורה שאנחנו באמת קוראים מתשובת Photon. */
 type PhotonFeature = {
@@ -145,6 +171,7 @@ async function searchByHouseNumber(q: string): Promise<Place[]> {
       // מופע אחד תוקן ואז נסרקה המחלקה, ונמצא שני.
       const area = a.suburb && a.suburb !== city ? a.suburb : null;
       return {
+        housenumber: a.house_number,
         label: [street, area, city].filter(Boolean).join(" · ") || x.display_name.split(",").slice(0, 3).join(" · "),
         lat: Number(x.lat),
         lng: Number(x.lon),
@@ -185,6 +212,7 @@ export async function lookupPlaces(q: string): Promise<Place[]> {
         const area = p.district && p.district !== p.city ? p.district : null;
         const named = p.name && p.name !== p.street && p.street ? p.name : null;
         return {
+          housenumber: p.housenumber,
           label: [named, street, area, p.city].filter(Boolean).join(" · ") || p.name || q,
           rank: wanted && p.housenumber === wanted ? 2 : p.housenumber ? 1 : 0,
           lat: f.geometry.coordinates[1],
@@ -281,6 +309,12 @@ export function useNearestStation() {
       const merged = await lookupPlaces(q);
       if (seq !== searchSeq.current) return;
       if (merged.length === 0) setPlaceMsg("לא נמצא מקום בשם הזה. נסו שם של רחוב, עיר או מקום מוכר.");
+      else {
+        // ההחלפה השקטה שבעל האתר תפס: תוצאות הוצגו במקום מה שהוקלד,
+        // בלי לומר זאת. אם ביקשת מספר בית ואין אותו — נאמר.
+        const miss = missingHouseNumber(q, merged);
+        if (miss) setPlaceMsg(`מספר ${miss} לא נמצא במפה. אלה המקומות הקרובים ביותר:`);
+      }
       setResults(merged);
     } catch {
       if (seq !== searchSeq.current) return;
