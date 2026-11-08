@@ -20,19 +20,35 @@ const urlArg = process.argv.slice(2).find((a) => /^https?:\/\//.test(a));
 const BASE = urlArg || process.env.BASE || "http://localhost:3011";
 const STATION = "/station/%D7%90%D7%91%D7%90%20%D7%94%D7%9C%D7%9C";
 
+/**
+ * פענוח ישויות HTML. **ישויות מספריות קודם לישויות בשם**, ו-`&amp;`
+ * אחרון — אחרת `&amp;#8211;` מפוענח פעמיים.
+ *
+ * הגרסה הראשונה כאן כיסתה ארבע ישויות בשם בלבד. זה החזיק כאן במקרה,
+ * אבל אותה חסרה הפילה את `hours-live.mjs` ב-08.11: דנקל כותבת את אותו
+ * מקף פעם כתו ופעם כ-`&#8211;`, והפיצול איבד מסלול אחד מתוך חמישה.
+ * כלל 5ב — הפענוח קודם לכל פעולה, גם להשוואה וגם לפיצול.
+ *
+ * מיוצא כדי שיהיה מפענח אחד ולא שניים שנחלקים בשקט.
+ */
+export function decodeEntities(s) {
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
 async function text(path) {
   const html = await liveText(`השרת המקומי ${path}`, BASE + path, {
     signal: AbortSignal.timeout(20000),
   });
-  return html
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ");
+  return decodeEntities(html);
 }
 
 /** בלוקי ה-JSON-LD של העמוד, מפורסרים. */
-function jsonLd(html) {
+export function jsonLd(html) {
   const out = [];
   for (const [, body] of html.matchAll(
     /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g
@@ -51,8 +67,11 @@ function jsonLd(html) {
  * זאת הנקודה שבה הבדיקה הזאת נכשלה קודם. היא שאלה "האם המחרוזת קיימת
  * ב-HTML" — ומחרוזת שיושבת רק ב-JSON-LD עונה כן. כלומר אם הבלוק הנראה
  * היה נשבר לגמרי, הבדיקה הייתה עוברת. נוכחות אינה מיקום.
+ *
+ * מיוצא כדי שבדיקות אחרות ישאלו "האם זה **נראה**" באותו כלי בדיוק.
+ * `addresses.mjs rendered` מייבא אותו; מימוש שני היה נפרד ממנו בשקט.
  */
-function visible(html) {
+export function visible(html) {
   const stripped = html.replace(
     /<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
     " "

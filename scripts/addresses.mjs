@@ -14,6 +14,7 @@
 // ולא על המחרוזת. דנקל מפרידה כניסות בקו מפריד ואנחנו בנקודתיים, היא
 // משמיטה פסיק לפני העיר, ושתי הצורות של הגרש מופיעות בשני הצדדים.
 // השוואת מחרוזות החזירה 12 "הפרשים" שרובם היו פיסוק. כלל 11א.
+import { readFile } from "node:fs/promises";
 import { load } from "./load.mjs";
 import { liveText } from "./net.mjs";
 
@@ -138,6 +139,75 @@ async function live() {
   return { panels: found.length, gone, added };
 }
 
+/**
+ * מצב `rendered`: 34 הכתובות **על 34 העמודים**, ולא במודול ולא אצל דנקל.
+ *
+ * זה היה הסעיף הפתוח של אזור 4 ב-QA: הכתובות אומתו מול דנקל ומול הצילום,
+ * ואף לא אחת משתי השורות האחרות כאן נוגעת בעמודים שלנו. "נשמר" ו"מוצג"
+ * הם שני דברים שונים — ה-build קטע פעם את טקסט המחיר ב-154 קבצים בעוד
+ * המודול היה תקין (ראו faq-rendered.mjs). כתובת של תחנה תת-קרקעית
+ * שאינה מגיעה למסך שולחת אדם לצד הלא נכון של הכביש.
+ *
+ * ההשוואה היא על הטקסט ה**נראה**, דרך `visible` של faq-rendered.mjs —
+ * אותו כלי בדיוק, לא מימוש שני. מחרוזת שיושבת רק ב-JSON-LD או רק
+ * במטען ה-RSC עונה "כן" ל-HTML ו"לא" לקורא.
+ *
+ * הפיצול לשורות: `StationClient.tsx:298` מפצל את הכתובת ב-
+ * /,\s*(?=כניסה)/ ומרנדר כל חלק לחוד, ולכן המחרוזת המלאה **אינה** רצופה
+ * בעמוד של תחנה עם יותר מכניסה אחת. חיפוש המחרוזת כולה היה מדווח חסר
+ * ב-9 תחנות שאין בהן שום פגם. התבנית כאן היא העתק, ולכן הבדיקה מאמתת
+ * שהיא עוד נמצאת בקומפוננטה — העתק שנחלק בשקט הוא בדיוק מה שנבדק כאן.
+ */
+const ENTRANCE_SPLIT = /,\s*(?=כניסה)/;
+
+async function rendered(base) {
+  const { visible, decodeEntities, jsonLd } = await import("./faq-rendered.mjs");
+  const src = await readFile(new URL("../app/station/[slug]/StationClient.tsx", import.meta.url), "utf8");
+  const splitStillThere = src.includes(",\\s*(?=כניסה)");
+
+  const missVis = [];
+  const missLd = [];
+  let pages = 0, partsSeen = 0, negTested = 0, negFound = 0;
+  let everyPageControl = true;
+
+  for (const st of m.STATIONS) {
+    const c = m.STATION_CONTENT[st.name];
+    const res = await fetch(`${base}/station/${encodeURIComponent(st.name)}`, {
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) { missVis.push(`${st.name} · HTTP ${res.status}`); continue; }
+    const html = decodeEntities(await res.text());
+    pages++;
+    const vis = visible(html);
+    if (!vis.includes("הקו האדום")) everyPageControl = false;
+
+    const addr = c?.address ?? "";
+    if (!addr) { missVis.push(`${st.name} · אין כתובת במודול`); continue; }
+
+    for (const part of addr.split(ENTRANCE_SPLIT)) {
+      const p = part.trim();
+      partsSeen++;
+      if (!vis.includes(p)) missVis.push(`${st.name} · לא נראה: ${p}`);
+      // בקרה שלילית לכל חלק שיש בו מספר בית: אותו חלק עם המספר מוזז
+      // ב-1000 חייב **לא** להימצא. בלי זה "נמצא" יכול להיות התאמה של שם
+      // הרחוב בלבד, והבדיקה הייתה עוברת גם על מספר בית שגוי.
+      const mutated = p.replace(/(\d+)(?!.*\d)/, (d) => String(Number(d) + 1000));
+      if (mutated !== p) {
+        negTested++;
+        if (vis.includes(mutated)) negFound++;
+      }
+    }
+
+    const place = jsonLd(html).find((x) => x?.address?.streetAddress);
+    if (!place) missLd.push(`${st.name} · אין streetAddress ב-JSON-LD`);
+    else if (place.address.streetAddress !== addr)
+      missLd.push(`${st.name} · JSON-LD "${place.address.streetAddress}" במקום "${addr}"`);
+  }
+
+  const control = everyPageControl && splitStillThere && pages === 34 && partsSeen === 49 && negTested >= 40;
+  return { missVis, missLd, pages, partsSeen, negFound, negTested, control, splitStillThere };
+}
+
 const m = await load();
 const ours = Object.values(m.STATION_CONTENT);
 
@@ -180,6 +250,23 @@ if (process.argv[2] === "live") {
     for (const a of added) console.log("  + בדף ואינו בצילום: %s", a);
   }
   process.exit(panels === 34 && !gone.length && !added.length ? 0 : 1);
+}
+
+if (process.argv[2] === "rendered") {
+  const base = process.argv.slice(3).find((a) => /^https?:\/\//.test(a)) || process.env.BASE || "http://localhost:3011";
+  const r = await rendered(base);
+  // חסר נראה · חסר JSON-LD · עמודים · חלקי כתובת · בקרה שלילית · בקרה
+  console.log(
+    "%d · %d · %d · %d · %d · בקרה: %s",
+    r.missVis.length, r.missLd.length, r.pages, r.partsSeen, r.negFound, r.control ? "כן" : "לא",
+  );
+  if (process.argv.includes("verbose")) {
+    for (const x of r.missVis) console.log("  ✗ %s", x);
+    for (const x of r.missLd) console.log("  ✗ %s", x);
+    console.log("  בקרה שלילית: %d מתוך %d חלקים ניתנים לשינוי מספר", r.negFound, r.negTested);
+    console.log("  תבנית הפיצול עוד בקומפוננטה: %s", r.splitStillThere ? "כן" : "לא");
+  }
+  process.exit(!r.missVis.length && !r.missLd.length && !r.negFound && r.control ? 0 : 1);
 }
 
 if (process.argv[2] === "count") {
