@@ -169,14 +169,39 @@ hardcoded_hours(){
   | grep -oE '[0-2][0-9]:[0-5][0-9]|get(Hours|Minutes)\(\) *[<>=!]+ *[0-9]+' \
   | wc -l | tr -d ' '
 }
-hh_total(){ local n=0 f; for f in "$@"; do n=$(( n + $(hardcoded_hours "$f") )); done; echo "$n"; }
+# מדפיס "מופעים · קבצים שנקראו". הקריאה היא דרך read ולא דרך פיצול מילים,
+# כי `app/station/[slug]/page.tsx` מכיל סוגריים מרובעים — מחרוזת שעוברת
+# פיצול מילים עוברת אחריו גם הרחבת גלוב, ו-`[slug]` היא מחלקת תווים.
+# כאן היא לא מתאימה לכלום ולכן נשארת כפשוטה, אבל זה מקרי.
+# המספר השני נספר על קבצים שנפתחו בפועל ולא על אורך הרשימה: רשימה שלמה
+# שאי אפשר לקרוא הייתה מחזירה 0 מופעים ו-35 "קבצים" ועוברת בשקט.
+hh_scan(){
+  local n=0 c=0 f
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    [ -r "$f" ] || continue
+    n=$(( n + $(hardcoded_hours "$f") ))
+    c=$(( c + 1 ))
+  done <<< "$1"
+  echo "$n · $c"
+}
 # חמישה קבצים החזיקו את לוח הזמנים ככתב, אחד-עשר מופעים. כולם קוראים
 # עכשיו מ-data.ts, והבדיקה שומרת על כולם ולא רק על הקובץ שתוקן ראשון.
+# **ומאז 08.11 היא סורקת את כל app/ ולא את החמישה.** רשימה קשיחה של חמישה
+# מגנה על החמישה שנתפסו, ולא על הקובץ השישי שייכתב מחר — בדיוק המלכודת
+# שכלל 9 מתאר. נמדד שכל 35 הקבצים מחזירים 0 כבר עכשיו, ולכן ההרחבה אינה
+# דורשת שום תיקון; היא רק מקבעת מצב שהושג. data.ts מוחרג במכוון: הוא
+# המקור היחיד, ושעה ככתב בו היא הדבר הנכון ולא רגרסיה. הוא מחזיק את
+# לוח הזמנים כחשבון (14 * 60 + 10) ולכן מחזיר 0 גם בלי ההחרגה, אבל
+# ההחרגה היא הצהרה ולא נוחות.
+# המספר השני הוא כמה קבצים נסרקו, והוא בקרה: אם find ישתנה ויחזיר ריק,
+# ה-0 שלפניו יהיה נכון על אוכלוסייה ריקה. אם הוספת קובץ והוא לא עלה —
+# הוא לא נבדק.
 # מה שהיא לא מכסה: אריחי התדירות בעמוד הקו האדום היו "3.5′" ו-"6′" —
 # מספר וסימן דקות, בלי שעה ובלי מילים. תבנית לזה דורשת את הסימן ′,
 # שאינו ASCII, וכלל 11 אוסר זאת בבלוק. השמירה עליהם היא הייבוא מ-data.ts
 # בלבד, וזה פחות מבדיקה. נרשם כאן כדי שלא ייחשב מכוסה.
-HFILES="app/hours/HoursContent.tsx app/hours/page.tsx app/HomeContent.tsx app/line-red/RedLineContent.tsx app/lib/stationContent.ts"
+HFILES=$(find app -name '*.tsx' -o -name '*.ts' | grep -v '^app/lib/data\.ts$' | sort)
 HFIX=/tmp/reg-hours-fixture.tsx
 cat > "$HFIX" <<'FIXTURE'
 const a = `resumes at 19:45.`;
@@ -186,7 +211,7 @@ const d = "05:30";
 const e = 1; // kept running until 21:00
 const u = "https://derechkala.online/hours";
 FIXTURE
-ok "לוח זמנים קשיח בחמישה קבצים · בקרה" "0 · 5" "$(hh_total $HFILES) · $(hardcoded_hours "$HFIX")"
+ok "לוח זמנים קשיח בכל app/ · נקראו · בקרה" "0 · 35 · 5" "$(hh_scan "$HFILES") · $(hardcoded_hours "$HFIX")"
 
 # כלל 11ב: ממצא נרשם עם עוגן קובץ:שורה, אחרת אי אפשר לאמת אותו מחדש.
 # המספר השני הוא כמה סעיפים נסרקו, והוא הבקרה: רשימת האותיות קשיחה,
@@ -241,10 +266,28 @@ ok "fitBounds: קריאות מול animate:false" "שווה" "$(same "$(grep -c 
 # מפילות את הבדיקה שמונעת את חזרתה.
 # שתי בקרות חיוביות: מתקן עם ההמתנה מושתלת, ומספר ה-handlePlan בשני
 # הקבצים. אם אחת מהן יורדת, ה-grep לא רץ והאפס שלפניו חסר משמעות.
-PFILES="app/HomeContent.tsx app/station/[slug]/StationClient.tsx"
+# **וגם כאן האוכלוסייה הורחבה ב-08.11 מרשימה קשיחה לכל app/**, מאותו
+# טעם שבשורת לוח הזמנים: שני הקבצים האלה החזיקו את ההמתנה, אבל מצב
+# טעינה בלי מה לטעון יכול להיוולד בכל קומפוננטה. נמדד שכל 36 הקבצים
+# מחזירים 0 כבר עכשיו, ולכן ההרחבה אינה דורשת תיקון.
+# בקרת handlePlan נשארת על שני קבצי המתכנן בכוונה — היא עוגן לקבצים
+# האלה, לא לאוכלוסייה. handlePlan אינו קיים בשאר app/, והרחבתה הייתה
+# הופכת אותה לספירה של כלום.
+PFILES=$(find app -name '*.tsx' -o -name '*.ts' | sort)
+PLANNERS="app/HomeContent.tsx app/station/[slug]/StationClient.tsx"
 DFIX=/tmp/reg-delay-fixture.tsx
 printf 'setLoading(true);\nsetTimeout(() => { setLoading(false); }, 2000 + Math.random() * 1000);\n' > "$DFIX"
-delay_count(){ local n=0 f; for f in "$@"; do n=$(( n + $(grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -cE '2000 \+ Math\.random|setLoading') )); done; echo "$n"; }
+# מדפיס "מופעים · קבצים שנקראו", כמו hh_scan ומאותו טעם.
+delay_scan(){
+  local n=0 c=0 f
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    [ -r "$f" ] || continue
+    n=$(( n + $(grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -cE '2000 \+ Math\.random|setLoading') ))
+    c=$(( c + 1 ))
+  done <<< "$1"
+  echo "$n · $c"
+}
 # כלל 7ה: התנאי ב-ResizeObserver חייב להשוות מול הגודל שההתאמה נעשתה
 # עבורו, ולא מול map.getSize(). ליפט מעדכן את getSize בעצמו ב-_onResize
 # לפני שהצופה רץ (trackResize ברירת מחדל, leaflet-src.js:4437 ו-:4446),
@@ -257,7 +300,21 @@ delay_count(){ local n=0 f; for f in "$@"; do n=$(( n + $(grep -vE '^[[:space:]]
 RFIX=/tmp/reg-resize-fixture.tsx
 printf 'if (known.x === el.clientWidth) return;\n' > "$RFIX"
 ok "התאמת מיכל: fittedSizeRef · getSize · בקרה · מאזין חלון" "5 · 0 · 1 · 0" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'fittedSizeRef') · $(grep -c 'known\.x' app/lib/Map.tsx) · $(grep -c 'known\.x' "$RFIX") · $(grep -c 'addEventListener("resize"' app/lib/Map.tsx)"
-ok "המתנה מלאכותית · שתי בקרות" "0 · 2 · 4" "$(delay_count $PFILES) · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PFILES | paste -sd+ - | bc)"
+ok "המתנה מלאכותית · נקראו · שתי בקרות" "0 · 36 · 2 · 4" "$(delay_scan "$PFILES") · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PLANNERS | paste -sd+ - | bc)"
+# ושתי השורות שלמעלה הן אותו תיקון, ולכן המחלקה נבדקת כאן ולא נזכרת.
+# ב-08.11 נמצא שבלוק הזה החזיק **שתי** אוכלוסיות ככתב — חמישה קבצים
+# ללוח הזמנים ושניים להמתנה — ושתיהן נולדו נכונות והתיישנו בשקט: הן
+# מגנות על המופעים שנתפסו ולא על הקובץ שייכתב מחר. שתיהן עברו ל-find.
+# המספר הוא כמה רשימות קשיחות נשארו, והוא 1 בכוונה: PLANNERS, שהיא
+# עוגן לשני קבצים מסוימים ולא אוכלוסייה — handlePlan אינו קיים בשאר
+# app/, והרחבתה הייתה הופכת אותה לספירה של כלום.
+# כלומר **רשימה קשיחה חדשה תפיל את השורה הזאת ותידרש להסביר את עצמה.**
+# זה מה שהופך את הלקח לבקרה במקום להערה שצריך לזכור.
+# כלל 5ג: כאן שורה אחת היא רשימה אחת, ולכן ספירת שורות היא הנכונה.
+# התבנית ASCII בלבד, כלל 11. הבקרה היא מתקן עם שתי רשימות ואחת שאינה.
+LFIX=/tmp/reg-lists-fixture.sh
+printf 'AFILES="a/b.ts c/d.tsx"\nBFILES="e/f.py"\nX="not a file"\n' > "$LFIX"
+ok "רשימות קבצים קשיחות בבלוק · בקרה" "1 · 2" "$(grep -cE '^[A-Z_]+="[^"]*\.(ts|tsx|py|mjs|sh)' scripts/regression.sh) · $(grep -cE '^[A-Z_]+="[^"]*\.(ts|tsx|py|mjs|sh)' "$LFIX")"
 # כלל 11: הספירה באה מהמודול עצמו ולא מפרסר, כדי שהוא יהיה בשימוש.
 # הקו האדום הוא Y, ושנקר יושב במערך השטוח מיד לפני קריית אריה — סוף ענף
 # אחד ליד סוף הענף האחר. כל מי שגוזר שכנות ממקום במערך מצייר ביניהן
