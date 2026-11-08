@@ -431,6 +431,41 @@ console.log([
 ' 2>/dev/null)"
 ok "פרופיל הניתוב: שונים · קצב · בקרה" "שונים · קצב הליכה · בקרה: כן" "$(node scripts/router-profile.mjs count 2>/dev/null)"
 ok "ניתוב: קריאות · צרכנים" "1 · 2" "$(grep -rn --include='*.ts' --include='*.tsx' 'route/v1' app/ | grep -vE '^\S+: *(//|\*)' | wc -l | tr -d ' ') · $(grep -rn --include='*.ts' --include='*.tsx' 'fetchFootRoute(' app/ | grep -v 'export async function' | wc -l | tr -d ' ')"
+# **ושתי השורות שלמעלה מגנות על המנתב, לא על מה שמוצג.** שלושה מקומות
+# בממשק מדפיסים זמן הליכה, ורק שניים מהם מעבירים את המרחק דרך
+# walkEstimate — כלומר דרך סף 8 ודרך walkNote. השלישי הוא כרטיס המפה
+# ב-Map.tsx, שמחשב `distanceMetres` בלבד (שורות 872–877) ומזין את
+# **המרחק האווירי** ל-walkMinutes בשורה 1026. אין בקובץ הזה שום קריאה
+# למנתב, ולכן גם אין לו מה להשוות ואין לו מה להודיע.
+#
+# נמדד על המסך ב-08.11.2026, לא נגזר: לחיצה ב-32.07399,34.84589 הציגה
+# "התחנה הקרובה · שנקר · 2.2 ק״מ · כ-27 דק׳ הליכה". המסלול הרגלי
+# האמיתי לאותו זוג הוא 3,390 מ׳, כלומר כ-42 דקות. הכרטיס מקטין את
+# ההליכה ב-1.2 ק״מ וב-15 דקות. בלחיצה שנייה, 4.9 ק״מ מול 6.5 במסלול.
+# זאת אותה מחלקה בדיוק של התקלה שהאזור הזה נולד ממנה — מרחק מסוג אחד
+# מוצג כהליכה — רק שהפעם המרחק אווירי ולא של רכב.
+#
+# **נעול כפער ידוע ולא כאפס**, כמו שומר ההליכה עצמו: "3 · 2" פירושו
+# שלושה מציגים ושניים מגודרים. צרכן רביעי יפיל את השורה; תיקון כרטיס
+# המפה יפיל אותה גם הוא, וידרוש לעדכן ל-"3 · 3". הסעיף המלא: open-items.
+# הבקרה היא מתקן עם קובץ מגודר אחד ואחד שאינו, ששייך למחלקה ולא לקוד.
+GFIX=/tmp/reg-gate-fixture
+rm -rf "$GFIX" && mkdir -p "$GFIX"
+printf 'const e = walkEstimate(a, r);\nconst s = `כ-${walkMinutes(e.metres)} דק׳`;\n' > "$GFIX/gated.tsx"
+printf 'const s = `כ-${walkMinutes(air)} דק׳`;\n' > "$GFIX/ungated.tsx"
+gate_counts(){
+  local shows=0 gated=0 f
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in */data.ts) continue;; esac
+    [ -r "$f" ] || continue
+    grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -q 'walkMinutes(' || continue
+    shows=$(( shows + 1 ))
+    grep -vE '^[[:space:]]*(//|\*)' "$f" | grep -q 'walkEstimate(' && gated=$(( gated + 1 ))
+  done <<< "$1"
+  echo "$shows · $gated"
+}
+ok "זמן הליכה: מציגים · מגודרים · בקרה" "3 · 2 · 2 · 1" "$(gate_counts "$(find app -name '*.tsx' -o -name '*.ts' | sort)") · $(gate_counts "$(find "$GFIX" -name '*.tsx' | sort)")"
 ok "פרטיות מצהירה על השרת בפועל" "1" "$(grep -c 'routing.openstreetmap.de' app/privacy/PrivacyContent.tsx)"
 # **החלפה שקטה**: הצגנו משהו אחר ממה שהמשתמש ביקש, ולא אמרנו זאת.
 # בעל האתר הקליד "יוספטל 82" וקיבל את 92, את הקניון ואת תחנת
