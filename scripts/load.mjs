@@ -36,6 +36,12 @@ export async function load() {
     PLACES: places.PLACES,
     STATION_CONTENT: content.STATION_CONTENT,
     STATION_FAQ: content.STATION_FAQ,
+    // נגזר מהרשומות ב-stationContent.ts ועובר כ-prop לשלושה עמודים.
+    // נוסף ב-08.11 כדי שבדיקה תוכל להשוות את המשפט השלם למה שמוגש,
+    // במקום לחפש תת-מחרוזת שלו.
+    STATION_TYPE_BREAKDOWN: content.STATION_TYPE_BREAKDOWN,
+    STATION_TYPE_COUNTS: content.STATION_TYPE_COUNTS,
+    TRENCH_STATIONS: content.TRENCH_STATIONS,
     RAIL_STATIONS: rail.RAIL_STATIONS,
     railDistance: rail.railDistance,
   };

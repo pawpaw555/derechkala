@@ -115,8 +115,15 @@ if (!isMain) {
 } else {
 
 const m = await load();
-const [station, home, map] = await Promise.all([text(STATION), text("/"), text("/map")]);
-const vis = { station: visible(station), home: visible(home), map: visible(map) };
+const [station, home, map, redline] = await Promise.all([
+  text(STATION), text("/"), text("/map"), text("/line-red"),
+]);
+const vis = {
+  station: visible(station),
+  home: visible(home),
+  map: visible(map),
+  redline: visible(redline),
+};
 
 const missing = [];
 let checked = 0;
@@ -133,6 +140,20 @@ for (const [name, a] of [["FARE_ANSWER", m.FARE_ANSWER], ["SURCHARGE_ANSWER", m.
 }
 
 
+// פילוג סוגי התחנות — המשפט **השלם**, בטקסט הנראה, בשלושת הצרכנים.
+//
+// STATION_TYPE_BREAKDOWN נגזר מהרשומות ועובר כ-prop לשלושה עמודים.
+// השורה שהגנה עליו בבלוק חיפשה את תת-המחרוזת "23 עיליות" ב-HTML הגולמי
+// של שניים מהם. שלוש חולשות באותה שורה: עמוד הבית הוא צרכן שלישי ולא
+// נבדק כלל; תת-מחרוזת עוברת גם אם סעיף השיקוע נקטע — בדיוק מחלקת
+// הקטיעה שהקובץ הזה נולד ממנה; ו-HTML גולמי עונה "כן" גם למחרוזת
+// שיושבת רק במטען ה-RSC. כאן זה המשפט כולו, אחרי הסרת ה-JSON-LD.
+for (const [page, v] of [["עמוד הבית", vis.home], ["/map", vis.map], ["/line-red", vis.redline]]) {
+  checked++;
+  if (!v.includes(m.STATION_TYPE_BREAKDOWN))
+    missing.push(`${page} · פילוג סוגי התחנות אינו גלוי`);
+}
+
 let faqPages = 0;
 for (const [page, html, v] of [["/map", map, vis.map], ["עמוד תחנה", station, vis.station]]) {
   const { gaps, pairs, found } = compareFaqPage(page, html, v);
@@ -148,6 +169,12 @@ const control =
   vis.station.includes("הקו האדום") &&
   vis.home.includes("הקו האדום") &&
   vis.map.includes("הקו האדום") &&
+  vis.redline.includes("הקו האדום") &&
+  // בלי זה, STATION_TYPE_BREAKDOWN שאינו מיוצא מ-load.mjs היה
+  // undefined, שלוש ההשוואות היו נכשלות, והכשל היה נראה כמו תקלה
+  // בעמודים. הוא נוסף ל-load.mjs ב-08.11 בדיוק בגלל זה.
+  typeof m.STATION_TYPE_BREAKDOWN === "string" &&
+  m.STATION_TYPE_BREAKDOWN.length > 20 &&
   faqPages === 2;
 
 if (process.argv.includes("count") || process.env.COUNT) {
