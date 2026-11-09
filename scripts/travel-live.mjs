@@ -29,8 +29,15 @@ const NAMES = new Map([
 ]);
 const ours = (n) => NAMES.get(n) ?? n;
 
-const ents = (s) =>
-  s.replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, "&");
+// כלל 5ב, וכלל 3. המפענח כאן טיפל בצורה מספרית אחת בלבד — `&#039;` —
+// ולא בכלל. שמות התחנות הם בדיוק המקום שזה נשבר בו: `הבעש"ט` יכול
+// להגיע כ-`&quot;` (מטופל) או כ-`&#34;` (לא היה מטופל), ואותו אתר
+// כבר הוכח שכותב את אותו תו בשתי צורות — זה מה שהפיל את
+// hours-live.mjs ב-08.11. המפענח המשותף מכסה את שתיהן.
+// `&#039;` נכלל בו — `Number("039")` הוא 39 — ולכן אין צורך בשורה
+// נפרדת לגרש, והשארתה הייתה נראית כאילו היא עושה משהו.
+const { decodeEntities } = await import("./faq-rendered.mjs");
+const ents = decodeEntities;
 
 let session = null;
 async function init() {

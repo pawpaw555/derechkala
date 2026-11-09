@@ -21,13 +21,18 @@ async function text(url) {
     headers: { "user-agent": "derechkala-verify/1.0" },
     signal: AbortSignal.timeout(60000),
   });
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&quot;/g, '"')
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ");
+  // כלל 5ב, וכלל 3 — אחרי שתוקן מופע אחד, סורקים את המחלקה. המפענח
+  // כאן כיסה שלוש ישויות בשם בלבד, בדיוק כמו ב-hours-live.mjs לפני
+  // 08.11 — ושם החסר הזה הפיל מסלול אחד מתוך חמישה **באותו אתר**.
+  // נמדד 09.11.2026 ששני דפי המחיר של דנקל אכן נושאים ישויות
+  // מספריות: `&#8211;` ו-`&#038;`. הן אינן יושבות כרגע בתוך מחרוזת
+  // מחיר, ולכן הבדיקה עברה — אבל זה מזל ולא מבנה.
+  // המפענח המשותף יושב ב-faq-rendered.mjs: מספריות לפני שמיות,
+  // ו-`&amp;` אחרון, אחרת `&amp;#8211;` מפוענח פעמיים.
+  const { decodeEntities } = await import("./faq-rendered.mjs");
+  return decodeEntities(
+    html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")
+  ).replace(/\s+/g, " ");
 }
 
 const m = await load();
