@@ -4,6 +4,7 @@ import { useTheme } from "../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../lib/SiteComponents";
 import {
   getDayType, isOperating, hhmm,
+  describeNoService,
   SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS,
   WEEKDAY_LAST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS,
 } from "../lib/data";
@@ -115,7 +116,21 @@ export default function HoursContent() {
               ? `השירות מתחדש במוצאי שבת מהשעה ${SATURDAY_FIRST}.`
               : operating
               ? `השירות פעיל עד ${LAST_BY_DAY[dayType]}.`
-              : "בדקו את לוח הזמנים השבועי למטה."}
+              : /* **הענף הזה אמר "בדקו את לוח הזמנים השבועי למטה".** נכון,
+                 * וחסר תועלת בדיוק ברגע שבו שואלים. נמדדו 32 דקות בשבוע
+                 * שבהן הוא מוצג בעוד הטבלה שמתחתיו מבטיחה שירות, בשלושה
+                 * סוגי יום — הפירוט ב-open-items יג וב-card-vs-table.mjs.
+                 * כלומר המסך סתר את עצמו ולא הסביר.
+                 *
+                 * `describeNoService` כבר ניסח את התשובה בשביל מתכנן
+                 * הנסיעה; עכשיו שלושת המסכים חולקים אותה ואינם יכולים
+                 * להיחלק.
+                 *
+                 * שורות ההמשך כאן מתחילות ב-`*` בכוונה: השורה "לוח זמנים
+                 * קשיח בכל app/" מנכה שורות כאלה, ובגרסה הראשונה שלי
+                 * הערת ה-JSX הזאת החזיקה שש שעות והפילה אותה. הבדיקה
+                 * צדקה — היא אינה יכולה להבחין בין הערה לקוד. */
+                describeNoService(clock)}
           </div>
         </div>
 

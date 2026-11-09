@@ -919,7 +919,17 @@ export type NoService = { noService: true; reason: string };
 export const hhmm = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-function describeNoService(date: Date): string {
+/**
+ * המשפט שמסביר **למה** אין רכבת ברגע נתון.
+ *
+ * מיוצא מ-09.11.2026: עד אז הוא שירת רק את מתכנן הנסיעה, וכרטיס הסטטוס
+ * ב-/hours אמר בענף השלישי שלו "בדקו את לוח הזמנים השבועי למטה" — נכון,
+ * וחסר תועלת בדיוק ברגע שבו המשתמש שואל. נמדדו 32 דקות בשבוע שבהן
+ * הכרטיס אמר "לא פועלת כרגע" והטבלה באותו מסך הבטיחה שירות
+ * (`scripts/card-vs-table.mjs`), ובכולן המשפט הזה אומר את הדבר הנכון.
+ * שלושת המסכים חולקים עכשיו ניסוח אחד ואינם יכולים להיחלק.
+ */
+export function describeNoService(date: Date): string {
   const t = getDayType(date);
   const mins = date.getHours() * 60 + date.getMinutes();
   if (t === "saturday" && mins < SATURDAY_NIGHT_FIRST_MINS)
@@ -928,8 +938,14 @@ function describeNoService(date: Date): string {
   // עברה את FRIDAY_LAST_MINS. בתנאי הקודם ארבע הדקות האלה נפלו לשורה
   // האחרונה ואמרו "מתחדש מחר ב-05:30" — ובשישי מחר היא שבת, שבה אין
   // שירות עד מוצאי שבת. נחשף כשהגבול העליון נכנס ל-isOperating.
+  // **"יוצאת ב-14:10" הוחלף ב-"נגמר ב-14:10" ב-09.11.2026.** הענף הזה
+  // נקרא רק כשאין שירות, ובשישי מעל 05:30 פירושו שהיציאה האחרונה כבר
+  // הייתה — ולכן זמן עתיד הבטיח רכבת שלא תגיע. ב-14:07–14:10 זה היה
+  // בולט במיוחד: ארבע דקות בכל שבוע שבהן המשפט מבטיח יציאה בעוד רגע.
+  // "השירות נגמר ב-" מתאר את חלון השירות שדנקל מפרסמת, והוא נכון בכל
+  // דקה בענף — גם ב-14:08 וגם ב-20:00 — בלי להבטיח יציאה.
   if (t === "friday" && mins >= SERVICE_FIRST_MINS)
-    return `בערב שבת הרכבת האחרונה יוצאת ב-${hhmm(FRIDAY_LAST_MINS)}. השירות מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
+    return `בערב שבת השירות נגמר ב-${hhmm(FRIDAY_LAST_MINS)}. הוא מתחדש במוצאי שבת ב-${hhmm(SATURDAY_NIGHT_FIRST_MINS)}.`;
   if (mins < SERVICE_FIRST_MINS)
     return `הרכבת מתחילה לפעול ב-${hhmm(SERVICE_FIRST_MINS)}.`;
   // נשארנו בתוך שעות השירות אבל אין עוד יציאה היום — כלומר הרכבת
