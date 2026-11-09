@@ -590,7 +590,16 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
 
       {/* Hero */}
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "52px 24px 36px", textAlign: "center" }}>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.25 }}>
+        {/*
+          textWrap balance ולא נקודת שבירה קשיחה. נמדד על הכותרת עצמה:
+          ב-36 פיקסל המשפט דורש 352 פיקסל טקסט, כלומר מסך של 400 פיקסל.
+          בטלפון של 375 נשארו 327, והשבירה הטבעית נתנה
+          "הרכבת הקלה של גוש" ואז "דן" לבדה. balance באותו רוחב נותן
+          "הרכבת הקלה" ואז "של גוש דן", וב-382 פיקסל שתי הצורות חוזרות
+          לשורה אחת — כלומר הכלל מפסיק לפעול מעצמו ואינו צריך מדיה-קוורי
+          שיתיישן. דפדפן שאינו תומך מתעלם ונשאר בהתנהגות הקודמת.
+        */}
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.25, textWrap: "balance" }}>
           הרכבת הקלה של גוש דן
         </h1>
 
