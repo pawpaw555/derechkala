@@ -33,14 +33,9 @@ import { load } from "./load.mjs";
 const BASE = process.argv.find((a) => /^https?:\/\//.test(a)) || process.env.BASE || "http://localhost:3011";
 const mode = process.argv[2];
 
-function decodeEntities(s) {
-  return s
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&quot;/g, '"')
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&");
-}
+// מפענח אחד לכל הסקריפטים, ב-faq-rendered.mjs. כאן ישב עותק שני שלו,
+// זהה — ושני עותקים זהים הם שני עותקים שייחלקו ביום שאחד מהם יתוקן.
+const { decodeEntities } = await import("./faq-rendered.mjs");
 
 async function links() {
   const m = await load();
@@ -61,6 +56,51 @@ async function links() {
   const negative = !uniq.includes("תחנת הדמיון");
   const control = ours.length === 34 && edges && negative;
   return { total: names.length, uniq: uniq.length, missing, extra, sameOrder, control };
+}
+
+// ── fares ────────────────────────────────────────────────────────────
+// טקסט המחיר **המלא**, בכל 34 עמודי התחנה.
+//
+// זאת הטענה היחידה באתר שעולה לקורא כסף אם היא שגויה, וזה בדיוק המקום
+// שבו הקטיעה קרתה: `FARE_ANSWER` נכתב כשרשור של שלוש תבניות ב-`+`,
+// המודול היה תקין, ו-Next פלט אותו קטוע — "ומעבר לכך 14.5במשך 90בטווח" —
+// **ב-154 קבצים מוכני רינדור**, כולל כל 34 עמודי התחנה ושני בלוקי
+// ה-JSON-LD שגוגל קורא. שתי בדיקות עברו על הטקסט השבור: אחת השוותה
+// את המודול לעצמו, והשנייה חיפשה "8 ₪" שנשאר שלם.
+//
+// `faq-rendered.mjs` נולד מזה והוא משווה טקסט מלא — אבל על **עמוד תחנה
+// אחד**. הקטיעה פגעה ב-34. כאן נסגר ההפרש: 34 עמודים × 4 תשובות.
+//
+// הבקרה אינה "0". היא ששתי תשובות המחיר נמצאות בפועל בקבוצה שהושוותה:
+// בלעדיה אפשר להשוות 136 מחרוזות נכונות שאינן המחיר, ולקבל 0 מושלם.
+async function fares() {
+  const { visible, jsonLd } = await import("./faq-rendered.mjs");
+  const m = await load();
+  const answers = m.STATION_FAQ.map((f) => f.a);
+  // הבקרה שמכוונת את הבדיקה לשאלה הנכונה
+  const coversFare = answers.includes(m.FARE_ANSWER) && answers.includes(m.SURCHARGE_ANSWER);
+
+  let pages = 0, compared = 0, missVis = 0, missLd = 0, seen = 0;
+  const bad = [];
+  for (const st of m.STATIONS) {
+    const res = await fetch(`${BASE}/station/${encodeURIComponent(st.name)}`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) { bad.push(`${st.name} · HTTP ${res.status}`); continue; }
+    const html = decodeEntities(await res.text());
+    pages++;
+    const vis = visible(html);
+    if (vis.includes("הקו האדום")) seen++;
+    for (const a of answers) {
+      compared++;
+      if (!vis.includes(a)) { missVis++; bad.push(`${st.name} · לא נראה: ${a.slice(0, 40)}`); }
+    }
+    const faq = jsonLd(html).find((x) => x["@type"] === "FAQPage");
+    for (const it of faq?.mainEntity ?? []) {
+      const text = it?.acceptedAnswer?.text ?? "";
+      if (!text || !vis.includes(text)) { missLd++; bad.push(`${st.name} · ב-JSON-LD ואינו נראה: ${(it?.name ?? "").slice(0, 30)}`); }
+    }
+  }
+  const control = coversFare && pages === 34 && seen === 34 && compared === 136;
+  return { pages, compared, missVis, missLd, control, coversFare, bad };
 }
 
 async function css() {
@@ -95,6 +135,16 @@ if (mode === "links") {
     console.log("בקרה (קצוות + שם מומצא): %s", r.control ? "כן" : "לא");
   }
   process.exit(!r.missing.length && !r.extra.length && r.sameOrder && r.control ? 0 : 1);
+} else if (mode === "fares") {
+  const r = await fares();
+  if (process.argv.includes("count"))
+    console.log("%d · %d · %d · %d · בקרה: %s", r.missVis, r.missLd, r.pages, r.compared, r.control ? "כן" : "לא");
+  else {
+    console.log("עמודים %d · השוואות %d · חסר בנראה %d · JSON-LD שאינו נראה %d", r.pages, r.compared, r.missVis, r.missLd);
+    for (const b of r.bad.slice(0, 12)) console.log("  ✗ %s", b);
+    console.log("שתי תשובות המחיר בקבוצה שהושוותה: %s · בקרה: %s", r.coversFare ? "כן" : "לא", r.control ? "כן" : "לא");
+  }
+  process.exit(!r.missVis && !r.missLd && r.control ? 0 : 1);
 } else if (mode === "css") {
   const r = await css();
   if (process.argv.includes("count"))
@@ -103,6 +153,6 @@ if (mode === "links") {
     console.log("כלל הטבעת מוגש ב-%d מתוך %d עמודים · %d גיליונות נשלפו · בקרה ב-%d", r.served, r.pages, r.sheets, r.controls);
   process.exit(r.served === r.pages && r.controls === r.pages ? 0 : 1);
 } else {
-  console.log("שימוש: served.mjs links|css [count] [base-url]");
+  console.log("שימוש: served.mjs links|fares|css [count] [base-url]");
   process.exit(2);
 }
