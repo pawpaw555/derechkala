@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Station, distanceMetres, formatDistance, walkMinutes, isWalkable, stationLabel, LINE_SEGMENTS, areAdjacent } from "./data";
+import { Station, distanceMetres, formatDistance, isWalkable, stationLabel, LINE_SEGMENTS, areAdjacent } from "./data";
 import { PLACES } from "./places";
 import { RAIL_STATIONS, railDistance } from "./railStations";
 import { useTheme } from "./useTheme";
@@ -1020,10 +1020,23 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
                 <span style={{ color: t.muted }}>התחנה הקרובה · </span>
                 <strong>{pickedNearest.station.name}</strong>
               </div>
+              {/* **הכרטיס הזה הציג מרחק אווירי כזמן הליכה.** `pickedNearest`
+                  מחושב ב-`distanceMetres` בלבד (שורות 872–877), ואין בקובץ
+                  הזה שום קריאה למנתב — ולכן אין לו מסלול להשוות אליו, אין
+                  לו את סף 8 להחיל, ואין לו `walkNote` להציג. נמדד על המסך
+                  ב-09.11.2026: לחיצה ב-32.07399,34.84589 הראתה
+                  "שנקר · 2.2 ק״מ · כ-27 דק׳ הליכה" להליכה של 3,390 מ׳
+                  וכ-42 דקות. זאת אותה מחלקה שהאזור הזה נולד ממנה — מרחק
+                  מסוג אחד מוצג כהליכה — רק שהפעם הוא אווירי ולא של רכב.
+
+                  התיקון הוא ניסוח ולא קריאת רשת: הכרטיס אומר מה המספר
+                  **הוא**, ואינו גוזר ממנו זמן שאינו יכול לעמוד מאחוריו.
+                  המרחק המדויק ומשך ההליכה נמצאים בעמוד התחנה, כפתור אחד
+                  מכאן. open-items יד. */}
               <div style={{ fontSize: 12, color: t.muted, marginTop: 2 }}>
-                {formatDistance(pickedNearest.metres)}
+                {formatDistance(pickedNearest.metres)} בקו אווירי
                 {isWalkable(pickedNearest.metres)
-                  ? ` · כ-${walkMinutes(pickedNearest.metres)} דק׳ הליכה`
+                  ? " · ההליכה בפועל ארוכה יותר"
                   : " — רחוק מכדי ללכת"}
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
