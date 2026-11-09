@@ -28,6 +28,26 @@
 // 08.11.2026. מה שכן נמדד שם: ההצהרה **מסוגלת** לגבור על ה-style
 // המוטבע, והיא זקוקה ל-!important כדי לעשות זאת — בלעדיו הגבול נשאר
 // rgb(208,208,220), כי `border: 1.5px solid #d0d0dc` יושב inline.
+//
+// ── clarity ──────────────────────────────────────────────────────────
+// תנאי הדומיין שעוטף את סקריפט Clarity. עד 01.11.2026 הוא נטען ללא
+// תנאי, ולכן כל בנייה מקומית נרשמה לפרויקט החי: ב-31.10 הופיעו בלוח
+// המחוונים 22 צפיות מ-localhost, והשגיאה היחידה שדווחה — `_leaflet_pos`
+// — הגיעה מסשן בדיקות ולא ממשתמש. מדידה שמערבת את מי שבודק את האתר
+// עם מי שמשתמש בו אינה מדידה.
+//
+// **וזאת הבדיקה היחידה כאן שנכתבה לקומיט שאי אפשר לאמת מהמחשב.**
+// התנאי הוא על `location.hostname`, ולכן בלוקאלהוסט הסקריפט כבוי בין
+// אם הוא תקין ובין אם התנאי נמחק — "עובד" ו"שבור" נראים שם זהים.
+// נמדד 09.11.2026 בהצלבה של 103 הקומיטים שלא נדחפו: `clarity` החזיר
+// אפס מופעים בכל `scripts/`, מול בקרה חיובית באותה פקודה שהחזירה 4.
+// כלומר זה היה הקומיט היחיד מתוך 49 הנוגעים ב-`app/` בלי שום כיסוי.
+//
+// מה שכן ניתן למדידה מכאן: **שהתנאי מוגש**, ושהוא עוטף את הטוען ולא
+// יושב לידו. ההשוואה היא ללשון אחת מלאה — התנאי, הדומיין, והסוגריים
+// שפותחים את ה-IIFE — ולכן מחיקת התנאי, שינוי דומיין, או תנאי שאינו
+// עוטף, שלושתם מפילים אותה. מה שהיא אינה אומרת: שהסקריפט אכן נטען על
+// הדומיין עצמו. את זה רק לוח המחוונים של Clarity יכול לומר, אחרי דחיפה.
 import { load } from "./load.mjs";
 
 const BASE = process.argv.find((a) => /^https?:\/\//.test(a)) || process.env.BASE || "http://localhost:3011";
@@ -103,8 +123,11 @@ async function fares() {
   return { pages, compared, missVis, missLd, control, coversFare, bad };
 }
 
+// ארבעת העמודים משותפים ל-css ול-clarity, ולכן הם יושבים פעם אחת:
+// שתי רשימות זהות הן שתי רשימות שייחלקו ביום שאחת מהן תתעדכן (כלל 4).
+const PAGES = ["/", "/line-red", "/map", "/hours"];
+
 async function css() {
-  const PAGES = ["/", "/line-red", "/map", "/hours"];
   let served = 0, controls = 0, sheets = 0;
   for (const p of PAGES) {
     const html = await (await fetch(BASE + p, { signal: AbortSignal.timeout(20000) })).text();
@@ -122,6 +145,34 @@ async function css() {
     if (ctl) controls++;
   }
   return { pages: PAGES.length, served, controls, sheets };
+}
+
+async function clarity() {
+  const TAG = "yrc8o851ob";
+  // לשון אחת מלאה, ולא שלוש בדיקות נפרדות: התנאי, הדומיין, והסוגריים
+  // שפותחים את ה-IIFE. תנאי שיושב ליד הטוען ואינו עוטף אותו אינו מכיל
+  // את `) {(function(`, ולכן אינו עובר כאן.
+  const GATE = 'location.hostname === "derechkala.online") {(function(';
+  // Next מסרר את הסקריפט המוטבע כמחרוזת, ולכן הגרשיים מוגשים כ-`\\"`.
+  // שיטוח הלוכסנים הופך את ההשוואה לעמידה בפני רמת ההברחה, שהיא פרט
+  // סריאליזציה — אותו לקח של "23 עיליות" שמופיע פעמיים באחד וארבע באחר.
+  const flat = (h) => h.replace(/\\/g, "");
+  let gated = 0, tags = 0;
+  const bad = [];
+  for (const p of PAGES) {
+    const h = flat(await (await fetch(BASE + p, { signal: AbortSignal.timeout(20000) })).text());
+    const hasTag = h.includes(TAG);
+    if (hasTag) tags++; else bad.push(`${p} · אין סקריפט Clarity בכלל`);
+    if (h.includes(GATE)) gated++;
+    else if (hasTag) bad.push(`${p} · הסקריפט מוגש בלי תנאי הדומיין`);
+  }
+  // בקרה שלילית על המסמך המוגש עצמו, בלי לערוך אף קובץ: אותו עמוד
+  // כשהתנאי נמחק ממנו חייב להיכשל **והתג חייב להישאר**. בלעדיה
+  // "אין תנאי" ו"אין Clarity בכלל" נראים כאן זהים.
+  const raw = flat(await (await fetch(BASE + PAGES[0], { signal: AbortSignal.timeout(20000) })).text());
+  const stripped = raw.replace(GATE, "(function(");
+  const negative = raw.includes(GATE) && !stripped.includes(GATE) && stripped.includes(TAG);
+  return { pages: PAGES.length, gated, tags, negative, bad };
 }
 
 if (mode === "links") {
@@ -152,7 +203,17 @@ if (mode === "links") {
   else
     console.log("כלל הטבעת מוגש ב-%d מתוך %d עמודים · %d גיליונות נשלפו · בקרה ב-%d", r.served, r.pages, r.sheets, r.controls);
   process.exit(r.served === r.pages && r.controls === r.pages ? 0 : 1);
+} else if (mode === "clarity") {
+  const r = await clarity();
+  if (process.argv.includes("count"))
+    console.log("%d/%d · תג: %d · שלילית: %s", r.gated, r.pages, r.tags, r.negative ? "כן" : "לא");
+  else {
+    console.log("תנאי הדומיין מוגש ב-%d מתוך %d עמודים · הסקריפט עצמו ב-%d", r.gated, r.pages, r.tags);
+    for (const b of r.bad) console.log("  ✗ %s", b);
+    console.log("בקרה שלילית (התנאי נמחק מהמסמך המוגש): %s", r.negative ? "כן" : "לא");
+  }
+  process.exit(r.gated === r.pages && r.tags === r.pages && r.negative ? 0 : 1);
 } else {
-  console.log("שימוש: served.mjs links|fares|css [count] [base-url]");
+  console.log("שימוש: served.mjs links|fares|css|clarity [count] [base-url]");
   process.exit(2);
 }
