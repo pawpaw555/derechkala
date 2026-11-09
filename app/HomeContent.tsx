@@ -314,6 +314,18 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
   // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
   const [planInstant, setPlanInstant] = useState<Date | null>(null);
+  /**
+   * הזמן שבו השירות מתחדש אחרי הזמן שהמשתמש ביקש, כשהתשובה היא
+   * "אין רכבת". נשמר כאן ולא מחושב ברינדור, כי חישובו קורא `new Date()`
+   * דרך `pickerDefaults`, ו-`new Date()` ברינדור הוא בדיוק מה שגרם
+   * ל-/hours להגיש "פועלת עכשיו" לפי שעון של יום הבנייה.
+   *
+   * התווית נשמרת איתו מאותו טעם: `dayLabel` צריך "עכשיו" כדי לדעת אם
+   * היום הוא "היום" או "רביעי".
+   */
+  const [nextService, setNextService] = useState<
+    { day: number; hour: number; minute: number; label: string } | null
+  >(null);
   const finder = useNearestStation();
   const { locError, locating } = finder;
   /** מה הוזן מהכתובת, ומאיזה עמוד הגענו — כדי להסביר למשתמש מה קרה. */
@@ -494,14 +506,34 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
     // שני הענפים עוברים דרך פונקציה אחת כל אחד, כדי שהחישוב לא ישוכפל
     // ויתפצל. הנקודה שנבחרה נשמרת, כי רשימת "עזיבות הבאות" מתחת לכרטיס
     // בנתה את עצמה משעת ההגעה המבוקשת וסתרה אותו.
+    let r: ReturnType<typeof findRoute>;
     if (useCustomTime && timeMode === "arrival") {
-      const r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
+      r = findRouteByArrival(fromStation.name, toStation.name, baseDate);
       setResult(r);
       setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
     } else {
       const departures = getNextDepartures(baseDate, 1);
-      setResult(findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate));
+      r = findRoute(fromStation.name, toStation.name, departures[0]?.minsFromNow, baseDate);
+      setResult(r);
       setPlanInstant(baseDate);
+    }
+
+    // כשאין רכבת, מחשבים כאן את הזמן שבו השירות מתחדש **אחרי הזמן
+    // שנבחר** ולא אחרי עכשיו: מי ששאל על שבת ב-10:00 רוצה לדעת מתי
+    // השירות חוזר בשבת, לא מה קורה בעוד רגע. `pickerDefaults` הוא אותה
+    // פונקציה שמזינה את הבוררים עצמם, ולכן הזמן שמוצע כאן הוא תמיד
+    // משבצת שהבורר יכול להציג והמתכנן מקבל — השורה "שירות: ...·בורר"
+    // בבלוק מודדת בדיוק את זה על כל 10,080 הדקות בשבוע.
+    if (r && isNoService(r)) {
+      const n = pickerDefaults(MINUTE_STEP, baseDate);
+      // התווית נגזרת מ**עכשיו האמיתי** ולא מ-baseDate. `dayLabel` מודד
+      // מרחק בימים מ"עכשיו", ולכן העברת baseDate הייתה מכריזה "היום"
+      // על השבת שהמשתמש שאל עליה בעוד חמישה ימים. אותו היגיון בדיוק
+      // שבגללו קיים `dayLabel` מלכתחילה: "שני" ביום שלישי הוא בעוד שישה
+      // ימים, והממשק לא אמר את זה. הרגע נגזר מהזמן שנבחר, השם מעכשיו.
+      setNextService({ ...n, label: `${hhmm(n.hour * 60 + n.minute)}, ${dayLabel(n.day, new Date())}` });
+    } else {
+      setNextService(null);
     }
   };
 
@@ -640,6 +672,55 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
                 אין רכבת בזמן שבחרת
               </div>
               <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
+              {/* **הקופסה הזאת הייתה מבוי סתום.** היא מחליפה את כל כרטיס
+                  החיפוש, והיא היחידה משלושת הענפים כאן שלא החזיקה שום
+                  דרך חזרה — לתוצאה רגילה יש "חפש מסלול אחר", ולטופס אין
+                  מה לחזור אליו. נמדד 09.11.2026 בתוך הכרטיס:
+                  7 כפתורים · 2 שדות · 3 בוררים ← 0 · 0 · 0. הכתובת
+                  וההיסטוריה אינן משתנות, ולכן גם "חזור" אינו מחזיר —
+                  הוא מוציא מהעמוד. רק רענון החזיר את הטופס.
+
+                  **וכפתור שרק מנקה היה סוגר לופ:** מצב הזמן היה נשאר על
+                  אותה שעה שאין בה שירות, והחיפוש הבא היה מחזיר את אותה
+                  הודעה. לכן הכפתור הראשון מזיז גם את הזמן, ל"יוצא ב־"
+                  בשעה שבה השירות מתחדש. */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                {nextService && (
+                  <button
+                    onClick={() => {
+                      setCustomDay(nextService.day);
+                      setCustomHour(nextService.hour);
+                      setCustomMinute(nextService.minute);
+                      // כדי ש-chooseTime לא ידרוס את זה בשעה הנוכחית
+                      // בפעם הבאה שייבחר "יוצא ב־".
+                      timeSeeded.current = true;
+                      setTimeMode("departure");
+                      setUseCustomTime(true);
+                      setResult(null);
+                      setNextService(null);
+                    }}
+                    style={{
+                      background: "#b04050", border: "1px solid #b04050",
+                      borderRadius: 10, padding: "10px 14px", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      fontFamily: "'Rubik', sans-serif",
+                    }}
+                  >
+                    תכננו ל-{nextService.label}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setResult(null); setNextService(null); }}
+                  style={{
+                    background: "transparent", border: `1px solid ${t.border}`,
+                    borderRadius: 10, padding: "10px 14px", color: t.muted,
+                    fontSize: 13, fontWeight: 500, cursor: "pointer",
+                    fontFamily: "'Rubik', sans-serif",
+                  }}
+                >
+                  שנו את החיפוש
+                </button>
+              </div>
               <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
                 לוח שעות הפעילות המלא ←
               </a>

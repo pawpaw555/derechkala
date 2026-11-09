@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
+import { Station, Landmark, findRoute, findRouteByArrival, isNoService, hhmm, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
@@ -57,6 +57,10 @@ export default function StationClient({ stationName, station }: Props) {
   // הערכים שלמעלה נדרסים בשעה הנוכחית בבחירה הראשונה של שעה מפורשת.
   // רק הראשונה: מי שחזר ל"עכשיו" ושוב לשעה מפורשת לא מאבד את מה שהגדיר.
   const timeSeeded = useRef(false);
+  /** ראה את ההערה ב-HomeContent: נשמר ואינו מחושב ברינדור. */
+  const [nextService, setNextService] = useState<
+    { day: number; hour: number; minute: number; label: string } | null
+  >(null);
   const chooseTime = (next: TimeChoiceValue) => {
     if (next === "now") { setUseCustomTime(false); return; }
     if (!timeSeeded.current) {
@@ -190,14 +194,26 @@ const content = STATION_CONTENT[stationName];
 
     // החישוב סינכרוני ומקומי — ראה את אותה הערה ב-HomeContent. גם כאן
     // ישבה המתנה מלאכותית של 2 עד 3 שניות, ואיתה מצב loading שלא חיכה לכלום.
+    let r: ReturnType<typeof findRoute>;
     if (useCustomTime && timeMode === "arrival") {
-      const r = findRouteByArrival(origin, dest, baseDate);
+      r = findRouteByArrival(origin, dest, baseDate);
       setResult(r);
       setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
     } else {
       const departures = getNextDepartures(baseDate, 1);
-      setResult(findRoute(origin, dest, departures[0]?.minsFromNow, baseDate));
+      r = findRoute(origin, dest, departures[0]?.minsFromNow, baseDate);
+      setResult(r);
       setPlanInstant(baseDate);
+    }
+
+    // אותו חישוב כמו ב-HomeContent, ומאותו טעם. ראה את ההערה המלאה שם.
+    // בעמוד הזה הקפיצה היא 15 ולא 1, ולכן הזמן המוצע מתיישר לרשת של
+    // הבוררים כאן — `pickerDefaults` מקבל את הקפיצה בדיוק בשביל זה.
+    if (r && isNoService(r)) {
+      const n = pickerDefaults(MINUTE_STEP, baseDate);
+      setNextService({ ...n, label: `${hhmm(n.hour * 60 + n.minute)}, ${dayLabel(n.day, new Date())}` });
+    } else {
+      setNextService(null);
     }
   };
 
@@ -360,6 +376,45 @@ const content = STATION_CONTENT[stationName];
                 אין רכבת בזמן שבחרת
               </div>
               <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
+              {/* כאן הטופס לא ננעל כמו בעמוד הבית — כפתור הכיוון יושב
+                  מעל התנאי ומנקה את התוצאה. אבל זאת יציאה **במקרה**,
+                  דרך פקד שאינו קשור, והלופ זהה: הזמן נשאר על השעה שאין
+                  בה שירות. אותם שני כפתורים, מאותו חישוב. */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                {nextService && (
+                  <button
+                    onClick={() => {
+                      setCustomDay(nextService.day);
+                      setCustomHour(nextService.hour);
+                      setCustomMinute(nextService.minute);
+                      timeSeeded.current = true;
+                      setTimeMode("departure");
+                      setUseCustomTime(true);
+                      setResult(null);
+                      setNextService(null);
+                    }}
+                    style={{
+                      background: "#b04050", border: "1px solid #b04050",
+                      borderRadius: 10, padding: "10px 14px", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      fontFamily: "'Rubik', sans-serif",
+                    }}
+                  >
+                    תכננו ל-{nextService.label}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setResult(null); setNextService(null); }}
+                  style={{
+                    background: "transparent", border: `1px solid ${t.border}`,
+                    borderRadius: 10, padding: "10px 14px", color: t.muted,
+                    fontSize: 13, fontWeight: 500, cursor: "pointer",
+                    fontFamily: "'Rubik', sans-serif",
+                  }}
+                >
+                  שנו את החיפוש
+                </button>
+              </div>
               <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
                 לוח שעות הפעילות המלא ←
               </a>
