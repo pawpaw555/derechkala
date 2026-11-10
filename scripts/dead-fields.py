@@ -25,8 +25,19 @@
 `verification` ו-`verifiedGap` שכבר בבסיס. קוראים אותו שלושה סקריפטים:
 `addresses.mjs`, `provenance.mjs` ו-`verified-facts.mjs`. זאת העלאה
 מוצדקת של תקרה, והיא נרשמת כאן ולא רק בבלוק כדי שמי שיראה 14 יידע למה.
+
+**10.11.2026: ההפרדה נעשתה, במקום עלייה רביעית.** `coordSource`
+ו-`coordVerification` נוספו ל-59 רשומות LANDMARKS, והתקרה הייתה עולה
+מ-15 ל-17 — בדיוק מה שהפסקה שמעל חזתה. תקרה שמעלים בכל פעם שהיא
+נוגעת אינה שומר. שדות התיעוד נספרים מעכשיו **בנפרד**, והמניין הראשון
+חוזר למשמעותו: שדה שהשכבה מחשבת ואיש אינו רואה.
+
+**והפטור אינו רשימת שמות שנסמוך עליה.** כל שם ב-PROVENANCE חייב
+להיקרא בפועל על ידי סקריפט תחת `scripts/`, והבדיקה מאמתת את זה בכל
+הרצה. שם שיאבד את הקורא שלו ייפול בחזרה למניין הראשון מעצמו — כלומר
+הפטור פג כשהסיבה לו פגה, בלי שאיש יזכור לבדוק.
 """
-import io, os, re, sys, collections
+import io, os, re, sys, collections, glob
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DECL = (r'(?:export\s+)?(?:type|interface)\s+\w+\s*=?\s*\{(.*?)\n\}',
@@ -55,11 +66,48 @@ def scan():
     return declared, dead
 
 
+# שדות תיעוד: קיימים כדי שלטענה יהיה מקור, ואין להם קורא בממשק במכוון.
+PROVENANCE = ('addressSource', 'nameFactSource', 'coordSource',
+              'coordVerification', 'verification', 'verifiedGap', 'sourceGap')
+
+
+def script_readers():
+    """מי מהשמות באמת נקרא על ידי סקריפט. בלי זה הפטור הוא רשימה שמתיישנת."""
+    text = []
+    for p in glob.glob(os.path.join(ROOT, 'scripts', '*.*')):
+        # הסקריפט עצמו, ובלוק הרגרסיה. הבלוק **מריץ** סקריפטים ואינו
+        # צרכן של שדה — והערה בתוכו אינה קריאה. בהרצה הראשונה שלי
+        # הוא העלה את המניין מ-5 ל-7, כי כתבתי שם בהערה את שמות שני
+        # השדות שהבדיקה פסלה. אותה מלכודת כמו הערת ה-JSX שהפילה את
+        # סריקת הזמנים הקשיחים: טקסט חופשי נספר כמו קוד.
+        if os.path.basename(p) in (os.path.basename(__file__), 'regression.sh'):
+            continue
+        try:
+            text.append(io.open(p, encoding='utf-8').read())
+        except (UnicodeDecodeError, IsADirectoryError):
+            pass
+    return {f for f in PROVENANCE if sum(t.count(f) for t in text) > 0}
+
+
 if __name__ == '__main__':
     declared, dead = scan()
+    readers = script_readers()
+    doc = [f for f in dead if f in readers]
+    real = [f for f in dead if f not in readers]
     if len(sys.argv) > 1 and sys.argv[1] == 'count':
-        print(len(dead))
+        print(len(real))
+    elif len(sys.argv) > 1 and sys.argv[1] == 'doc':
+        # שני המספרים: שדות תיעוד מתוך הרשימה, וכמה מהם אומתו כנקראים
+        print('%d · נקראים בסקריפט %d' % (len(doc), len(readers)))
     else:
-        print('שדות מוכרזים: %d · בלי קורא בממשק: %d' % (len(declared), len(dead)))
-        for f in dead:
+        print('שדות מוכרזים: %d · בלי קורא בממשק: %d · מהם תיעוד: %d'
+              % (len(declared), len(dead), len(doc)))
+        print('בלי קורא בכלל:')
+        for f in real:
             print('   ' + f)
+        print('תיעוד (נקראים בסקריפט, לא בממשק):')
+        for f in doc:
+            print('   ' + f)
+        missing = [f for f in PROVENANCE if f not in readers]
+        if missing:
+            print('⚠ ברשימת הפטור ואין להם קורא בסקריפט: ' + ', '.join(missing))

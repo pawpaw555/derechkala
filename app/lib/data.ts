@@ -12,8 +12,14 @@ export type Station = {
 export type Landmark = {
   name: string;
   stationName: string;
+  /** נכתב ביד. עד שיש קואורדינטה אין מול מה לבדוק אותו — ראו coordSource. */
   walkMins: number;
   lineId: "red" | "green" | "purple";
+  /** קואורדינטה שיש לה מקור. נעדרת = לא הוכרעה; seo-data/landmark-coords.md */
+  lat?: number;
+  lng?: number;
+  coordSource?: string;
+  coordVerification?: "two" | "single" | "address";
 };
 export const STATIONS: Station[] = [
   // ── קו אדום — פתח תקווה ──────────────────────────────
@@ -66,97 +72,97 @@ export const LANDMARKS: Landmark[] = [
   // תחנה מרכזית פתח תקווה
   // אומת ב-Nominatim: השוק נמצא 667 מ' מהתחנה המרכזית ו-387 מ' מפינסקר.
   // ארבע הדקות שהוצהרו כאן התאימו למרחק שגוי ולתחנה שגויה.
-  { name: "שוק פתח תקווה", stationName: "פינסקר", walkMins: 5, lineId: "red" },
+  { name: "שוק פתח תקווה", stationName: "פינסקר", walkMins: 5, lineId: "red", lat: 32.09034, lng: 34.88193, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   { name: "תיאטרון המסילה", stationName: "תחנה מרכזית פתח תקווה", walkMins: 6, lineId: "red" },
   // פינסקר
   { name: "מתחמי הבילוי גיסין", stationName: "פינסקר", walkMins: 5, lineId: "red" },
   // דנקנר
-  { name: "פארק יד לבנים פתח תקווה", stationName: "דנקנר", walkMins: 4, lineId: "red" },
-  { name: "מוזיאון האדם והסביבה", stationName: "דנקנר", walkMins: 5, lineId: "red" },
+  { name: "פארק יד לבנים פתח תקווה", stationName: "דנקנר", walkMins: 4, lineId: "red", lat: 32.08655, lng: 34.87326, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
+  { name: "מוזיאון האדם והסביבה", stationName: "דנקנר", walkMins: 5, lineId: "red", lat: 32.08836, lng: 34.87319, coordSource: "מקור יחיד · ויקינתונים (OSM נפסל על המרחק)", coordVerification: "single" },
   // בילינסון
-  { name: "בית חולים בילינסון", stationName: "בילינסון", walkMins: 3, lineId: "red" },
+  { name: "בית חולים בילינסון", stationName: "בילינסון", walkMins: 3, lineId: "red", lat: 32.08945, lng: 34.86779, coordSource: "שני מקורות · OSM + ויקינתונים", coordVerification: "two" },
   // הוסר: "מרכז רפואי רבין" הוא שמו הרשמי של בית חולים בילינסון. שתי
   // הרשומות גיאוקודו לאותה נקודה בדיוק, 33 מ' מהתחנה, אבל הצהירו 3 ו-4
   // דקות — אותו מקום הופיע פעמיים באותו כרטיס עם שני זמנים.
-  { name: "בית חולים שניידר", stationName: "בילינסון", walkMins: 5, lineId: "red" },
+  { name: "בית חולים שניידר", stationName: "בילינסון", walkMins: 5, lineId: "red", lat: 32.08854, lng: 34.86858, coordSource: "שני מקורות · OSM + ויקינתונים", coordVerification: "two" },
   // שחם
-  { name: "B.S.R סיטי", stationName: "שחם", walkMins: 4, lineId: "red" },
+  { name: "B.S.R סיטי", stationName: "שחם", walkMins: 4, lineId: "red", lat: 32.09153, lng: 34.86127, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // שנקר
   // הוסר: "מכללת שנקר, תחנת שנקר, 3 דקות". המכללה ברמת גן ברחוב אנה פרנק,
   // 4.8 ק"מ מתחנת שנקר שבפתח תקווה — כשעה הליכה, לא שלוש דקות. השיוך הנכון
   // הוא לאבא הלל, והוא יושב ב-places.ts עם קואורדינטה מאומתת.
   // קריית אריה
-  { name: "אצטדיון שלמה ביטוח", stationName: "קריית אריה", walkMins: 5, lineId: "red" },
+  { name: "אצטדיון שלמה ביטוח", stationName: "קריית אריה", walkMins: 5, lineId: "red", lat: 32.1042, lng: 34.86508, coordSource: "מקור יחיד · ויקינתונים", coordVerification: "single" },
   // אבא הלל
-  { name: "בורסת היהלומים", stationName: "אבא הלל", walkMins: 4, lineId: "red" },
-  { name: "מגדל משה אביב", stationName: "אבא הלל", walkMins: 5, lineId: "red" },
+  { name: "בורסת היהלומים", stationName: "אבא הלל", walkMins: 4, lineId: "red", lat: 32.08344, lng: 34.80102, coordSource: "מקור יחיד · OSM (ויקינתונים נפסל על המרחק)", coordVerification: "single" },
+  { name: "מגדל משה אביב", stationName: "אבא הלל", walkMins: 5, lineId: "red", lat: 32.08343, lng: 34.80374, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // ארלוזורוב
-  { name: "תחנת רכבת סבידור מרכז", stationName: "ארלוזורוב", walkMins: 3, lineId: "red" },
+  { name: "תחנת רכבת סבידור מרכז", stationName: "ארלוזורוב", walkMins: 3, lineId: "red", lat: 32.08503, lng: 34.79852, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // שאול המלך
-  { name: "מרכז עזריאלי", stationName: "שאול המלך", walkMins: 5, lineId: "red" },
-  { name: "בית חולים איכילוב", stationName: "שאול המלך", walkMins: 6, lineId: "red" },
+  { name: "מרכז עזריאלי", stationName: "שאול המלך", walkMins: 5, lineId: "red", lat: 32.0747, lng: 34.79197, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
+  { name: "בית חולים איכילוב", stationName: "שאול המלך", walkMins: 6, lineId: "red", lat: 32.08056, lng: 34.79, coordSource: "ויקינתונים Q2561450 — הטענה ללא מקור מצוטט", coordVerification: "single" },
   // יהודית
-  { name: "מתחם שרונה", stationName: "יהודית", walkMins: 5, lineId: "red" },
+  { name: "מתחם שרונה", stationName: "יהודית", walkMins: 5, lineId: "red", lat: 32.07325, lng: 34.7868, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // קרליבך
-  { name: "קניון TLV", stationName: "קרליבך", walkMins: 4, lineId: "red" },
+  { name: "קניון TLV", stationName: "קרליבך", walkMins: 4, lineId: "red", lat: 32.06833, lng: 34.78321, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // אלנבי
-  { name: "שוק הכרמל", stationName: "אלנבי", walkMins: 11, lineId: "red" },
-  { name: "שדרות רוטשילד", stationName: "אלנבי", walkMins: 6, lineId: "red" },
+  { name: "שוק הכרמל", stationName: "אלנבי", walkMins: 11, lineId: "red", lat: 32.06837, lng: 34.76855, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
+  { name: "שדרות רוטשילד", stationName: "אלנבי", walkMins: 6, lineId: "red", lat: 32.06599, lng: 34.77722, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // אליפלט
   { name: "פארק המסילה", stationName: "אליפלט", walkMins: 4, lineId: "red" },
-  { name: "נווה צדק", stationName: "אליפלט", walkMins: 7, lineId: "red" },
+  { name: "נווה צדק", stationName: "אליפלט", walkMins: 7, lineId: "red", lat: 32.05974, lng: 34.76674, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // שלמה (סלמה)
-  { name: "יפו העתיקה", stationName: "שלמה (סלמה)", walkMins: 11, lineId: "red" },
-  { name: "תיאטרון גשר", stationName: "שלמה (סלמה)", walkMins: 5, lineId: "red" },
+  { name: "יפו העתיקה", stationName: "שלמה (סלמה)", walkMins: 11, lineId: "red", lat: 32.05382, lng: 34.75333, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
+  { name: "תיאטרון גשר", stationName: "שלמה (סלמה)", walkMins: 5, lineId: "red", lat: 32.05331, lng: 34.75165, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // אצטדיון בלומפילד
-  { name: "אצטדיון בלומפילד", stationName: "אצטדיון בלומפילד", walkMins: 4, lineId: "red" },
-  { name: "שוק הפשפשים", stationName: "שלמה (סלמה)", walkMins: 4, lineId: "red" },
+  { name: "אצטדיון בלומפילד", stationName: "אצטדיון בלומפילד", walkMins: 4, lineId: "red", lat: 32.05184, lng: 34.76158, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
+  { name: "שוק הפשפשים", stationName: "שלמה (סלמה)", walkMins: 4, lineId: "red", lat: 32.05358, lng: 34.75627, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // הבעש"ט
-  { name: "בית חולים וולפסון", stationName: "הבעש\"ט", walkMins: 9, lineId: "red" },
+  { name: "בית חולים וולפסון", stationName: "הבעש\"ט", walkMins: 9, lineId: "red", lat: 32.0353, lng: 34.7631, coordSource: "ויקינתונים Q2091071 (P143) + OSM \"Wolfson Medical Center\" — פער 68 מ׳", coordVerification: "two" },
   // יוספטל
-  { name: "קניון בת ים", stationName: "יוספטל", walkMins: 5, lineId: "red" },
+  { name: "קניון בת ים", stationName: "יוספטל", walkMins: 5, lineId: "red", lat: 32.01526, lng: 34.7561, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // בלפור
-  { name: "עיריית בת ים", stationName: "בלפור", walkMins: 4, lineId: "red" },
+  { name: "עיריית בת ים", stationName: "בלפור", walkMins: 4, lineId: "red", lat: 32.0162, lng: 34.74122, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // הקוממיות
-  { name: "אצטדיון בת ים", stationName: "הקוממיות", walkMins: 5, lineId: "red" },
+  { name: "אצטדיון בת ים", stationName: "הקוממיות", walkMins: 5, lineId: "red", lat: 32.00081, lng: 34.7484, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
   // ── כתובות רחובות ────────────────────────────────────────────
-  { name: "זאב אורלוב 70", stationName: "תחנה מרכזית פתח תקווה", walkMins: 1, lineId: "red" },
-  { name: "זאב אורלוב 41", stationName: "פינסקר", walkMins: 1, lineId: "red" },
-  { name: "זאב אורלוב 8", stationName: "קרול", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 31 פתח תקווה", stationName: "דנקנר", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 72 פתח תקווה", stationName: "בילינסון", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 82 פתח תקווה", stationName: "שחם", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 101 פתח תקווה", stationName: "שנקר", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 166 בני ברק", stationName: "אהרונוביץ'", walkMins: 1, lineId: "red" },
+  { name: "זאב אורלוב 70", stationName: "תחנה מרכזית פתח תקווה", walkMins: 1, lineId: "red", lat: 32.0947, lng: 34.8868, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "זאב אורלוב 41", stationName: "פינסקר", walkMins: 1, lineId: "red", lat: 32.0938, lng: 34.8825, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "זאב אורלוב 8", stationName: "קרול", walkMins: 1, lineId: "red", lat: 32.0917, lng: 34.8772, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 31 פתח תקווה", stationName: "דנקנר", walkMins: 1, lineId: "red", lat: 32.091, lng: 34.8718, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 72 פתח תקווה", stationName: "בילינסון", walkMins: 1, lineId: "red", lat: 32.0915, lng: 34.8664, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 82 פתח תקווה", stationName: "שחם", walkMins: 1, lineId: "red", lat: 32.0919, lng: 34.8614, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 101 פתח תקווה", stationName: "שנקר", walkMins: 1, lineId: "red", lat: 32.0926, lng: 34.8536, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 166 בני ברק", stationName: "אהרונוביץ'", walkMins: 1, lineId: "red", lat: 32.0927, lng: 34.8382, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
   { name: "ז'בוטינסקי 117 בני ברק", stationName: "אהרונוביץ'", walkMins: 2, lineId: "red" },
-  { name: "ז'בוטינסקי 12 בני ברק", stationName: "בן גוריון", walkMins: 1, lineId: "red" },
-  { name: "ז'בוטינסקי 85 רמת גן", stationName: "ביאליק", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 12 בני ברק", stationName: "בן גוריון", walkMins: 1, lineId: "red", lat: 32.0908, lng: 34.8229, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ז'בוטינסקי 85 רמת גן", stationName: "ביאליק", walkMins: 1, lineId: "red", lat: 32.0864, lng: 34.8115, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
   { name: "ז'בוטינסקי 68 רמת גן", stationName: "ביאליק", walkMins: 2, lineId: "red" },
-  { name: "ז'בוטינסקי 5 רמת גן", stationName: "אבא הלל", walkMins: 1, lineId: "red" },
-  { name: "מנחם בגין 160", stationName: "ארלוזורוב", walkMins: 1, lineId: "red" },
-  { name: "מנחם בגין 125", stationName: "שאול המלך", walkMins: 1, lineId: "red" },
-  { name: "מנחם בגין 144", stationName: "שאול המלך", walkMins: 1, lineId: "red" },
-  { name: "מנחם בגין 112", stationName: "יהודית", walkMins: 1, lineId: "red" },
+  { name: "ז'בוטינסקי 5 רמת גן", stationName: "אבא הלל", walkMins: 1, lineId: "red", lat: 32.0829, lng: 34.803, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מנחם בגין 160", stationName: "ארלוזורוב", walkMins: 1, lineId: "red", lat: 32.0815, lng: 34.7962, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מנחם בגין 125", stationName: "שאול המלך", walkMins: 1, lineId: "red", lat: 32.0766, lng: 34.792, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מנחם בגין 144", stationName: "שאול המלך", walkMins: 1, lineId: "red", lat: 32.0766, lng: 34.792, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מנחם בגין 112", stationName: "יהודית", walkMins: 1, lineId: "red", lat: 32.0702, lng: 34.7884, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
   { name: "מנחם בגין 98", stationName: "יהודית", walkMins: 2, lineId: "red" },
-  { name: "קרליבך לינקולן", stationName: "קרליבך", walkMins: 1, lineId: "red" },
-  { name: "קרליבך מנחם בגין", stationName: "קרליבך", walkMins: 1, lineId: "red" },
-  { name: "יהודה הלוי 63", stationName: "אלנבי", walkMins: 1, lineId: "red" },
-  { name: "מקווה ישראל 10", stationName: "אלנבי", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 15", stationName: "שלמה (סלמה)", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 42", stationName: "אצטדיון בלומפילד", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 94", stationName: "ארליך", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 120", stationName: "איסקוב", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 146", stationName: "הבעש\"ט", walkMins: 1, lineId: "red" },
-  { name: "שדרות ירושלים 210", stationName: "מחרוזת", walkMins: 1, lineId: "red" },
-  { name: "שד' העצמאות 69", stationName: "העצמאות", walkMins: 1, lineId: "red" },
-  { name: "רוטשילד 17 בת ים", stationName: "רוטשילד", walkMins: 1, lineId: "red" },
-  { name: "הרצל 64 בת ים", stationName: "ז'בוטינסקי", walkMins: 1, lineId: "red" },
-  { name: "יוספטל 44", stationName: "בלפור", walkMins: 1, lineId: "red" },
-  { name: "יוספטל 70", stationName: "בנימין", walkMins: 1, lineId: "red" },
-  { name: "יוספטל 82", stationName: "יוספטל", walkMins: 1, lineId: "red" },
-  { name: "ניסבאום 48", stationName: "כ\"ט בנובמבר", walkMins: 1, lineId: "red" },
-  { name: "ניסבאום 7", stationName: "העמל", walkMins: 1, lineId: "red" },
-  { name: "מנחם בגין 4 בת ים", stationName: "הקוממיות", walkMins: 1, lineId: "red" },
+  { name: "קרליבך לינקולן", stationName: "קרליבך", walkMins: 1, lineId: "red", lat: 32.0653, lng: 34.7829, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "קרליבך מנחם בגין", stationName: "קרליבך", walkMins: 1, lineId: "red", lat: 32.0653, lng: 34.7829, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "יהודה הלוי 63", stationName: "אלנבי", walkMins: 1, lineId: "red", lat: 32.0626, lng: 34.7746, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מקווה ישראל 10", stationName: "אלנבי", walkMins: 1, lineId: "red", lat: 32.0626, lng: 34.7746, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 15", stationName: "שלמה (סלמה)", walkMins: 1, lineId: "red", lat: 32.0542, lng: 34.7594, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 42", stationName: "אצטדיון בלומפילד", walkMins: 1, lineId: "red", lat: 32.05, lng: 34.7589, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 94", stationName: "ארליך", walkMins: 1, lineId: "red", lat: 32.0457, lng: 34.7583, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 120", stationName: "איסקוב", walkMins: 1, lineId: "red", lat: 32.0419, lng: 34.7569, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 146", stationName: "הבעש\"ט", walkMins: 1, lineId: "red", lat: 32.0384, lng: 34.7556, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שדרות ירושלים 210", stationName: "מחרוזת", walkMins: 1, lineId: "red", lat: 32.0333, lng: 34.7515, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "שד' העצמאות 69", stationName: "העצמאות", walkMins: 1, lineId: "red", lat: 32.0279, lng: 34.7488, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "רוטשילד 17 בת ים", stationName: "רוטשילד", walkMins: 1, lineId: "red", lat: 32.0267, lng: 34.7441, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "הרצל 64 בת ים", stationName: "ז'בוטינסקי", walkMins: 1, lineId: "red", lat: 32.0214, lng: 34.7432, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "יוספטל 44", stationName: "בלפור", walkMins: 1, lineId: "red", lat: 32.0173, lng: 34.745, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "יוספטל 70", stationName: "בנימין", walkMins: 1, lineId: "red", lat: 32.0163, lng: 34.7488, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "יוספטל 82", stationName: "יוספטל", walkMins: 1, lineId: "red", lat: 32.0152, lng: 34.7525, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ניסבאום 48", stationName: "כ\"ט בנובמבר", walkMins: 1, lineId: "red", lat: 32.0105, lng: 34.7513, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "ניסבאום 7", stationName: "העמל", walkMins: 1, lineId: "red", lat: 32.0061, lng: 34.7492, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
+  { name: "מנחם בגין 4 בת ים", stationName: "הקוממיות", walkMins: 1, lineId: "red", lat: 32.0024, lng: 34.7469, coordSource: "כתובת התחנה — מאומתת מול דנקל", coordVerification: "address" },
 ];
 /**
  * מקלדת עברית ותיקון אוטומטי באייפון מייצרים גרש (U+05F3) וגרשיים

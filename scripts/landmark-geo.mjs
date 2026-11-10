@@ -93,6 +93,41 @@ const station = new Map(m.STATIONS.map((s) => [s.name, s]));
 const content = m.STATION_CONTENT;
 const norm = (s) => (s || "").replace(/[,'׳]/g, "").replace(/\s+/g, " ").trim();
 
+// ── מצב check ────────────────────────────────────────────────────
+// בלי רשת. בודק את מה שכבר יושב ב-data.ts, ולכן יכול לרוץ בבלוק בכל
+// הרצה: כל קואורדינטה שנכתבה חייבת להיות בטווח שפוי מהתחנה שאליה
+// הרשומה משויכת, וכל רשומה עם קואורדינטה חייבת לשאת שדה מקור.
+// זאת העמודה השלישית של הטבלה — הקואורדינטות שלנו, שכבר מאומתות —
+// והיא זאת שתפסה את איכילוב ואת וולפסון כשהגיאוקודר שלח אותם 6 ו-8
+// ק״מ משם, ואת תיאטרון המסילה ב-13.5 ק״מ.
+if (process.argv[2] === "check") {
+  const withCoord = m.LANDMARKS.filter((l) => l.lat !== undefined);
+  const far = [], noSource = [];
+  for (const l of withCoord) {
+    const st = station.get(l.stationName);
+    if (!st) continue;
+    const d = Math.round(hav(l.lat, l.lng, st.lat, st.lng));
+    if (d > STATION_MAX_M) far.push(`${l.name} · ${d} מ׳`);
+    if (!l.coordSource || !l.coordVerification) noSource.push(l.name);
+  }
+  // בקרה חיובית: הקיצוניות שנמדדה בפועל. אם המקסימום צנח לאפס,
+  // הקואורדינטות נמחקו או שהחישוב שבור — ו-"0 רחוקות" היה נכון
+  // על אוכלוסייה ריקה.
+  const maxD = Math.max(0, ...withCoord.map((l) => {
+    const st = station.get(l.stationName);
+    return st ? Math.round(hav(l.lat, l.lng, st.lat, st.lng)) : 0;
+  }));
+  if (process.argv.includes("count"))
+    console.log("%d · %d · %d · הרחוקה ביותר %d מ׳", withCoord.length, far.length, noSource.length, maxD);
+  else {
+    console.log("עם קואורדינטה %d מתוך %d · רחוקות מהתחנה %d · בלי שדה מקור %d · הרחוקה ביותר %d מ׳",
+      withCoord.length, m.LANDMARKS.length, far.length, noSource.length, maxD);
+    for (const f of far) console.log("  ✗ רחוקה מהתחנה: %s", f);
+    for (const n of noSource) console.log("  ✗ בלי שדה מקור: %s", n);
+  }
+  process.exit(!far.length && !noSource.length && maxD > 0 ? 0 : 1);
+}
+
 // כתובת התחנה עצמה — מזוהה מהנתונים, לא מרשימה שהוקלדה.
 //
 // הדרישה: **כל** מילה בשם חייבת להופיע בכתובת התחנה. הגרסה הראשונה
