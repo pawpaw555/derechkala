@@ -1,12 +1,38 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { findNearestStation } from "./data";
+import { findNearestStation, normalizeHebrew } from "./data";
 // טיפוס בייבוא נפרד, אחרת טוען המודולים של node מחפש אותו כערך —
 // אותה תקלה שתוקנה ב-places.ts. בלי זה scripts/silent-selftest.mjs
 // נופל ב-"does not provide an export named Station".
 import type { Station } from "./data";
 
-export type Place = { label: string; lat: number; lng: number; housenumber?: string };
+export type Place = {
+  label: string;
+  lat: number;
+  lng: number;
+  housenumber?: string;
+  /**
+   * הרחוב כפי שהמקור מסר אותו, בנפרד מהתווית. בלעדיו אי אפשר לדעת אם
+   * מספר הבית שחזר הוא **הבית שהוקלד** או בית באותו מספר ברחוב אחר.
+   */
+  street?: string;
+};
+
+/**
+ * האם הרחוב שהמקור החזיר הוא הרחוב שהמשתמש הקליד.
+ *
+ * **נולד מבדיקה ידנית של בעל האתר ב-10.11.2026.** הוא הקליד
+ * "הוד השרון הרמה 1", ובראש הרשימה הופיע "שיבולת השרון · זקיף 1" —
+ * מספר בית 1 **ברחוב אחר לגמרי**. שלוש התנהגויות נשענו על אותה השוואה
+ * חסרה, ולכן שלושתן נשברו יחד: הדירוג קידם את זקיף, תנאי הנפילה
+ * ל-Nominatim החליט ש"נמצא מספר 1" ולא רץ, וההודעה "מספר 1 לא נמצא"
+ * נשתקה. מכאן שההשוואה יושבת בפונקציה אחת שכולן קוראות לה.
+ */
+export function typedStreet(q: string, street?: string): boolean {
+  if (!street) return false;
+  const ns = normalizeHebrew(street);
+  return ns.length > 1 && normalizeHebrew(q).includes(ns);
+}
 
 /**
  * המשתמש ביקש מספר בית ואף תוצאה לא נושאת אותו — מחזיר את המספר.
@@ -27,7 +53,8 @@ export function missingHouseNumber(q: string, places: Place[]): string | null {
   const wanted = (q.match(/\d+/) || [])[0];
   if (!wanted) return null;
   if (!places.length) return null;
-  return places.some(p => p.housenumber === wanted) ? null : wanted;
+  // הרחוב נבדק יחד עם המספר. בלי זה "הרמה 1" נענה ב-"זקיף 1" והמשפט נשתק.
+  return places.some(p => p.housenumber === wanted && typedStreet(q, p.street)) ? null : wanted;
 }
 
 /**
@@ -186,6 +213,7 @@ async function searchByHouseNumber(q: string): Promise<Place[]> {
       const area = a.suburb && a.suburb !== city ? a.suburb : null;
       return {
         housenumber: a.house_number,
+        street: a.road,
         label: [street, area, city].filter(Boolean).join(" · ") || x.display_name.split(",").slice(0, 3).join(" · "),
         lat: Number(x.lat),
         lng: Number(x.lon),
@@ -227,8 +255,16 @@ export async function lookupPlaces(q: string): Promise<Place[]> {
         const named = p.name && p.name !== p.street && p.street ? p.name : null;
         return {
           housenumber: p.housenumber,
+          street: p.street || p.name,
           label: [named, street, area, p.city].filter(Boolean).join(" · ") || p.name || q,
-          rank: wanted && p.housenumber === wanted ? 2 : p.housenumber ? 1 : 0,
+          // כשהוקלד מספר בית, הרחוב קודם למספר: בית באותו מספר ברחוב אחר
+          // אינו תשובה. בלי התנאי הזה "זקיף 1" קיבל 2 ו-"הרמה" קיבל 0.
+          // כשלא הוקלד מספר — הדירוג הישן, כדי שהשינוי יישאר במקרה שנשבר.
+          rank: wanted
+            ? (typedStreet(q, p.street || p.name)
+                ? (p.housenumber === wanted ? 3 : 2)
+                : p.housenumber ? 1 : 0)
+            : (p.housenumber ? 1 : 0),
           lat: f.geometry.coordinates[1],
           lng: f.geometry.coordinates[0],
         };
@@ -238,7 +274,11 @@ export async function lookupPlaces(q: string): Promise<Place[]> {
 
     // המשתמש ביקש מספר בית ו-Photon לא החזיר אותו — זה המקרה שבו
     // "הלוחמים 2 תל אביב" החזיר רק את הרחוב בלי הבית.
-    const gotNumber = wanted && (d.features || []).some((f: PhotonFeature) => f.properties?.housenumber === wanted);
+    // "החזיר את מה שביקשת" = אותו מספר **ובאותו רחוב**. בלי החלק השני,
+    // מספר בית מקרי ברחוב אחר ביטל את הפנייה ל-Nominatim — שהוא המקור
+    // היחיד שיודע מספרי בית ש-Photon לא יודע.
+    const gotNumber = wanted && (d.features || []).some((f: PhotonFeature) =>
+      f.properties?.housenumber === wanted && typedStreet(q, f.properties?.street || f.properties?.name));
     const extra = wanted && !gotNumber ? await searchByHouseNumber(q) : [];
 
     const seen = new Set<string>();
