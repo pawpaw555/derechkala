@@ -83,10 +83,17 @@ export default function RadioPills<T extends string>({
             style={{
               flex: 1, padding, borderRadius: 8,
               border: `1px solid ${on ? (selectedBorder ?? t.borderSelected) : t.border}`,
-              background: on ? t.resultBg : "transparent",
-              color: on ? t.text : t.muted,
+              // ⚠ **הנבחר היה רקע בגוון בהיר מאוד וגבול בצבע הקו.** בעל
+              // האתר דיווח ב-10.11.2026 שהוא לא מבחין איזה כפיל נבחר, ולא
+              // מבחין שהמצב התחלף — וזה הפך לקריטי באותו יום, כשהתשובה
+              // התחילה להגיע לבד: אם אינך רואה שעברת ל"יוצא ב־", גם
+              // התשובה שהתחלפה מתחתיה נראית כמו שום דבר. עכשיו הנבחר
+              // **מלא** בצבע ההדגשה, עם טקסט לבן, והמעבר מונפש.
+              background: on ? (selectedBorder ?? t.borderSelected) : "transparent",
+              color: on ? "#ffffff" : t.muted,
               fontFamily: "'Rubik', sans-serif", fontSize: 13,
               fontWeight: on ? 600 : 400, cursor: "pointer",
+              transition: "background 0.18s ease, color 0.18s ease, border-color 0.18s ease",
             }}
           >{text}</button>
         );

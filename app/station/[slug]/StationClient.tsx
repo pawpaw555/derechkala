@@ -569,10 +569,10 @@ const content = STATION_CONTENT[stationName];
               )}
 
               {/* Time picker */}
-              <TimeChoice value={useCustomTime ? timeMode : "now"} onChange={chooseTime} className="btn-toggle-s" />
+              <TimeChoice value={useCustomTime ? timeMode : "now"} onChange={chooseTime} className="btn-toggle-s" selectedBorder={color} />
 
               {useCustomTime && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="reveal" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{
                     background: t.resultBg, border: `1px solid ${t.border}`,
                     borderRadius: 9, padding: "12px 14px",
@@ -647,7 +647,7 @@ const content = STATION_CONTENT[stationName];
               ) : null}
           </div>
           {result && isNoService(result) ? (
-            <div role="alert" style={{
+            <div role="alert" className="reveal" style={{
               background: t.card, border: "1px solid #b0405055", borderRadius: 12,
               padding: "16px 18px", textAlign: "right",
             }}>
@@ -697,7 +697,7 @@ const content = STATION_CONTENT[stationName];
               </a>
             </div>
           ) : result ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="reveal" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {/* Result summary */}
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

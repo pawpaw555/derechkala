@@ -328,8 +328,20 @@ export async function lookupPlaces(q: string): Promise<Place[]> {
       f.properties?.housenumber === wanted && typedStreet(q, f.properties?.street || f.properties?.name));
     const extra = wanted && !gotNumber ? await searchByHouseNumber(q) : [];
 
+    // ⚠ **הנפילה הועמדה בראש ללא תנאי, וזה הזיז תוצאות טובות למטה.**
+    // בעל האתר הקליד "דיזנגוף 50 תל אביב" ב-10.11.2026 וקיבל ארבע שורות
+    // ברמת רחוב — "דיזנגוף · הצפון הישן" ו"ככר דיזנגוף" — כי באותה
+    // שנייה Photon לא החזיר את בית 50, הנפילה רצה, ו-Nominatim החזיר
+    // את הרחוב בלבד. הטעם לקדם את הנפילה הוא **שהיא יודעת מספרי בית
+    // ש-Photon לא יודע**; כשהיא עצמה לא החזירה את המספר, אין לה שום
+    // יתרון על תוצאות Photon והיא יורדת לסוף. נמדד שאותה שאילתה
+    // מחזירה את בית 50 בראש כשהמקור כן מכיר אותו.
+    const isHit = (h: Place) => h.housenumber === wanted && typedStreet(q, h.street);
+    const extraHit = extra.filter(isHit);
+    const extraRest = extra.filter((h: Place) => !isHit(h));
+
     const seen = new Set<string>();
-    const merged = [...extra, ...hits].filter(h => {
+    const merged = [...extraHit, ...hits, ...extraRest].filter(h => {
       const k = h.label;
       if (seen.has(k)) return false;
       seen.add(k);

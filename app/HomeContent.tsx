@@ -824,10 +824,10 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
                 </div>
               )}
 
-              <TimeChoice value={useCustomTime ? timeMode : "now"} onChange={chooseTime} className="btn-toggle" padding="9px 12px" />
+              <TimeChoice value={useCustomTime ? timeMode : "now"} onChange={chooseTime} className="btn-toggle" padding="9px 12px" selectedBorder="#b04050" />
 
               {useCustomTime && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="reveal" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{
                   background: t.resultBg, border: `1px solid ${t.border}`,
                   borderRadius: 10, padding: "12px 14px",
@@ -913,7 +913,7 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
               ) : null}
           </>
           {result && isNoService(result) ? (
-            <div role="alert" style={{
+            <div role="alert" className="reveal" style={{
               background: t.card, border: "1px solid #b0405055", borderRadius: 12,
               padding: "16px 18px", textAlign: "right",
             }}>
@@ -974,7 +974,7 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
             </div>
           ) : result ? (
             /* Collapsed result view */
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="reveal" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, color: t.muted, fontWeight: 500, letterSpacing: "0.04em" }}>מסלול נסיעה</div>

@@ -961,6 +961,32 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               box-shadow: 0 2px 5px rgba(0,0,0,.45); }
         .map-far .mk-station, .map-far .mk-rail { transform: scale(1.3); }
         .map-far .mk-poi { transform: rotate(45deg) scale(1.3); }
+        /**
+         * תיבת סימון שנראית כמתג. בעל האתר דיווח ב-10.11.2026 ש"לא ברור
+         * בכלל שזה מתגים" — והוא צדק: תיבת סימון קטנה ליד נקודת מקרא
+         * נקראת כמו חלק מהמקרא, לא כמו פקד. הסמנטיקה נשארת של תיבת
+         * סימון (רווח וקורא מסך עובדים בלי קוד), רק המראה השתנה.
+         * ובלי גרש אחורי כאן — ההערה שלוש שורות מעל אומרת למה.
+         */
+        .lyr {
+          appearance: none; -webkit-appearance: none;
+          width: 30px; height: 17px; border-radius: 999px;
+          background: ${t.border}; position: relative; margin: 0;
+          cursor: pointer; flex-shrink: 0;
+          transition: background 0.18s ease;
+        }
+        .lyr::after {
+          content: ""; position: absolute; top: 2px; right: 2px;
+          width: 13px; height: 13px; border-radius: 50%;
+          background: #ffffff; box-shadow: 0 1px 2px #0003;
+          transition: transform 0.18s ease;
+        }
+        .lyr:checked { background: #b04050; }
+        /* RTL: הידית יושבת מימין כשכבוי ונעה שמאלה כשדלוק. */
+        .lyr:checked::after { transform: translateX(-13px); }
+        @media (prefers-reduced-motion: reduce) {
+          .lyr, .lyr::after { transition: none; }
+        }
         @media (prefers-reduced-motion: reduce) { .mk { transition: none; } }
       `}</style>
       {/* הרצועה הזאת הייתה טקסט אפור בן 11 פיקסלים על רקע קבוע בהיר —
@@ -969,6 +995,9 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           על המפה. הקריאה לפעולה עברה לתוך המפה עצמה. */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+        // ממורכז מ-10.11.2026, לבקשת בעל האתר: הרצועה יושבת מעל מפה
+        // ממורכזת, ושורה שנצמדת לימין נראית כמו שארית ולא ככותרת שלה.
+        justifyContent: "center",
         padding: "9px 12px", background: t.card,
         borderBottom: `1px solid ${t.border}`,
         fontSize: 12, fontFamily: "'Rubik', sans-serif", direction: "rtl",
@@ -1012,7 +1041,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
               type="checkbox"
               checked={layers[l.key]}
               onChange={() => toggleLayer(l.key)}
-              style={{ width: 13, height: 13, margin: 0, cursor: "pointer", accentColor: "#b04050" }}
+              className="lyr"
             />
             <span style={{ width: 9, height: 9, display: "inline-block", ...l.swatch }} />
             {l.label}
@@ -1020,7 +1049,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         ))}
         {/* הרמז תלוי ביכולת: מפה בלי pickPoint אינה עונה ללחיצה על
             הרקע, ורמז שמבטיח התנהגות שאינה קיימת גרוע מאין רמז. */}
-        <span style={{ color: t.muted, marginRight: "auto" }}>
+        <span style={{ color: t.muted }}>
           {pickPoint ? "לחצו על תחנה, או על כל מקום במפה." : "לחצו על שם או על נקודה לפרטים."}
         </span>
       </div>

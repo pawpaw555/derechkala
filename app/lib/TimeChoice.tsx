@@ -26,10 +26,13 @@ export type TimeChoiceValue = "now" | "departure" | "arrival";
  * `className` מגיע מבחוץ כי כל עמוד מגדיר את המעבר שלו בשם אחר
  * (`btn-toggle` מול `btn-toggle-s`), ושני הכללים זהים בתוכנם.
  */
-export default function TimeChoice({ value, onChange, className, padding = "8px 12px" }: {
+export default function TimeChoice({ value, onChange, className, padding = "8px 12px", selectedBorder }: {
   value: TimeChoiceValue;
   onChange: (next: TimeChoiceValue) => void;
   className: string;
+  /** צבע ההדגשה של הנבחר. בלעדיו הוא נופל לברירת המחדל של הערכה,
+   *  שהיא אפורה — וזה בדיוק מה שלא נראה. */
+  selectedBorder?: string;
   /** עמוד הבית השתמש ב-9px ועמוד התחנה ב-8px. פרמטר, כדי שהאיחוד
    *  לא ישנה בשקט את גובה הכפתור באחד משני העמודים. */
   padding?: string;
@@ -43,6 +46,7 @@ export default function TimeChoice({ value, onChange, className, padding = "8px 
       onChange={onChange}
       className={className}
       padding={padding}
+      selectedBorder={selectedBorder}
       options={[
         ["now", "עכשיו"],
         ["departure", "יוצא ב־"],

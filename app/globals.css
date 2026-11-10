@@ -55,3 +55,22 @@ select:focus-visible {
   box-shadow: 0 0 0 3px #b0405018 !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+
+
+/**
+ * הופעה מוחשת: התשובה בתכנון הנסיעה מגיעה מ-10.11.2026 **לבד**, בלי
+ * לחיצה — ובעל האתר דיווח באותו יום שהוא בכלל לא הבחין שהיא נפתחה.
+ * כשאין פעולה שמקדימה את השינוי, אין לעין רמז לחפש אותו, ולכן ההופעה
+ * עצמה היא הרמז. 280ms — מספיק כדי להיתפס, קצר מכדי לעכב.
+ */
+@keyframes revealIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal { animation: revealIn 0.28s ease-out both; }
+
+/* מי שביקש פחות תנועה מקבל את התוכן בלי האנימציה, לא בלי התוכן. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal { animation: none; }
+}
