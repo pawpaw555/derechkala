@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Station, Landmark, findNearestStation, findRoute, findRouteByArrival, isNoService, hhmm, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
@@ -54,7 +54,7 @@ export default function StationClient({ stationName, station }: Props) {
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
   // שנבחרה, ולא שעת ההגעה המבוקשת — אחרת הרשימה סותרת את הכרטיס שמעליה.
-  const [planInstant, setPlanInstant] = useState<Date | null>(null);
+
   // הקפיצה בבורר הדקות. מזינה גם את אפשרויות ה-select וגם את העיגול
   // ב-pickerDefaults, כדי ששניהם לא יוכלו להתפצל.
   const MINUTE_STEP = 15;
@@ -65,9 +65,6 @@ export default function StationClient({ stationName, station }: Props) {
   // רק הראשונה: מי שחזר ל"עכשיו" ושוב לשעה מפורשת לא מאבד את מה שהגדיר.
   const timeSeeded = useRef(false);
   /** ראה את ההערה ב-HomeContent: נשמר ואינו מחושב ברינדור. */
-  const [nextService, setNextService] = useState<
-    { day: number; hour: number; minute: number; label: string } | null
-  >(null);
   const chooseTime = (next: TimeChoiceValue) => {
     if (next === "now") { setUseCustomTime(false); return; }
     if (!timeSeeded.current) {
@@ -78,7 +75,13 @@ export default function StationClient({ stationName, station }: Props) {
     setTimeMode(next);
     setUseCustomTime(true);
   };
-  const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
+  /**
+   * כמו בעמוד הבית מ-10.11.2026: התשובה נגזרת ואינה נשמרת. ההנמקה
+   * המלאה שם, כולל למה `new Date()` בגזירה בטוח כאן — ההבדל היחיד
+   * הוא שבעמוד הזה תחנה אחת קבועה (זו של העמוד) והשנייה נבחרת.
+   */
+  const [planTick, setPlanTick] = useState(0);
+  const [dismissKey, setDismissKey] = useState<string | null>(null);
   const finder = useNearestStation();
   const [routeHere, setRouteHere] = useState<{ key: string; metres: number; snap: number | null } | null>(null);
 
@@ -137,7 +140,6 @@ const content = STATION_CONTENT[stationName];
     if (toStation) {
       setToStation("");
       setToQuery("");
-      setResult(null);
     }
     const local = val.length >= 2 ? dropSelf(searchCombined(val)) : { stations: [], landmarks: [], places: [] };
     setResults(local);
@@ -213,11 +215,16 @@ const content = STATION_CONTENT[stationName];
   const origin = direction === "from" ? stationName : toStation;
   const dest = direction === "from" ? toStation : stationName;
 
-  const handlePlan = () => {
-    if (!toStation) return;
+  const planKey = [
+    origin, dest, useCustomTime ? timeMode : "now",
+    useCustomTime ? `${customDay}:${customHour}:${customMinute}` : "", planTick,
+  ].join("|");
+
+  const plan = useMemo(() => {
+    if (!toStation) return null;
     const from = STATIONS.find(s => s.name === origin);
     const to = STATIONS.find(s => s.name === dest);
-    if (!from || !to) return;
+    if (!from || !to) return null;
 
     const baseDate = useCustomTime ? dateForDay(customDay) : new Date();
     if (useCustomTime) {
@@ -227,27 +234,32 @@ const content = STATION_CONTENT[stationName];
     // החישוב סינכרוני ומקומי — ראה את אותה הערה ב-HomeContent. גם כאן
     // ישבה המתנה מלאכותית של 2 עד 3 שניות, ואיתה מצב loading שלא חיכה לכלום.
     let r: ReturnType<typeof findRoute>;
+    let instant: Date;
     if (useCustomTime && timeMode === "arrival") {
       r = findRouteByArrival(origin, dest, baseDate);
-      setResult(r);
-      setPlanInstant(r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate);
+      instant = r && !isNoService(r) ? instantFromTime(baseDate, r.departureTime) : baseDate;
     } else {
       const departures = getNextDepartures(baseDate, 1);
       r = findRoute(origin, dest, departures[0]?.minsFromNow, baseDate);
-      setResult(r);
-      setPlanInstant(baseDate);
+      instant = baseDate;
     }
 
     // אותו חישוב כמו ב-HomeContent, ומאותו טעם. ראה את ההערה המלאה שם.
     // בעמוד הזה הקפיצה היא 15 ולא 1, ולכן הזמן המוצע מתיישר לרשת של
     // הבוררים כאן — `pickerDefaults` מקבל את הקפיצה בדיוק בשביל זה.
+    let next = null as null | { day: number; hour: number; minute: number; label: string };
     if (r && isNoService(r)) {
       const n = pickerDefaults(MINUTE_STEP, baseDate);
-      setNextService({ ...n, label: `${hhmm(n.hour * 60 + n.minute)}, ${dayLabel(n.day, new Date())}` });
-    } else {
-      setNextService(null);
+      next = { ...n, label: `${hhmm(n.hour * 60 + n.minute)}, ${dayLabel(n.day, new Date())}` };
     }
-  };
+    return { result: r, planInstant: instant, nextService: next };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planKey]);
+
+  const dismissed = dismissKey === planKey;
+  const result = dismissed ? null : plan?.result ?? null;
+  const planInstant = plan?.planInstant ?? null;
+  const nextService = dismissed ? null : plan?.nextService ?? null;
 
   const hasResults = results.stations.length > 0 || results.landmarks.length > 0 || results.places.length > 0;
   const noResults = query.length >= 2 && !hasResults && !toStation && query === query.trim();
@@ -393,154 +405,20 @@ const content = STATION_CONTENT[stationName];
             <RadioPills<"from" | "to">
               label={`כיוון הנסיעה מתחנת ${stationName}`}
               value={direction}
-              onChange={d => { setDirection(d); setResult(null); setPlanInstant(null); }}
+              onChange={d => setDirection(d)}
               selectedBorder={color}
               options={[["from", "יציאה מכאן"], ["to", "הגעה לכאן"]]}
             />
           </div>
 
-          {result && isNoService(result) ? (
-            <div role="alert" style={{
-              background: t.card, border: "1px solid #b0405055", borderRadius: 12,
-              padding: "16px 18px", textAlign: "right",
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: t.text, marginBottom: 6 }}>
-                אין רכבת בזמן שבחרת
-              </div>
-              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
-              {/* כאן הטופס לא ננעל כמו בעמוד הבית — כפתור הכיוון יושב
-                  מעל התנאי ומנקה את התוצאה. אבל זאת יציאה **במקרה**,
-                  דרך פקד שאינו קשור, והלופ זהה: הזמן נשאר על השעה שאין
-                  בה שירות. אותם שני כפתורים, מאותו חישוב. */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                {nextService && (
-                  <button
-                    onClick={() => {
-                      setCustomDay(nextService.day);
-                      setCustomHour(nextService.hour);
-                      setCustomMinute(nextService.minute);
-                      timeSeeded.current = true;
-                      setTimeMode("departure");
-                      setUseCustomTime(true);
-                      setResult(null);
-                      setNextService(null);
-                    }}
-                    style={{
-                      background: "#b04050", border: "1px solid #b04050",
-                      borderRadius: 10, padding: "10px 14px", color: "#fff",
-                      fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      fontFamily: "'Rubik', sans-serif",
-                    }}
-                  >
-                    תכננו ל-{nextService.label}
-                  </button>
-                )}
-                <button
-                  onClick={() => { setResult(null); setNextService(null); }}
-                  style={{
-                    background: "transparent", border: `1px solid ${t.border}`,
-                    borderRadius: 10, padding: "10px 14px", color: t.muted,
-                    fontSize: 13, fontWeight: 500, cursor: "pointer",
-                    fontFamily: "'Rubik', sans-serif",
-                  }}
-                >
-                  שנו את החיפוש
-                </button>
-              </div>
-              <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
-                לוח שעות הפעילות המלא ←
-              </a>
-            </div>
-          ) : result ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {/* Result summary */}
-              <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>מסלול נסיעה</div>
-                  <div style={{ fontSize: 10, color: t.muted, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 6, padding: "2px 7px" }}>הערכה בלבד</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <div style={{ textAlign: "right", flex: 1 }}>
-                    <div style={{ fontSize: 11, color: t.muted }}>מוצא</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{origin}</div>
-                  </div>
-                  <div style={{ fontSize: 16, color: result.lineColor }}>←</div>
-                  <div style={{ textAlign: "left", flex: 1 }}>
-                    <div style={{ fontSize: 11, color: t.muted }}>יעד</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{dest}</div>
-                    {(() => {
-                      const s = STATIONS.find(st => st.name === toStation);
-                      return s && s.nearbyPlaces.length > 0 ? (
-                        <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>ליד: {s.nearbyPlaces[0]}</div>
-                      ) : null;
-                    })()}
-                  </div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0", borderTop: `1px solid ${t.border}` }}>
-                  {[
-                    ["שעת יציאה", result.departureTime, result.lineColor],
-                    ["זמן נסיעה", `${result.mins}′`, t.text],
-                    ["שעת הגעה", result.arrivalTime, t.text],
-                  ].map(([label, val, col]) => (
-                    <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: col }}>{val}</div>
-                      <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-                {result.change && (
-                  <div style={{
-                    borderTop: `1px solid ${t.border}`, padding: "10px 14px",
-                    fontSize: 12, color: t.text, lineHeight: 1.6, textAlign: "right",
-                  }}>
-                    <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
-                    לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
-                    זמן הנסיעה שלמעלה כולל המתנה משוערת של {JUNCTION_WAIT_MINS} דקות להחלפה.
-                  </div>
-                )}
-              </div>
-
-              {/* Custom time label */}
-              {useCustomTime && (
-                <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 9, padding: "10px 14px", textAlign: "center" }}>
-                  <span style={{ fontSize: 12, color: t.muted }}>{timeMode === "arrival" ? "מגיע ב: " : "יוצא ב: "}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
-                    {dayLabel(customDay)} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
-                  </span>
-                </div>
-              )}
-
-              {/* Map */}
-              <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
-                {/* גם כאן, כדי ששתי המפות באותו עמוד לא יגיבו אחרת
-                    לאותה תנועה. מי שרואה את התוצאה ורוצה יעד אחר לוחץ
-                    עליו ומחפש שוב, במקום לצאת לעמוד הבית. */}
-                <Map stations={STATIONS} userLoc={finder.userLoc} onSelectStation={handleSelectStation} fromStation={STATIONS.find(s => s.name === origin) || null} toStation={STATIONS.find(s => s.name === dest) || null} />
-              </div>
-{(() => {
-                const s = STATIONS.find(st => st.name === toStation);
-                return s && s.nearbyPlaces.length > 0 ? (
-                  <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מקומות קרובים {direction === "from" ? "ליעד" : "למוצא"}</div>
-                    {s.nearbyPlaces.map(place => (
-                      <div key={place} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: t.text }}>{place}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null;
-              })()}
-              <button onClick={() => setResult(null)} className="btn-reset-s" style={{
-                background: "transparent", border: `1px solid ${t.border}`,
-                borderRadius: 9, padding: "10px 14px",
-                color: t.muted, fontSize: 13, fontWeight: 500,
-                cursor: "pointer", fontFamily: "'Rubik', sans-serif",
-              }}>חפש מסלול אחר</button>
-            </div>
-
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/*
+              אותו סידור כמו בעמוד הבית מ-10.11.2026, ומאותה סיבה: ברגע
+              שהתשובה מגיעה לבד, טופס שנעלם לוקח איתו את בורר הזמן. כאן
+              זה היה חמור יותר — ההערה שמעל קופסת "אין רכבת" מתארת יציאה
+              שמתרחשת **במקרה**, דרך כפתור הכיוון שיושב מחוץ לתנאי.
+              עכשיו הטופס עצמו הוא היציאה, בשני העמודים.
+          */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {/* Search input */}
               <div style={{ position: "relative" }}>
                 <input
@@ -740,23 +618,180 @@ const content = STATION_CONTENT[stationName];
                 </div>
               )}
 
-              <button
-                onClick={handlePlan}
-                disabled={!toStation}
-                aria-disabled={!toStation}
-                title={!toStation ? (direction === "from" ? "בחרו תחנת יעד כדי לחפש נסיעה" : "בחרו תחנת מוצא כדי לחפש נסיעה") : undefined}
-                className="btn-primary-s"
-                style={{
-                  width: "100%", background: toStation ? color : t.border,
-                  color: toStation ? "#fff" : t.subtle,
-                  border: "none", borderRadius: 9,
-                  padding: "12px", fontSize: 14, fontWeight: 600,
-                  cursor: toStation ? "pointer" : "not-allowed",
-                  fontFamily: "'Rubik', sans-serif",
-                }}
-              >חפש נסיעה</button>
+              {/*
+                  הכפתור משנה תפקיד, כמו בעמוד הבית: אומר מה חסר, או
+                  מרענן את "עכשיו", או יורד כשאין מה לרענן.
+              */}
+              {!toStation ? (
+                <div
+                  role="status"
+                  style={{
+                    width: "100%", background: t.card2, color: t.muted,
+                    border: `1px solid ${t.border}`, borderRadius: 9,
+                    padding: "12px", fontSize: 14, fontWeight: 600,
+                    textAlign: "center", fontFamily: "'Rubik', sans-serif",
+                  }}>
+                  {direction === "from" ? "בחרו יעד כדי לחפש נסיעה" : "בחרו מוצא כדי לחפש נסיעה"}
+                </div>
+              ) : !useCustomTime ? (
+                <button
+                  onClick={() => { setPlanTick(n => n + 1); setDismissKey(null); }}
+                  className="btn-primary-s"
+                  style={{
+                    width: "100%", background: color, color: "#fff",
+                    border: "none", borderRadius: 9,
+                    padding: "12px", fontSize: 14, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+                  }}
+                >עדכנו לשעה הנוכחית</button>
+              ) : null}
+          </div>
+          {result && isNoService(result) ? (
+            <div role="alert" style={{
+              background: t.card, border: "1px solid #b0405055", borderRadius: 12,
+              padding: "16px 18px", textAlign: "right",
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: t.text, marginBottom: 6 }}>
+                אין רכבת בזמן שבחרת
+              </div>
+              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.7 }}>{result.reason}</div>
+              {/* כאן הטופס לא ננעל כמו בעמוד הבית — כפתור הכיוון יושב
+                  מעל התנאי ומנקה את התוצאה. אבל זאת יציאה **במקרה**,
+                  דרך פקד שאינו קשור, והלופ זהה: הזמן נשאר על השעה שאין
+                  בה שירות. אותם שני כפתורים, מאותו חישוב. */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                {nextService && (
+                  <button
+                    onClick={() => {
+                      setCustomDay(nextService.day);
+                      setCustomHour(nextService.hour);
+                      setCustomMinute(nextService.minute);
+                      timeSeeded.current = true;
+                      setTimeMode("departure");
+                      setUseCustomTime(true);
+                    }}
+                    style={{
+                      background: "#b04050", border: "1px solid #b04050",
+                      borderRadius: 10, padding: "10px 14px", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      fontFamily: "'Rubik', sans-serif",
+                    }}
+                  >
+                    תכננו ל-{nextService.label}
+                  </button>
+                )}
+                <button
+                  onClick={() => setDismissKey(planKey)}
+                  style={{
+                    background: "transparent", border: `1px solid ${t.border}`,
+                    borderRadius: 10, padding: "10px 14px", color: t.muted,
+                    fontSize: 13, fontWeight: 500, cursor: "pointer",
+                    fontFamily: "'Rubik', sans-serif",
+                  }}
+                >
+                  שנו את החיפוש
+                </button>
+              </div>
+              <a href="/hours" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "#b04050" }}>
+                לוח שעות הפעילות המלא ←
+              </a>
             </div>
-          )}
+          ) : result ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Result summary */}
+              <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>מסלול נסיעה</div>
+                  <div style={{ fontSize: 10, color: t.muted, background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 6, padding: "2px 7px" }}>הערכה בלבד</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div style={{ textAlign: "right", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: t.muted }}>מוצא</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{origin}</div>
+                  </div>
+                  <div style={{ fontSize: 16, color: result.lineColor }}>←</div>
+                  <div style={{ textAlign: "left", flex: 1 }}>
+                    <div style={{ fontSize: 11, color: t.muted }}>יעד</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{dest}</div>
+                    {(() => {
+                      // ⚠ כאן היה `toStation` — התחנה **שנבחרה**, לא היעד.
+                      // בכיוון "הגעה לכאן" היעד הוא התחנה של העמוד והנבחרת
+                      // היא המוצא, ולכן השורה תיארה את המוצא מתחת לכותרת
+                      // "יעד": נראה על המסך "יעד פינסקר · ליד: קניון TLV",
+                      // וקניון TLV שייך לקרליבך. באג קיים שנחשף ב-10.11.2026
+                      // כשהתשובה התחילה להופיע לבד — קודם צריך היה ללחוץ,
+                      // ואז להחליף כיוון, ואז ללחוץ שוב.
+                      const s = STATIONS.find(st => st.name === dest);
+                      return s && s.nearbyPlaces.length > 0 ? (
+                        <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>ליד: {s.nearbyPlaces[0]}</div>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0", borderTop: `1px solid ${t.border}` }}>
+                  {[
+                    ["שעת יציאה", result.departureTime, result.lineColor],
+                    ["זמן נסיעה", `${result.mins}′`, t.text],
+                    ["שעת הגעה", result.arrivalTime, t.text],
+                  ].map(([label, val, col]) => (
+                    <div key={label} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: col }}>{val}</div>
+                      <div style={{ fontSize: 10, color: t.muted, marginTop: 3 }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+                {result.change && (
+                  <div style={{
+                    borderTop: `1px solid ${t.border}`, padding: "10px 14px",
+                    fontSize: 12, color: t.text, lineHeight: 1.6, textAlign: "right",
+                  }}>
+                    <strong>נדרשת החלפה ב{stationLabel(result.change)}.</strong> הקו מתפצל שם: שירות אחד ממשיך
+                    לפתח תקווה והשני לקריית אריה, ולכן אין נסיעה ישירה בין שני הענפים.
+                    זמן הנסיעה שלמעלה כולל המתנה משוערת של {JUNCTION_WAIT_MINS} דקות להחלפה.
+                  </div>
+                )}
+              </div>
+
+              {/* Custom time label */}
+              {useCustomTime && (
+                <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 9, padding: "10px 14px", textAlign: "center" }}>
+                  <span style={{ fontSize: 12, color: t.muted }}>{timeMode === "arrival" ? "מגיע ב: " : "יוצא ב: "}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
+                    {dayLabel(customDay)} · {customHour.toString().padStart(2,"0")}:{customMinute.toString().padStart(2,"0")}
+                  </span>
+                </div>
+              )}
+
+              {/* Map */}
+              <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${t.border}` }}>
+                {/* גם כאן, כדי ששתי המפות באותו עמוד לא יגיבו אחרת
+                    לאותה תנועה. מי שרואה את התוצאה ורוצה יעד אחר לוחץ
+                    עליו ומחפש שוב, במקום לצאת לעמוד הבית. */}
+                <Map stations={STATIONS} userLoc={finder.userLoc} onSelectStation={handleSelectStation} fromStation={STATIONS.find(s => s.name === origin) || null} toStation={STATIONS.find(s => s.name === dest) || null} />
+              </div>
+{(() => {
+                const s = STATIONS.find(st => st.name === toStation);
+                return s && s.nearbyPlaces.length > 0 ? (
+                  <div style={{ background: t.resultBg, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>מקומות קרובים {direction === "from" ? "ליעד" : "למוצא"}</div>
+                    {s.nearbyPlaces.map(place => (
+                      <div key={place} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: t.text }}>{place}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+              <button onClick={() => setDismissKey(planKey)} className="btn-reset-s" style={{
+                background: "transparent", border: `1px solid ${t.border}`,
+                borderRadius: 9, padding: "10px 14px",
+                color: t.muted, fontSize: 13, fontWeight: 500,
+                cursor: "pointer", fontFamily: "'Rubik', sans-serif",
+              }}>חפש מסלול אחר</button>
+            </div>
+
+          ) : null}
         </div>
 {/* Intro + Best for */}
         {content && (
