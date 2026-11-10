@@ -19,6 +19,10 @@ export type Landmark = {
    * מרכז הקמפוס, ולכן המסלול הוא 1503 מ׳ מול 263 מ׳ אוויריים (יחס 5.71,
    * מתחת לסף MAX_WALK_DETOUR) — כלומר 19 דקות להליכה של 3. אל תחליף את
    * המספר בנגזר בלי לפתור את הקמפוסים. seo-data/open-items.md, הכרעת 10.11
+   *
+   * **חריג אחד, מאותו יום:** תיאטרון המסילה. שם השיוך לתחנה עצמו היה
+   * שגוי, ולכן 6 הדקות נמדדו מתחנה שאינה שלו — ערך כתוב ביד שאין לו
+   * מה לשמר. הוא הועבר לפינסקר וקיבל את 7 הדקות מהמנתב. סעיף טז.
    */
   walkMins: number;
   lineId: "red" | "green" | "purple";
@@ -30,8 +34,8 @@ export type Landmark = {
 };
 export const STATIONS: Station[] = [
   // ── קו אדום — פתח תקווה ──────────────────────────────
-  { name: "תחנה מרכזית פתח תקווה", lat: 32.0947, lng: 34.8868, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["תיאטרון המסילה"] },
-  { name: "פינסקר", lat: 32.0938, lng: 34.8825, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["שוק פתח תקווה", "מתחמי הבילוי גיסין"] },
+  { name: "תחנה מרכזית פתח תקווה", lat: 32.0947, lng: 34.8868, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: [] },
+  { name: "פינסקר", lat: 32.0938, lng: 34.8825, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["שוק פתח תקווה", "מתחמי הבילוי גיסין", "תיאטרון המסילה"] },
   { name: "קרול", lat: 32.0917, lng: 34.8772, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["גלריית הציפור הכחולה", "פארק תמר בורנשטיין"] },
   { name: "דנקנר", lat: 32.0910, lng: 34.8718, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["פארק יד לבנים", "מוזיאון האדם והסביבה"] },
   { name: "בילינסון", lat: 32.0915, lng: 34.8664, lineId: "red", lineName: "קו אדום", lineColor: "#b04050", lineHref: "/line-red", city: "פתח תקווה", nearbyPlaces: ["בית חולים בילינסון", "בית חולים שניידר"] },
@@ -80,7 +84,7 @@ export const LANDMARKS: Landmark[] = [
   // אומת ב-Nominatim: השוק נמצא 667 מ' מהתחנה המרכזית ו-387 מ' מפינסקר.
   // ארבע הדקות שהוצהרו כאן התאימו למרחק שגוי ולתחנה שגויה.
   { name: "שוק פתח תקווה", stationName: "פינסקר", walkMins: 5, lineId: "red", lat: 32.09034, lng: 34.88193, coordSource: "מקור יחיד · OSM", coordVerification: "single" },
-  { name: "תיאטרון המסילה", stationName: "תחנה מרכזית פתח תקווה", walkMins: 6, lineId: "red" },
+  { name: "תיאטרון המסילה", stationName: "פינסקר", walkMins: 7, lineId: "red", lat: 32.09625, lng: 34.88033, coordSource: "האחים בכר 3 — עיריית פ״ת (מפעילת האולם) + BE106 · אמצע הרחוב ב-OSM, בלי מספר בית", coordVerification: "single" },
   // פינסקר
   { name: "מתחמי הבילוי גיסין", stationName: "פינסקר", walkMins: 5, lineId: "red" },
   // דנקנר
