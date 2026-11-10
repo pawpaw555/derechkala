@@ -54,12 +54,19 @@ const HOUSE = [
 // `walkEstimate` פוסלת מסלול עקיף ומחזירה קו אווירי **בלי זמן**. עד
 // 07.11.2026 שני מקומות הציגו את המרחק הזה בשתיקה מלאה.
 const WALK = [
-  // [תיאור, אווירי, מסלול, האם מצפים להודעה]
-  ["מסלול נפסל במרחק הליכה — חייבים להסביר", 100, 2000, true],
-  ["מסלול סביר — יש זמן, אין מה להסביר", 400, 800, false],
-  ["רחוק מכדי ללכת — הממשק כבר אומר זאת, אין להכפיל", 3000, 40000, false],
-  ["אין מיקום בכלל — אין מספר ואין הודעה", null, null, false],
-  ["המנתב לא ענה — הקו האווירי לגיטימי, יש זמן", 500, null, false],
+  // [תיאור, אווירי, מסלול, הצמדה, האם מצפים להודעה]
+  ["מסלול נפסל במרחק הליכה — חייבים להסביר", 100, 2000, null, true],
+  ["מסלול סביר — יש זמן, אין מה להסביר", 400, 800, null, false],
+  ["רחוק מכדי ללכת — הממשק כבר אומר זאת, אין להכפיל", 3000, 40000, null, false],
+  ["אין מיקום בכלל — אין מספר ואין הודעה", null, null, null, false],
+  ["המנתב לא ענה — הקו האווירי לגיטימי, יש זמן", 500, null, null, false],
+  // ── הצמדת המנתב, 10.11.2026 ─────────────────────────────────
+  // נמדד: נקודה בים מול בת ים הוצמדה 481 מ׳ לחוף, והאתר הציג 16 דקות
+  // הליכה למקום שאינו על דרך. המסלול עצמו סביר — היחס 1.21 — ולכן
+  // שומר העקיפה לא תפס אותו, ורק מרחק ההצמדה מבדיל.
+  ["נקודה שהוצמדה 481 מ׳ — חייבים להסביר", 1033, 1254, 481, true],
+  ["הצמדה של 3 מ׳ — המסלול לגיטימי, יש זמן", 1027, 1163, 3, false],
+  ["בלי מידע על הצמדה — ההתנהגות הישנה נשמרת", 400, 800, undefined, false],
 ];
 
 const QUIET = process.argv[2] === "count";
@@ -76,8 +83,8 @@ for (const [label, q, places, want] of HOUSE) {
   check(got === want, label, String(got), String(want));
 }
 
-for (const [label, air, route, want] of WALK) {
-  const got = walkNote(walkEstimate(air, route));
+for (const [label, air, route, snap, want] of WALK) {
+  const got = walkNote(walkEstimate(air, route, snap));
   check(!!got === want, label, got ? "הודעה" : "שתיקה", want ? "הודעה" : "שתיקה");
 }
 
@@ -94,6 +101,13 @@ check(
 check(
   (walkNote(walkEstimate(100, 2000)) || "").includes("קו אווירי"),
   "המשפט על ההליכה אומר שהמספר אווירי", "כן", "כן");
+// שתי סיבות, שני משפטים. משפט משותף היה אומר "עקיף מדי" גם למי שלחץ
+// בים, והמסלול שם סביר לגמרי — הוא פשוט מתחיל במקום אחר.
+const SNAP_NOTE = walkNote(walkEstimate(1033, 1254, 481)) || "";
+const DETOUR_NOTE = walkNote(walkEstimate(100, 2000)) || "";
+check(
+  SNAP_NOTE.includes("אינה על דרך") && SNAP_NOTE !== DETOUR_NOTE,
+  "הודעת ההצמדה שונה מהודעת העקיפה", "כן", "כן");
 
 // ── ד. בקרה דו-כיוונית: לירות כשצריך, ולשתוק כשצריך ─────────────
 // "אפס כשלים" מתוך פונקציה שתמיד מחזירה null נראה בדיוק כמו הצלחה —
@@ -105,7 +119,7 @@ const canFire =
   walkNote({ metres: 100, trustTime: false }) !== null;
 check(canFire, "בקרה: יורות כשצריך ושותקות כשצריך", "כן", "כן");
 
-const total = HOUSE.length + WALK.length + 4;
+const total = HOUSE.length + WALK.length + 5;
 if (QUIET) console.log("%d/%d", fail, total);
 else console.log(fail ? `\n${fail} נכשלו` : `\nכל ${total} המקרים עברו`);
 process.exit(fail ? 1 : 0);

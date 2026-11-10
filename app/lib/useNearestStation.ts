@@ -170,16 +170,25 @@ const FOOT_ROUTER = "https://routing.openstreetmap.de/routed-foot";
 export async function fetchFootRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number }
-): Promise<{ coords: [number, number][]; metres: number } | null> {
+): Promise<{ coords: [number, number][]; metres: number; snapMetres: number | null } | null> {
   try {
     const r = await fetch(
       `${FOOT_ROUTER}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`
     );
-    const g = (await r.json())?.routes?.[0];
+    const j = await r.json();
+    const g = j?.routes?.[0];
     if (!g?.geometry?.coordinates?.length) return null;
+    // המנתב אינו מסרב לנקודה שאינה על דרך — הוא מצמיד אותה ומחזיר Ok.
+    // `waypoints[].distance` הוא מרחק ההצמדה, והיה כאן בתשובה מאז ומתמיד
+    // ונזרק. נקודה בים הוצמדה 2,430 מ׳ לחוף, והמסלול חושב משם. ההכרעה
+    // מה לעשות עם המספר יושבת ב-walkEstimate, עם שאר הספים.
+    const snaps = (j?.waypoints ?? [])
+      .map((w: { distance?: number }) => w?.distance)
+      .filter((d: unknown): d is number => typeof d === "number");
     return {
       coords: g.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]),
       metres: g.distance,
+      snapMetres: snaps.length ? Math.max(...snaps) : null,
     };
   } catch {
     // בלי מסלול נופלים חזרה למרחק אווירי; אין טעם בשגיאה למשתמש.
@@ -297,6 +306,8 @@ export function useNearestStation() {
   const [station, setStation] = useState<Station | null>(null);
   const [route, setRoute] = useState<[number, number][] | null>(null);
   const [routeMetres, setRouteMetres] = useState<number | null>(null);
+  /** כמה הזיז המנתב את הנקודה שנמסרה לו. ראו MAX_SNAP_M ב-walkEstimate. */
+  const [routeSnap, setRouteSnap] = useState<number | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [diag, setDiag] = useState<string | null>(null);
@@ -330,11 +341,13 @@ export function useNearestStation() {
     const seq = ++routeSeq.current;
     setRoute(null);
     setRouteMetres(null);
+    setRouteSnap(null);
     const r = await fetchFootRoute(from, to);
     if (seq !== routeSeq.current) return;
     if (r) {
       setRoute(r.coords);
       setRouteMetres(r.metres);
+      setRouteSnap(r.snapMetres);
     }
   };
 
@@ -450,7 +463,7 @@ export function useNearestStation() {
   };
 
   return {
-    userLoc, station, route, routeMetres, accuracy,
+    userLoc, station, route, routeMetres, routeSnap, accuracy,
     locError, locating, diag,
     place, results, searching, placeMsg, recent,
     searchRef, onType, search, pick, requestLocation, applyLocation,

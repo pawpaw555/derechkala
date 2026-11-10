@@ -724,8 +724,10 @@ export function walkMinutes(metres: number): number {
  */
 export function walkEstimate(
   airMetres: number | null,
-  routeMetres: number | null
-): { metres: number | null; fromRoute: boolean; trustTime: boolean } {
+  routeMetres: number | null,
+  /** מרחק ההצמדה של המנתב — כמה רחוק הוא הזיז את הנקודה שנמסרה לו. */
+  snapMetres?: number | null
+): { metres: number | null; fromRoute: boolean; trustTime: boolean; reason?: "detour" | "snap" } {
   if (airMetres == null) return { metres: routeMetres, fromRoute: routeMetres != null, trustTime: routeMetres != null };
   if (routeMetres == null) return { metres: airMetres, fromRoute: false, trustTime: true };
   /**
@@ -795,10 +797,37 @@ export function walkEstimate(
    *
    * הפער נמצא על ידי הסשן שחוקר, ושוחזר כאן לפני שתוקן.
    */
+  /**
+   * המנתב אינו מסרב לנקודה שאינה על דרך — הוא **מצמיד** אותה לדרך
+   * הקרובה ביותר ומחזיר מסלול מהנקודה המוצמדת, עם `code: Ok`.
+   *
+   * **נמצא על המסך של בעל האתר ב-10.11.2026:** הוא לחץ על נקודה
+   * אקראית בים וקיבל הוראות הגעה. הנקודה 32.0800,34.7400 הוצמדה
+   * **2,430 מ׳** אל החוף, והמסלול שחושב מתחיל שם ולא במקום שנבחר.
+   * שומר היחס אינו תופס את זה, כי המסלול מהנקודה המוצמדת סביר לגמרי.
+   *
+   * **הסף נמדד ולא נוחש.** הצמדה של נקודות לגיטימיות, מול אותו שרת:
+   *
+   *     תחנה שלנו               4 מ׳
+   *     בתוך מרכז עזריאלי        2 מ׳
+   *     מרכז קמפוס בילינסון     11 מ׳
+   *     בתוך דשא בפארק הירקון   45 מ׳
+   *     שדה פתוח מזרחית לפ״ת    87 מ׳   ← הגבוה ביותר שנמדד
+   *     ים, 2 ק״מ מהחוף      2,430 מ׳   ← מקרה הכשל
+   *
+   * 300 יושב פי 3.4 מעל הגבוה שנמדד ופי 8 מתחת לכשל. כמו
+   * `MAX_WALK_DETOUR`, זאת קנרית עם מרווח ולא כיול: מי שעומד בשטח
+   * סגור גדול עלול להצמיד יותר מ-87, ואסור שהוא ייפסל.
+   */
+  const MAX_SNAP_M = 300;
+  if (snapMetres != null && snapMetres > MAX_SNAP_M) {
+    return { metres: airMetres, fromRoute: false, trustTime: false, reason: "snap" };
+  }
+
   const plausible = routeMetres <= airMetres * MAX_WALK_DETOUR;
   return plausible
     ? { metres: routeMetres, fromRoute: true, trustTime: true }
-    : { metres: airMetres, fromRoute: false, trustTime: false };
+    : { metres: airMetres, fromRoute: false, trustTime: false, reason: "detour" };
 }
 
 /**
@@ -828,10 +857,20 @@ export function isWalkable(metres: number | null): boolean {
  *
  * טהורה בכוונה, ולכן `scripts/silent-selftest.mjs` בודק אותה בבלוק.
  */
-export function walkNote(est: { metres: number | null; trustTime: boolean }): string | null {
+export function walkNote(est: {
+  metres: number | null;
+  trustTime: boolean;
+  reason?: "detour" | "snap";
+}): string | null {
   if (est.metres === null) return null;
   if (!isWalkable(est.metres)) return null;
   if (est.trustTime) return null;
+  // שתי סיבות שונות, שני משפטים. משפט אחד לשתיהן היה אומר "עקיף מדי" גם
+  // למי שלחץ בים — הסבר שגוי, כי המסלול שם סביר לגמרי והוא פשוט מתחיל
+  // במקום אחר. ראו MAX_SNAP_M ב-walkEstimate.
+  if (est.reason === "snap") {
+    return "הנקודה שנבחרה אינה על דרך להולכי רגל — המרחק הוא קו אווירי, ולכן לא מוצג זמן.";
+  }
   return "המרחק הוא קו אווירי — מסלול ההליכה שחזר נראה עקיף מדי, ולכן לא מוצג זמן. קישורי הניווט נותנים את המסלול המדויק.";
 }
 

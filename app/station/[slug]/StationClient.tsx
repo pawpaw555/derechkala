@@ -73,7 +73,7 @@ export default function StationClient({ stationName, station }: Props) {
   };
   const [result, setResult] = useState<ReturnType<typeof findRoute>>(null);
   const finder = useNearestStation();
-  const [routeHere, setRouteHere] = useState<{ key: string; metres: number } | null>(null);
+  const [routeHere, setRouteHere] = useState<{ key: string; metres: number; snap: number | null } | null>(null);
 
   // המרחק הרלוונטי בעמוד תחנה הוא עד התחנה הזאת, לא עד התחנה הקרובה ביותר.
   // נמדד בדרכים כמו בשאר האתר; המרחק האווירי הוא רק גשר עד שהמסלול חוזר.
@@ -89,15 +89,16 @@ export default function StationClient({ stationName, station }: Props) {
     const key = `${station.name}|${userLat},${userLng}`;
     let cancelled = false;
     fetchFootRoute({ lat: userLat, lng: userLng }, station)
-      .then(r => { if (!cancelled && r) setRouteHere({ key, metres: r.metres }); });
+      .then(r => { if (!cancelled && r) setRouteHere({ key, metres: r.metres, snap: r.snapMetres }); });
     return () => { cancelled = true; };
   }, [station, userLat, userLng]);
 
   const routeMetresHere = routeHere && routeHere.key === routeKey ? routeHere.metres : null;
+  const routeSnapHere = routeHere && routeHere.key === routeKey ? routeHere.snap : null;
   // אותו כלל כמו בפאנל התחנה הקרובה. קודם לכן כאן הוזן מספר OSRM הגולמי,
   // כך שמי שחיפש מקום שאינו מחובר לרשת ההליכה קיבל זמן מנופח פי כמה.
   const airHere = station && finder.userLoc ? distanceMetres(finder.userLoc, station) : null;
-  const estHere = walkEstimate(airHere, routeMetresHere);
+  const estHere = walkEstimate(airHere, routeMetresHere, routeSnapHere);
   const toHere = estHere.metres;
   const walkableHere = isWalkable(toHere);
   const showWalkHere = walkableHere && estHere.trustTime;

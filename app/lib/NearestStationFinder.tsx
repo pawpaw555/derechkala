@@ -41,14 +41,14 @@ export default function NearestStationFinder({
 }) {
   const { t, dark } = useTheme();
   const {
-    userLoc, station, routeMetres, accuracy, locError, locating, diag,
+    userLoc, station, routeMetres, routeSnap, accuracy, locError, locating, diag,
     place, results, searching, placeMsg, recent,
     searchRef, onType, pick, requestLocation,
   } = finder;
 
   // הכלל עצמו יושב ב-walkEstimate, משותף עם עמוד התחנה.
   const airMetres = userLoc && station ? distanceMetres(userLoc, station) : null;
-  const est = walkEstimate(airMetres, routeMetres ?? null);
+  const est = walkEstimate(airMetres, routeMetres ?? null, routeSnap ?? null);
   const metres = est.metres;
   const walkable = isWalkable(metres);
   const showWalkTime = walkable && est.trustTime;
