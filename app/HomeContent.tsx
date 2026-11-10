@@ -339,6 +339,15 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
   const [fromGeoBusy, setFromGeoBusy] = useState(false);
   const geoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const geoSeq = useRef(0);
+  // שדה היעד מקבל את אותה יכולת ב-10.11.2026. עד אז הוא חיפש רק באינדקס
+  // הפנימי — 34 תחנות, 65 נקודות ציון, 131 מוקדים, 22 מקומות — ולכן מי
+  // שהקליד בו כתובת לא קיבל כלום, בעוד אותה כתובת בדיוק עבדה בשדה המוצא.
+  // שני השדות חולקים מעכשיו טיימר וסדרה **נפרדים**: המשתמש מקליד בשניהם,
+  // ומונה משותף היה מבטל את החיפוש של השדה שלא נגעו בו.
+  const [toGeo, setToGeo] = useState<Place[]>([]);
+  const [toGeoBusy, setToGeoBusy] = useState(false);
+  const toGeoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toGeoSeq = useRef(0);
 
   const [arrivedWith, setArrivedWith] = useState<{ from?: string; to?: string } | null>(null);
   const [backTo, setBackTo] = useState<{ href: string; label: string } | null>(null);
@@ -381,29 +390,49 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
   // והייתה גדולה ממנה בשבעה שדות.
   const { dark, t } = useTheme();
 
+  /**
+   * חיפוש הכתובות של שדה טופס אחד: ההשהיה, שומר הרצף, והכלל מתי בכלל
+   * פונים לרשת — רק כשהאינדקס הפנימי לא החזיר דבר ויש לפחות שלושה תווים.
+   *
+   * **יושב כאן ולא פעמיים.** עד 10.11.2026 הצנרת הזאת הייתה רק בשדה
+   * המוצא, וכשהיא הגיעה גם ליעד היא הייתה הופכת לשני עותקים של אותן
+   * עשרים שורות — ואז התיקון הבא היה נוחת באחד מהם. זה בדיוק כלל 4.
+   */
+  const runGeoLookup = (
+    val: string,
+    empty: boolean,
+    timer: React.RefObject<ReturnType<typeof setTimeout> | null>,
+    seqRef: React.RefObject<number>,
+    setGeo: (p: Place[]) => void,
+    setBusy: (b: boolean) => void,
+  ) => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!empty || val.trim().length < 3) { setGeo([]); setBusy(false); return; }
+    setBusy(true);
+    timer.current = setTimeout(async () => {
+      const seq = ++seqRef.current;
+      try {
+        const hits = await lookupPlaces(val.trim());
+        if (seq !== seqRef.current) return;
+        setGeo(hits);
+      } catch {
+        if (seq === seqRef.current) setGeo([]);
+      } finally {
+        if (seq === seqRef.current) setBusy(false);
+      }
+    }, 450);
+  };
+
+  const isEmptyHit = (r: ReturnType<typeof searchCombined>) =>
+    r.stations.length === 0 && r.landmarks.length === 0 && r.places.length === 0;
+
   const handleFromSearch = (val: string) => {
     setArrivedWith(null);
     setFromQuery(val);
     setFromStation(null);
     const local = val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS;
     setFromResults(local);
-
-    if (geoTimer.current) clearTimeout(geoTimer.current);
-    const empty = local.stations.length === 0 && local.landmarks.length === 0 && local.places.length === 0;
-    if (!empty || val.trim().length < 3) { setFromGeo([]); setFromGeoBusy(false); return; }
-    setFromGeoBusy(true);
-    geoTimer.current = setTimeout(async () => {
-      const seq = ++geoSeq.current;
-      try {
-        const hits = await lookupPlaces(val.trim());
-        if (seq !== geoSeq.current) return;
-        setFromGeo(hits);
-      } catch {
-        if (seq === geoSeq.current) setFromGeo([]);
-      } finally {
-        if (seq === geoSeq.current) setFromGeoBusy(false);
-      }
-    }, 450);
+    runGeoLookup(val, isEmptyHit(local), geoTimer, geoSeq, setFromGeo, setFromGeoBusy);
   };
 
 
@@ -411,7 +440,9 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
     setArrivedWith(null);
     setToQuery(val);
     setToStation(null);
-    setToResults(val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS);
+    const local = val.length >= 2 ? searchCombined(val) : EMPTY_RESULTS;
+    setToResults(local);
+    runGeoLookup(val, isEmptyHit(local), toGeoTimer, toGeoSeq, setToGeo, setToGeoBusy);
   };
 
   const handleFromSelectStation = (s: Station) => {
@@ -445,6 +476,16 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
     setFromStation(p.station);
     setFromQuery(p.name);
     setFromResults(EMPTY_RESULTS);
+  };
+
+  /** כתובת כיעד: נבחרת התחנה הקרובה אליה, והשדה שומר את מה שהוקלד. */
+  const handleToSelectGeo = (g: Place) => {
+    const st = findNearestStation(g.lat, g.lng);
+    setToStation(st);
+    setToQuery(g.label);
+    setToResults(EMPTY_RESULTS);
+    setToGeo([]);
+    setToGeoBusy(false);
   };
 
   const handleToSelectStation = (s: Station) => {
@@ -949,6 +990,9 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
                 onSelectStation={handleToSelectStation}
                 onSelectLandmark={handleToSelectLandmark}
                 onSelectPlace={handleToSelectPlace}
+                geoResults={toGeo}
+                geoBusy={toGeoBusy}
+                onSelectGeo={handleToSelectGeo}
                 t={t}
               />
 

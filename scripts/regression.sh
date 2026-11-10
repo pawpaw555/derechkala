@@ -672,6 +672,12 @@ ok "זמן הליכה: קוראים · עם הצמדה" "2 · 2" "$(we_calls | w
 # `file:1` וגם `file`. ב-zsh, שבו בדקתי ידנית לפני כן, הוא הוציא
 # אחת. אותה פקודה, שני מספרים, תלוי בקונכייה. `-l` לבד חד-משמעי.
 ok "קוראים ל-walkNote · ל-houseNumberNote" "2 · 2" "$(grep -l 'walkNote(' app/lib/NearestStationFinder.tsx app/station/\[slug\]/StationClient.tsx 2>/dev/null|wc -l|tr -d ' ') · $(grep -l 'houseNumberNote(' app/HomeContent.tsx app/lib/useNearestStation.ts 2>/dev/null|wc -l|tr -d ' ')"
+# וכלל 4 על שדות הטופס: שני השדות בעמוד הבית חייבים לקבל את חיפוש
+# הכתובות. עד 10.11.2026 רק שדה המוצא קיבל אותו, ומי שהקליד כתובת
+# בשדה היעד לא קיבל דבר — אותה כתובת בדיוק עבדה בשדה שמעליו. שניהם
+# עוברים עכשיו דרך runGeoLookup, ושדה שלישי בלי geo יפיל את השורה.
+# **הוכח שנכשל:** הסרת onSelectGeo משדה אחד מחזירה "2 · 1".
+ok "שדות הטופס: InputField · עם חיפוש כתובות" "2 · 2" "$(grep -c '<InputField' app/HomeContent.tsx) · $(grep -c 'onSelectGeo={' app/HomeContent.tsx)"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
 ok "בדיקת ה-FAQ נבדקת: נכשלו/מקרים" "0/6" "$(node scripts/faq-selftest.mjs count 2>/dev/null)"
 # כניסה C של שאול המלך נוספה ב-05.11.2026, והפיצול לשורות הוא מקום
