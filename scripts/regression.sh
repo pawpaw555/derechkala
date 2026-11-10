@@ -94,12 +94,24 @@ ok "עמוד תחנה: כותרת המפה · בקרה כתובת" "1 · 1" "$(e
 # מה שכן נמדד שם ב-08.11: ההצהרה מסוגלת לגבור על ה-style המוטבע, והיא
 # זקוקה ל-!important — בלעדיו הגבול נשאר rgb(208,208,220), כי
 # `border: 1.5px solid #d0d0dc` יושב inline על השדה.
-ok "פוקוס: ב-globals · בעמודים · פקדים" "1 · 0 · 9" "$(grep -c 'select:focus-visible' app/globals.css) · $(grep -rh 'input:focus' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(/\*|\*)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
+# סריקת קוד בלי הערות — כולל הערות JSX, שאינן מתחילות ב-// או ב-*.
+# **נולד ב-10.11.2026, בפעם השלישית של אותה מלכודת.** הערת JSX שהסבירה
+# למה הטוגלים החדשים הם תיבות סימון הזכירה בשמן את שתי התכונות שהשורות
+# כאן סופרות, ושתיהן נפלו: "1 · 0 · 9" הפך ל-"1 · 1 · 9" ו-"1 · 2 · 1"
+# הפך ל-"1 · 2 · 3". הניסוח תוקן, אבל זה תיקון שתלוי בזיכרון — ולכן
+# הסריקה עצמה מדלגת עכשיו על גוש `{/* ... */}` שלם.
+# awk ולא grep, כי גוש כזה משתרע על שורות ורב-שורתי אינו בכוחו של grep.
+# ASCII בלבד, כלל 11. **הוכח:** מתקן עם המילה בתוך הערה ומחוצה לה
+# מחזיר 2 בלי הסינון ו-1 איתו.
+code_only() {
+  awk '/\{\/\*/ { c = 1 } !c { print } /\*\/\}/ { c = 0 }' "$@"
+}
+ok "פוקוס: ב-globals · בעמודים · פקדים" "1 · 0 · 9" "$(grep -c 'select:focus-visible' app/globals.css) · $(code_only $(find app -name '*.tsx') | grep -E 'input:focus' | grep -vE '^[[:space:]]*(/\*|\*|//)' | wc -l | tr -d ' ') · $(grep -rh 'outline: "none"' app/ --include='*.tsx' | wc -l | tr -d ' ')"
 # שני הטוגלים הם בחירה אחת מתוך כמה, ולכן radiogroup ולא שורת כפתורים
 # לחוצים. השלישי הוא הבקרה ששומרת על זה: aria-pressed אמיתי אחד בלבד
 # בכל הקוד, כפתור המצב הכהה, שהוא באמת טוגל דו-מצבי. אם הוא עולה, מישהו
 # בנה טוגל חדש ביד במקום להשתמש ברכיב — וגם הניווט בחצים לא יגיע איתו.
-ok "טוגלים: radiogroup · קוראים · aria-pressed" "1 · 2 · 1" "$(grep -rh 'role=\"radiogroup\"' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ') · $(grep -rh '<RadioPills' app/ --include='*.tsx' | wc -l | tr -d ' ') · $(grep -rh 'aria-pressed' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ')"
+ok "טוגלים: radiogroup · קוראים · aria-pressed" "1 · 2 · 1" "$(grep -rh 'role=\"radiogroup\"' app/ --include='*.tsx' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ') · $(grep -rh '<RadioPills' app/ --include='*.tsx' | wc -l | tr -d ' ') · $(code_only $(find app -name '*.tsx') | grep -E 'aria-pressed' | grep -vE '^[[:space:]]*(//|\*|/\*)' | wc -l | tr -d ' ')"
 ok "עמוד תחנה: מפות בוחרות · מפות · selectable" "2 · 2 · 3" "$(grep -c 'onSelectStation={handleSelectStation}' 'app/station/[slug]/StationClient.tsx') · $(grep -c '<Map ' 'app/station/[slug]/StationClient.tsx') · $(grep -c 'selectable' app/lib/Map.tsx)"
 ok "TrainStation · FAQPage" "2 · 2" "$(echo "$S"|grep -o 'TrainStation'|wc -l|tr -d ' ') · $(echo "$S"|grep -o 'FAQPage'|wc -l|tr -d ' ')"
 ok "/station/<שטות>" "404" "$(curl -s -o /dev/null -w '%{http_code}' $B/station/zzz)"

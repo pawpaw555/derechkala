@@ -182,12 +182,34 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   const poiLayersRef = useRef<Marker[]>([]);
   /** תוויות המוקדים בנפרד מהסמנים, כי רק הן נבדקות מול שמות התחנות. */
   const poiLabelsRef = useRef<Marker[]>([]);
-  /** תחנות רכבת ישראל: הסמנים גלויים תמיד, התוויות נדלקות עם השמות. */
+  /** תחנות רכבת ישראל: התוויות נדלקות עם השמות, והסמנים — עם הטוגל. */
   const railLabelsRef = useRef<Marker[]>([]);
+  /** סמני רכבת ישראל. עד 10.11.2026 הם נוספו למפה ישירות ובלי ref,
+   *  כלומר אי אפשר היה להסיר אותם. הטוגל הוא שדרש את ההחזקה. */
+  const railLayersRef = useRef<Marker[]>([]);
+  /**
+   * אילו שכבות דלוקות. ב-ref **וגם** ב-state: `sync` נוצרת בתוך effect
+   * עם מערך תלויות ריק ולכן רואה רק refs, והרצועה שמעל המפה צריכה
+   * state כדי להיצבע מחדש. שניהם מתעדכנים יחד ב-toggleLayer.
+   */
+  const layersRef = useRef({ poi: true, rail: true });
+  const [layers, setLayers] = useState({ poi: true, rail: true });
   const declutterRef = useRef<() => void>(() => {});
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
   const { t } = useTheme();
+  /**
+   * הדלקה וכיבוי של שכבה. מעדכן את ה-ref ואז קורא ל-`sync` הקיימת —
+   * אותה פונקציה שמחליטה מה על המפה בכל זום. בלי `setView` ובלי
+   * `fitBounds`: המשתמש כיבה שכבה, הוא לא ביקש לזוז.
+   */
+  const toggleLayer = (key: "poi" | "rail") => {
+    const next = { ...layersRef.current, [key]: !layersRef.current[key] };
+    layersRef.current = next;
+    setLayers(next);
+    syncRef.current();
+  };
+
   const markersRef = useRef<Marker[]>([]);
   /**
    * סמני הנקודה בלבד — markersRef מחזיק גם את התוויות, ולהן אין `.mk`
@@ -479,6 +501,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       // הקו כולו רוצה לדעת איפה אפשר להחליף לרכבת, וארבעה ריבועים אינם
       // מעמיסים. התווית נדלקת עם שמות התחנות ועוברת את אותו סינון.
       const railLabels: Marker[] = [];
+      const railLayer: Marker[] = [];
       RAIL_STATIONS.forEach(r => {
         const d = railDistance(r);
         const popup =
@@ -494,14 +517,16 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
                 style="display:block;text-align:center;border:1px solid #ccc;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;text-decoration:none;color:#333;">
                 🚶 ניווט לתחנת הרכבת</a>
            </div>`;
-        L.marker([r.lat, r.lng], {
-          icon: L.divIcon({
-            className: "",
-            html: `<div class="mk mk-rail"></div>`,
-            iconSize: [9, 9],
-            iconAnchor: [4.5, 4.5],
-          }),
-        }).bindPopup(popup, { maxWidth: 230 }).addTo(map);
+        railLayer.push(
+          L.marker([r.lat, r.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: `<div class="mk mk-rail"></div>`,
+              iconSize: [9, 9],
+              iconAnchor: [4.5, 4.5],
+            }),
+          }).bindPopup(popup, { maxWidth: 230 }).addTo(map)
+        );
         railLabels.push(
           L.marker([r.lat, r.lng], {
             icon: L.divIcon({
@@ -518,6 +543,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         );
       });
       railLabelsRef.current = railLabels;
+      railLayersRef.current = railLayer;
 
       /**
        * שם תחנה מנצח שם מוקד. הזזת התוויות לא פתרה את ההתנגשות — מוקד
@@ -593,8 +619,16 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         zoomLayersRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
         // הסמנים עצמם גלויים בכל זום — המשתמש ביקש לראות כבר במבט הראשון
         // שיש מה לחפש. רק השמות ממתינים, כי הם אלה שמתנגשים.
-        poiLabelsRef.current.forEach(l => (pois ? l.addTo(map) : map.removeLayer(l)));
-        railLabelsRef.current.forEach(l => (names ? l.addTo(map) : map.removeLayer(l)));
+        //
+        // **ומ-10.11.2026 גם הטוגלים עוברים דרך כאן, ולא דרך קוד נפרד.**
+        // שכבה שכבויה יורדת בכל זום, ושכבה שדלוקה חוזרת לכלל הזום שלה —
+        // ולכן אין מצב שבו טוגל והזום סותרים זה את זה. זאת הסיבה שהם
+        // לא נכתבו כ-effect משלהם: שתי ידיים על אותה שכבה נפרדות בשקט.
+        const on = layersRef.current;
+        poiLayersRef.current.forEach(l => (on.poi ? l.addTo(map) : map.removeLayer(l)));
+        poiLabelsRef.current.forEach(l => (pois && on.poi ? l.addTo(map) : map.removeLayer(l)));
+        railLayersRef.current.forEach(l => (on.rail ? l.addTo(map) : map.removeLayer(l)));
+        railLabelsRef.current.forEach(l => (names && on.rail ? l.addTo(map) : map.removeLayer(l)));
         containerRef.current?.classList.toggle("map-far", !names);
         sizeHits(!names);
         setStage(pois ? "all" : names ? "stations" : "far");
@@ -943,14 +977,43 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
           <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#b04050", display: "inline-block" }} />
           תחנה
         </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
-          <span style={{ width: 9, height: 9, background: "#2563eb", transform: "rotate(45deg)", display: "inline-block" }} />
-          מוקד עניין
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: t.text, fontWeight: 500 }}>
-          <span style={{ width: 9, height: 9, background: "#334155", display: "inline-block" }} />
-          רכבת ישראל
-        </span>
+        {/*
+            שתי השכבות שאפשר לכבות הן **הכיסוי**, לא התוכן: המשתמש ביקש
+            להסתיר את מה שהוא לא רוצה לראות, והתחנות הן מה שהמפה מראה.
+            לכן "תחנה" נשאר מפתח, ושני אלה כפתורים.
+
+            תיבת סימון ולא כפתור-מצב: זאת הסמנטיקה המדויקת של
+            "הצג/הסתר שכבה", הרווח עובד בלי קוד מקלדת, וכלל המיקוד
+            ב-globals.css כבר חל על שדות קלט. כפתור-המצב היחיד באתר
+            נשאר זה של הערכה הכהה, ושורת הבלוק שסופרת אותם שומרת על כך.
+
+            **ושתי המילים שהיו כאן קודם הפילו את הבלוק.** כתבתי בהערה
+            הזאת את שמות שתי התכונות שהשורות האלה סופרות, והן נספרו
+            כאילו היו קוד: 1·0·9 הפך ל-1·1·9, ו-1·2·1 הפך ל-1·2·3.
+            אותה מלכודת של הערת ה-JSX שהפילה את סריקת הזמנים הקשיחים,
+            פעם שלישית. התיקון האמיתי אינו "לא לכתוב את המילה" אלא
+            שהסריקות מדלגות על הערות JSX — וזה מה שנעשה.
+        */}
+        {([
+          { key: "poi" as const, label: "מוקד עניין", swatch: { background: "#2563eb", transform: "rotate(45deg)" } },
+          { key: "rail" as const, label: "רכבת ישראל", swatch: { background: "#334155" } },
+        ]).map(l => (
+          <label key={l.key} style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            color: t.text, fontWeight: 500, cursor: "pointer",
+            opacity: layers[l.key] ? 1 : 0.45,
+            transition: "opacity 0.15s ease",
+          }}>
+            <input
+              type="checkbox"
+              checked={layers[l.key]}
+              onChange={() => toggleLayer(l.key)}
+              style={{ width: 13, height: 13, margin: 0, cursor: "pointer", accentColor: "#b04050" }}
+            />
+            <span style={{ width: 9, height: 9, display: "inline-block", ...l.swatch }} />
+            {l.label}
+          </label>
+        ))}
         {/* הרמז תלוי ביכולת: מפה בלי pickPoint אינה עונה ללחיצה על
             הרקע, ורמז שמבטיח התנהגות שאינה קיימת גרוע מאין רמז. */}
         <span style={{ color: t.muted, marginRight: "auto" }}>
