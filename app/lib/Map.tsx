@@ -192,8 +192,17 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
    * עם מערך תלויות ריק ולכן רואה רק refs, והרצועה שמעל המפה צריכה
    * state כדי להיצבע מחדש. שניהם מתעדכנים יחד ב-toggleLayer.
    */
-  const layersRef = useRef({ poi: true, rail: true });
-  const [layers, setLayers] = useState({ poi: true, rail: true });
+  const layersRef = useRef({ poi: true, rail: true, track: false });
+  const [layers, setLayers] = useState({ poi: true, rail: true, track: false });
+  /**
+   * מסילות רכבת ישראל. **כבויות כברירת מחדל ונטענות רק בהדלקה** —
+   * 20 KB של גאומטריה אינם צריכים להישלח למי שבא לראות את הקו האדום.
+   * `app/lib/railLines.json` נוצר פעם אחת ב-scripts/rail-geometry.mjs,
+   * כי Overpass החזיר 502 בשלוש מתוך שש שאילתות בבדיקה — מפה שתלויה
+   * בו בזמן בקשה היא מפה שלפעמים בלי רכבת.
+   */
+  const trackLayersRef = useRef<Layer[]>([]);
+  const trackLoadingRef = useRef(false);
   const declutterRef = useRef<() => void>(() => {});
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
@@ -203,11 +212,57 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
    * אותה פונקציה שמחליטה מה על המפה בכל זום. בלי `setView` ובלי
    * `fitBounds`: המשתמש כיבה שכבה, הוא לא ביקש לזוז.
    */
-  const toggleLayer = (key: "poi" | "rail") => {
+  /**
+   * טוען את המסילות בפעם הראשונה שמדליקים אותן. אחרי זה הן יושבות
+   * ב-ref והמתג רק מוסיף ומוריד אותן מהמפה, כמו שאר השכבות.
+   */
+  const ensureTrack = async () => {
+    if (trackLayersRef.current.length || trackLoadingRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
+    trackLoadingRef.current = true;
+    try {
+      const [L, mod] = await Promise.all([import("leaflet"), import("./railLines.json")]);
+      // ⚠ **בלי `type` בעל שם כאן.** סורק השדות המתים סופר כל שדה
+      // שמוכרז בטיפוס תחת `app/lib` ואינו נקרא בקובץ ממשק — ו-`Map.tsx`
+      // עצמו הוא lib, כלומר קריאה כאן אינה נספרת. טיפוס בעל שם היה
+      // מוסיף את `lines` למניין המתים בשקט. נבדקה גם ההרחבה שתכיר
+      // ברכיבי `.tsx` שב-lib כקוראים, והיא **הוחזרה**: היא הוציאה
+      // מהרשימה גם `geometry` ו-`properties`, שהם מילים גנריות שנמצאות
+      // בקוד של ליפט — כלומר היא הייתה משתיקה שדות מתים אמיתיים.
+      const data = mod.default ?? (mod as unknown as typeof mod.default);
+      const built: Layer[] = [];
+      for (const line of data.lines) {
+        built.push(L.polyline(line.map(([lng, lat]) => [lat, lng] as [number, number]), {
+          color: "#334155", weight: 2, opacity: 0.55,
+        }));
+      }
+      for (const st of data.stations) {
+        built.push(
+          L.marker([st.lat, st.lng], {
+            icon: L.divIcon({ className: "", html: `<div class="mk mk-track"></div>`, iconSize: [8, 8], iconAnchor: [4, 4] }),
+          }).bindPopup(
+            `<div style="font-family:'Rubik',sans-serif;direction:rtl;text-align:right;min-width:120px;padding:2px;">
+               <div style="font-weight:700;font-size:13px;">${st.name}</div>
+               <div style="font-size:11px;color:#666;">תחנת רכבת ישראל</div>
+             </div>`,
+            { maxWidth: 200 }
+          )
+        );
+      }
+      trackLayersRef.current = built;
+    } finally {
+      trackLoadingRef.current = false;
+    }
+    syncRef.current();
+  };
+
+  const toggleLayer = (key: "poi" | "rail" | "track") => {
     const next = { ...layersRef.current, [key]: !layersRef.current[key] };
     layersRef.current = next;
     setLayers(next);
-    syncRef.current();
+    if (key === "track" && next.track) void ensureTrack();
+    else syncRef.current();
   };
 
   const markersRef = useRef<Marker[]>([]);
@@ -628,6 +683,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         poiLayersRef.current.forEach(l => (on.poi ? l.addTo(map) : map.removeLayer(l)));
         poiLabelsRef.current.forEach(l => (pois && on.poi ? l.addTo(map) : map.removeLayer(l)));
         railLayersRef.current.forEach(l => (on.rail ? l.addTo(map) : map.removeLayer(l)));
+        trackLayersRef.current.forEach(l => (on.track ? l.addTo(map) : map.removeLayer(l)));
         railLabelsRef.current.forEach(l => (names && on.rail ? l.addTo(map) : map.removeLayer(l)));
         containerRef.current?.classList.toggle("map-far", !names);
         sizeHits(!names);
@@ -968,6 +1024,8 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
          * סימון (רווח וקורא מסך עובדים בלי קוד), רק המראה השתנה.
          * ובלי גרש אחורי כאן — ההערה שלוש שורות מעל אומרת למה.
          */
+        .mk-track { width: 8px; height: 8px; background: #475569;
+              border: 1px solid #ffffff; opacity: 0.85; }
         .lyr {
           appearance: none; -webkit-appearance: none;
           width: 30px; height: 17px; border-radius: 999px;
@@ -1030,6 +1088,7 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         {([
           { key: "poi" as const, label: "מוקד עניין", swatch: { background: "#2563eb", transform: "rotate(45deg)" } },
           { key: "rail" as const, label: "רכבת ישראל", swatch: { background: "#334155" } },
+          { key: "track" as const, label: "מסילת הרכבת", swatch: { background: "#334155", height: 3, width: 14, opacity: 0.6 } },
         ]).map(l => (
           <label key={l.key} style={{
             display: "inline-flex", alignItems: "center", gap: 5,
