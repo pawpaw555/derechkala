@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, distanceMetres, formatDistance, isWalkable, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, FARE_ANSWER, SURCHARGE_ANSWER, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
+import { findRoute, findRouteByArrival, isNoService, Station, STATIONS, JUNCTION, Landmark, getNextDepartures, normalizeHebrew, stationLabel, findNearestStation, hhmm, SERVICE_FIRST_MINS, FRIDAY_LAST_MINS, SATURDAY_NIGHT_FIRST_MINS, PEAK_WINDOWS, PEAK_FREQ_MINS, BASE_FREQ_MINS, LINE_LENGTH_KM, FARE_ANSWER, SURCHARGE_ANSWER, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "./lib/data";
 import { searchCombined, PlaceHit, SearchResults } from "./lib/places";
 import HiddenCountNote from "./lib/HiddenCountNote";
 import { useTheme, type Theme } from "./lib/useTheme";
 import { SiteHeader } from "./lib/SiteComponents";
-import { useNearestStation, lookupPlaces, houseNumberNote, type Place } from "./lib/useNearestStation";
+import { useNearestStation, runGeoLookup, type Place } from "./lib/useNearestStation";
+import GeoPicks from "./lib/GeoPicks";
 import NearestStationFinder from "./lib/NearestStationFinder";
 import TimeChoice, { TimeChoiceValue } from "./lib/TimeChoice";
 
@@ -215,43 +216,7 @@ function InputField({ id, label, value, onChange, placeholder, selected, results
             borderRadius: 10, boxShadow: t.shadow, overflow: "hidden",
             fontFamily: "'Rubik', sans-serif", textAlign: "right",
           }}>
-            {geoBusy ? (
-              <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>מחפש מקומות…</div>
-            ) : geoResults.length > 0 ? (
-              <>
-                {/*
-                  ההחלפה השקטה, במקום השני: הכותרת הכריזה "מצאנו את המקום"
-                  מעל תוצאות שאינן מה שהוקלד. אם ביקשת מספר בית ואין אותו,
-                  המשפט נאמר כאן באותן מילים בדיוק כמו בפאנל — houseNumberNote
-                  הוא המקור היחיד שלהן.
-                */}
-                <div style={{ padding: "8px 14px", fontSize: 11, color: t.muted, background: t.resultBg }}>
-                  {houseNumberNote(value, geoResults) ?? "לא תחנה — אבל מצאנו את המקום"}
-                </div>
-                {geoResults.map(g => {
-                  const st = findNearestStation(g.lat, g.lng);
-                  const m = Math.round(distanceMetres(g, st));
-                  return (
-                    <button key={g.label} onClick={() => onSelectGeo?.(g)} className="dropdown-item" style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      width: "100%", background: "transparent",
-                      border: "none", borderBottom: `1px solid ${t.border}`,
-                      padding: "12px 14px", cursor: "pointer",
-                    }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 3, flexShrink: 0, background: st.lineColor, transform: "rotate(45deg)" }} />
-                      <div style={{ flex: 1, textAlign: "right" }}>
-                        <div style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>{g.label}</div>
-                        <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>
-                          התחנה הקרובה: {st.name} · {formatDistance(m)}{isWalkable(m) ? "" : " · רחוק מכדי ללכת"}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </>
-            ) : (
-              <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>לא נמצאו תוצאות עבור &quot;{value}&quot;</div>
-            )}
+            <GeoPicks query={value} results={geoResults} busy={geoBusy} onSelect={g => onSelectGeo?.(g)} t={t} />
           </div>
         )}
       </div>
@@ -352,6 +317,24 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
   const [arrivedWith, setArrivedWith] = useState<{ from?: string; to?: string } | null>(null);
   const [backTo, setBackTo] = useState<{ href: string; label: string } | null>(null);
 
+  // שתי הבחירות האלה יושבות כאן, מעל ה-effect שקורא להן בטעינה עם
+  // ?from= ו-?to=. הן ישבו מתחתיו, וזה עבד — אבל ב-10.11.2026, אחרי
+  // שהחיפוש המקומי עבר ל-runGeoLookup המשותפת, מהדר React הפסיק
+  // להיעצר מוקדם בקומפוננטה והתחיל לנתח את כל הגוף: שתי השגיאות
+  // "Cannot access variable before it is declared" לא נולדו מהשינוי,
+  // הן נחשפו בו. הסדר הזה מסלק אותן, והספירה חזרה מ-17 ל-15.
+  const handleFromSelectStation = (s: Station) => {
+    setFromStation(s);
+    setFromQuery(s.name);
+    setFromResults(EMPTY_RESULTS);
+  };
+
+  const handleToSelectStation = (s: Station) => {
+    setToStation(s);
+    setToQuery(s.name);
+    setToResults(EMPTY_RESULTS);
+  };
+
   useEffect(() => {
     // עמוד התחנה מקשר לכאן בשני הכיוונים: מי שמחפש תחנת מוצא ומי שמחפש
     // תחנת יעד. קודם לכן רק ?from= נקרא, ולכן לא היה אפשר להגיע לתחנה.
@@ -390,39 +373,6 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
   // והייתה גדולה ממנה בשבעה שדות.
   const { dark, t } = useTheme();
 
-  /**
-   * חיפוש הכתובות של שדה טופס אחד: ההשהיה, שומר הרצף, והכלל מתי בכלל
-   * פונים לרשת — רק כשהאינדקס הפנימי לא החזיר דבר ויש לפחות שלושה תווים.
-   *
-   * **יושב כאן ולא פעמיים.** עד 10.11.2026 הצנרת הזאת הייתה רק בשדה
-   * המוצא, וכשהיא הגיעה גם ליעד היא הייתה הופכת לשני עותקים של אותן
-   * עשרים שורות — ואז התיקון הבא היה נוחת באחד מהם. זה בדיוק כלל 4.
-   */
-  const runGeoLookup = (
-    val: string,
-    empty: boolean,
-    timer: React.RefObject<ReturnType<typeof setTimeout> | null>,
-    seqRef: React.RefObject<number>,
-    setGeo: (p: Place[]) => void,
-    setBusy: (b: boolean) => void,
-  ) => {
-    if (timer.current) clearTimeout(timer.current);
-    if (!empty || val.trim().length < 3) { setGeo([]); setBusy(false); return; }
-    setBusy(true);
-    timer.current = setTimeout(async () => {
-      const seq = ++seqRef.current;
-      try {
-        const hits = await lookupPlaces(val.trim());
-        if (seq !== seqRef.current) return;
-        setGeo(hits);
-      } catch {
-        if (seq === seqRef.current) setGeo([]);
-      } finally {
-        if (seq === seqRef.current) setBusy(false);
-      }
-    }, 450);
-  };
-
   const isEmptyHit = (r: ReturnType<typeof searchCombined>) =>
     r.stations.length === 0 && r.landmarks.length === 0 && r.places.length === 0;
 
@@ -445,11 +395,6 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
     runGeoLookup(val, isEmptyHit(local), toGeoTimer, toGeoSeq, setToGeo, setToGeoBusy);
   };
 
-  const handleFromSelectStation = (s: Station) => {
-    setFromStation(s);
-    setFromQuery(s.name);
-    setFromResults(EMPTY_RESULTS);
-  };
 
   /** מקום שאינו תחנה: בוחרים את התחנה הקרובה אליו, ומשאירים בשדה את מה
    *  שהמשתמש הקליד — כדי שיהיה ברור למה נבחרה דווקא היא. */
@@ -488,11 +433,6 @@ export default function HomeContent({ typeBreakdown }: { typeBreakdown: string }
     setToGeoBusy(false);
   };
 
-  const handleToSelectStation = (s: Station) => {
-    setToStation(s);
-    setToQuery(s.name);
-    setToResults(EMPTY_RESULTS);
-  };
 
   const handleToSelectPlace = (p: PlaceHit) => {
     if (!p.station) return;

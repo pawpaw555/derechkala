@@ -235,6 +235,43 @@ async function searchByHouseNumber(q: string): Promise<Place[]> {
 
 
 /**
+ * חיפוש הכתובות של שדה טופס אחד: ההשהיה, שומר הרצף, והכלל מתי בכלל
+ * פונים לרשת — רק כשהאינדקס הפנימי לא החזיר דבר ויש לפחות שלושה תווים.
+ *
+ * **שלושה שדות קוראים לה** — מוצא ויעד בעמוד הבית, ושדה היעד בעמוד
+ * התחנה מ-10.11.2026. היא נולדה כפונקציה מקומית בעמוד הבית באותו יום,
+ * ועברה לכאן ברגע שהשדה השלישי ביקש אותה: שלושה עותקים של ההשהיה
+ * ושומר הרצף הם שלוש הזדמנויות שאחד מהם יתיישן. כלל 4.
+ *
+ * **הטיימר והסדרה נשארים אצל הקורא, אחד לכל שדה.** מונה משותף היה
+ * מבטל את החיפוש של השדה שלא נגעו בו, כי המשתמש מקליד בשניהם.
+ */
+export function runGeoLookup(
+  val: string,
+  empty: boolean,
+  timer: { current: ReturnType<typeof setTimeout> | null },
+  seqRef: { current: number },
+  setGeo: (p: Place[]) => void,
+  setBusy: (b: boolean) => void,
+): void {
+  if (timer.current) clearTimeout(timer.current);
+  if (!empty || val.trim().length < 3) { setGeo([]); setBusy(false); return; }
+  setBusy(true);
+  timer.current = setTimeout(async () => {
+    const seq = ++seqRef.current;
+    try {
+      const hits = await lookupPlaces(val.trim());
+      if (seq !== seqRef.current) return;
+      setGeo(hits);
+    } catch {
+      if (seq === seqRef.current) setGeo([]);
+    } finally {
+      if (seq === seqRef.current) setBusy(false);
+    }
+  }, 450);
+}
+
+/**
  * חיפוש המקום היחיד באתר: Photon, ונפילה ל-Nominatim כשהוקלד מספר בית
  * שהוא לא החזיר. הצרכנים — פאנל התחנה הקרובה, ומ-10.11.2026 **שני**
  * שדות הטופס בעמוד הבית דרך `runGeoLookup` — קוראים לכאן. אין שני

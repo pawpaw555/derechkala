@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Station, Landmark, findRoute, findRouteByArrival, isNoService, hhmm, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
+import { Station, Landmark, findNearestStation, findRoute, findRouteByArrival, isNoService, hhmm, STATIONS, getNextDepartures, getRelatedStations, distanceMetres, formatDistance, walkMinutes, walkEstimate, walkNote, isWalkable, stationLabel, JUNCTION_WAIT_MINS, pickerDefaults, dateForDay, dayLabel, dayOptions } from "../../lib/data";
 import { STATION_CONTENT, STATION_FAQ, STATION_TYPE_LABEL } from "../../lib/stationContent";
 import { useTheme } from "../../lib/useTheme";
 import { SiteHeader, SiteFooter } from "../../lib/SiteComponents";
 import NavigationLinks from "../../lib/NavigationLinks";
 import HiddenCountNote from "../../lib/HiddenCountNote";
 import { railNear, railDistance } from "../../lib/railStations";
-import { useNearestStation, fetchFootRoute } from "../../lib/useNearestStation";
+import { useNearestStation, fetchFootRoute, runGeoLookup, type Place } from "../../lib/useNearestStation";
+import GeoPicks from "../../lib/GeoPicks";
 import { searchCombined, PlaceHit, SearchResults } from "../../lib/places";
 import NearestStationFinder from "../../lib/NearestStationFinder";
 import TimeChoice, { TimeChoiceValue } from "../../lib/TimeChoice";
@@ -43,6 +44,12 @@ export default function StationClient({ stationName, station }: Props) {
   const [toQuery, setToQuery] = useState("");
   /** נלחצה במפה התחנה של העמוד עצמו — מסבירים במקום להתעלם בשקט. */
   const [selfPick, setSelfPick] = useState(false);
+  // חיפוש כתובות בשדה היעד, כמו בעמוד הבית. עד 10.11.2026 השדה הזה
+  // קיבל תחנות בלבד, ולכן גם הניסוח היה "בחרו תחנת יעד".
+  const [geo, setGeo] = useState<Place[]>([]);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const geoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoSeq = useRef(0);
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [timeMode, setTimeMode] = useState<"departure" | "arrival">("departure");
   // הנקודה שממנה מחושבת רשימת "עזיבות הבאות". במצב הגעה זו שעת היציאה
@@ -132,7 +139,31 @@ const content = STATION_CONTENT[stationName];
       setToQuery("");
       setResult(null);
     }
-    setResults(val.length >= 2 ? dropSelf(searchCombined(val)) : { stations: [], landmarks: [], places: [] });
+    const local = val.length >= 2 ? dropSelf(searchCombined(val)) : { stations: [], landmarks: [], places: [] };
+    setResults(local);
+    const empty = local.stations.length === 0 && local.landmarks.length === 0 && local.places.length === 0;
+    runGeoLookup(val, empty, geoTimer, geoSeq, setGeo, setGeoBusy);
+  };
+
+  /**
+   * כתובת כיעד: נבחרת התחנה הקרובה אליה, והשדה שומר את מה שהוקלד.
+   * כלל 3, אותה מחלקה כמו handleSelectPlace: כתובת שהתחנה הקרובה אליה
+   * היא התחנה של העמוד מובילה לנסיעה של אפס דקות, ולכן נאמר למה לא
+   * קרה כלום במקום להתעלם בשקט.
+   */
+  const handleSelectGeo = (g: Place) => {
+    const st = findNearestStation(g.lat, g.lng);
+    if (st.name === stationName) {
+      setSelfPick(true);
+      return;
+    }
+    setSelfPick(false);
+    setToStation(st.name);
+    setToQuery(g.label);
+    setQuery(g.label);
+    setResults({ stations: [], landmarks: [], places: [] });
+    setGeo([]);
+    setGeoBusy(false);
   };
 
   const handleSelectStation = (s: Station) => {
@@ -515,8 +546,8 @@ const content = STATION_CONTENT[stationName];
                 <input
                   value={query}
                   onChange={e => handleSearch(e.target.value)}
-                  placeholder={direction === "from" ? "בחרו תחנת יעד" : "בחרו תחנת מוצא"}
-                  aria-label={direction === "from" ? "בחרו תחנת יעד" : "בחרו תחנת מוצא"}
+                  placeholder={direction === "from" ? "בחרו יעד — תחנה, מקום או כתובת" : "בחרו מוצא — תחנה, מקום או כתובת"}
+                  aria-label={direction === "from" ? "בחרו יעד" : "בחרו מוצא"}
                   autoComplete="off"
                   style={{
                     width: "100%", background: t.inputBg,
@@ -631,12 +662,17 @@ const content = STATION_CONTENT[stationName];
                   <div style={{
                     position: "absolute", top: "calc(100% + 4px)", right: 0, left: 0, zIndex: 100,
                     background: t.card, border: `1px solid ${t.border}`,
-                    borderRadius: 9, boxShadow: t.shadow,
-                    padding: "14px 16px", fontSize: 13, color: t.muted,
+                    borderRadius: 9, boxShadow: t.shadow, overflow: "hidden",
                     fontFamily: "'Rubik', sans-serif", textAlign: "right",
                   }}>
-                    <div style={{ marginBottom: 6 }}>לא נמצאה תחנה בשם הזה — נסו שם של תחנה, או בחרו מהמפה</div>
-                    <a href="/map" style={{ color: color, fontWeight: 600 }}>פתחו את המפה</a>
+                    {geoBusy || geo.length > 0 ? (
+                      <GeoPicks query={query} results={geo} busy={geoBusy} onSelect={handleSelectGeo} t={t} />
+                    ) : (
+                      <div style={{ padding: "14px 16px", fontSize: 13, color: t.muted }}>
+                        <div style={{ marginBottom: 6 }}>לא נמצאה תחנה בשם הזה — נסו שם של רחוב, עיר או מקום מוכר</div>
+                        <a href="/map" style={{ color: color, fontWeight: 600 }}>פתחו את המפה</a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

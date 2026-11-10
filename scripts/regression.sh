@@ -50,6 +50,11 @@ echo "═══ בלוק רגרסיה ═══"
 ok "tsc"  "0" "$(npx tsc --noEmit 2>&1 | grep -c 'error TS')"
 ok "build" "0" "$BUILD"
 LINTN=$(npm run lint 2>&1 | grep -oE '[0-9]+ problems' | head -1 | grep -oE '[0-9]+')
+# 15 → 16 ב-10.11.2026, **בלי שנוספה תקלה**: כשהחיפוש המקומי עבר
+# ל-runGeoLookup המשותפת, מהדר React הפסיק להיעצר מוקדם ב-HomeContent
+# והתחיל לנתח את כל הגוף. שתיים מהשגיאות שנחשפו תוקנו (סדר ההכרזה),
+# והאחרונה — setState בתוך effect שקורא פרמטרים מה-URL — היא התנהגות
+# קיימת ומכוונת. התקרה **לא הועלתה**: 16 נכנס בה בדיוק.
 ok "lint (תקרה)" "≤16" "$(le "${LINTN:-0}" 16)"
 # grep -c סופר שורות, ו-Next קובע את מעברי השורה ב-HTML לפי שיקוליו:
 # הוספת בלוק <style> אחד הזיזה את אותן מחרוזות מ-2 שורות ל-3 בלי ששום
@@ -167,7 +172,7 @@ ok "מחירים מול דנקל החיה" "8/14.5/180 · בקרה: כן" "$(nod
 ok "שעות מול דנקל החיה" "14:10 · 18:20 · מסלולים 5 · בקרה: כן" "$(node scripts/hours-live.mjs 2>/dev/null)"
 # כלל 2: סתירה מול הנתונים, עם קובץ ושורה. מספר הקבצים הוא הבקרה —
 # 0 סתירות מתוך 0 קבצים נראה בדיוק כמו אתר תקין.
-ok "סתירות מול הנתונים · קבצים שנסרקו" "0 · 36" "$(node scripts/audit-claims.mjs count 2>/dev/null)"
+ok "סתירות מול הנתונים · קבצים שנסרקו" "0 · 37" "$(node scripts/audit-claims.mjs count 2>/dev/null)"
 # כלל 2: העובדות שנקראו ממקור חי. שינוי שם תחנה אחד מפיל שלוש מהן
 # ומצביע על המקור שסותר. הבקרה היא מספר העובדות שנבדקו — 0 סתירות
 # מתוך 0 עובדות נראה בדיוק כמו אתר מאומת.
@@ -258,7 +263,7 @@ const d = "05:30";
 const e = 1; // kept running until 21:00
 const u = "https://derechkala.online/hours";
 FIXTURE
-ok "לוח זמנים קשיח בכל app/ · נקראו · בקרה" "0 · 35 · 5" "$(hh_scan "$HFILES") · $(hardcoded_hours "$HFIX")"
+ok "לוח זמנים קשיח בכל app/ · נקראו · בקרה" "0 · 36 · 5" "$(hh_scan "$HFILES") · $(hardcoded_hours "$HFIX")"
 
 # כלל 11ב: ממצא נרשם עם עוגן קובץ:שורה, אחרת אי אפשר לאמת אותו מחדש.
 # המספר השני הוא כמה סעיפים נסרקו, והוא הבקרה: רשימת האותיות קשיחה,
@@ -406,7 +411,7 @@ delay_scan(){
 RFIX=/tmp/reg-resize-fixture.tsx
 printf 'if (known.x === el.clientWidth) return;\n' > "$RFIX"
 ok "התאמת מיכל: fittedSizeRef · getSize · בקרה · מאזין חלון" "5 · 0 · 1 · 0" "$(grep -vE '^[[:space:]]*(//|\*)' app/lib/Map.tsx | grep -c 'fittedSizeRef') · $(grep -c 'known\.x' app/lib/Map.tsx) · $(grep -c 'known\.x' "$RFIX") · $(grep -c 'addEventListener("resize"' app/lib/Map.tsx)"
-ok "המתנה מלאכותית · נקראו · שתי בקרות" "0 · 36 · 2 · 4" "$(delay_scan "$PFILES") · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PLANNERS | paste -sd+ - | bc)"
+ok "המתנה מלאכותית · נקראו · שתי בקרות" "0 · 37 · 2 · 4" "$(delay_scan "$PFILES") · $(grep -cE '2000 \+ Math\.random|setLoading' "$DFIX") · $(grep -ch 'handlePlan' $PLANNERS | paste -sd+ - | bc)"
 # ושתי השורות שלמעלה הן אותו תיקון, ולכן המחלקה נבדקת כאן ולא נזכרת.
 # ב-08.11 נמצא שבלוק הזה החזיק **שתי** אוכלוסיות ככתב — חמישה קבצים
 # ללוח הזמנים ושניים להמתנה — ושתיהן נולדו נכונות והתיישנו בשקט: הן
@@ -671,13 +676,38 @@ ok "זמן הליכה: קוראים · עם הצמדה" "2 · 2" "$(we_calls | w
 # ב-bash, שבו הבלוק רץ, `-lc` מוציא **שתי שורות לכל קובץ** —
 # `file:1` וגם `file`. ב-zsh, שבו בדקתי ידנית לפני כן, הוא הוציא
 # אחת. אותה פקודה, שני מספרים, תלוי בקונכייה. `-l` לבד חד-משמעי.
-ok "קוראים ל-walkNote · ל-houseNumberNote" "2 · 2" "$(grep -l 'walkNote(' app/lib/NearestStationFinder.tsx app/station/\[slug\]/StationClient.tsx 2>/dev/null|wc -l|tr -d ' ') · $(grep -l 'houseNumberNote(' app/HomeContent.tsx app/lib/useNearestStation.ts 2>/dev/null|wc -l|tr -d ' ')"
+# ⚠ והרשימה הקשיחה כאן התיישנה ב-10.11.2026, בדיוק כמו שהכלל חוזה:
+# `houseNumberNote` עבר מ-`HomeContent` ל-`GeoPicks` כששדה שלישי ביקש
+# את אותן שורות, והבדיקה דיווחה "2 · 1" — נכון, אבל על רשימה שאינה
+# קיימת עוד. עכשיו אין כאן נתיבים: נספרים הקבצים שבהם **יש קריאה**,
+# אחרי סינון שורת ההגדרה עצמה. קובץ שיעתיק את המשפט יעלה את המספר,
+# וקובץ שיפסיק לקרוא לו יוריד אותו.
+note_callers() {
+  local fn="$1" n=0 f
+  while read -r f; do
+    [ -z "$f" ] && continue
+    grep -v "export function $fn" "$f" | grep -q "$fn(" && n=$(( n + 1 ))
+  done <<< "$(grep -rl "$fn(" --include='*.ts' --include='*.tsx' app/)"
+  echo "$n"
+}
+ok "קוראים ל-walkNote · ל-houseNumberNote" "2 · 2" "$(note_callers walkNote) · $(note_callers houseNumberNote)"
 # וכלל 4 על שדות הטופס: שני השדות בעמוד הבית חייבים לקבל את חיפוש
 # הכתובות. עד 10.11.2026 רק שדה המוצא קיבל אותו, ומי שהקליד כתובת
 # בשדה היעד לא קיבל דבר — אותה כתובת בדיוק עבדה בשדה שמעליו. שניהם
 # עוברים עכשיו דרך runGeoLookup, ושדה שלישי בלי geo יפיל את השורה.
 # **הוכח שנכשל:** הסרת onSelectGeo משדה אחד מחזירה "2 · 1".
 ok "שדות הטופס: InputField · עם חיפוש כתובות" "2 · 2" "$(grep -c '<InputField' app/HomeContent.tsx) · $(grep -c 'onSelectGeo={' app/HomeContent.tsx)"
+# ומ-10.11.2026 גם שדה היעד בעמוד התחנה. שלושה שדות, ולכן ההשהיה ושומר
+# הרצף עברו ל-runGeoLookup אחת, והשורות עצמן ל-GeoPicks אחד. המספר
+# השלישי הוא הקבצים שמחזיקים את המחרוזת "התחנה הקרובה:" — **אחד**.
+# עותק רביעי של אותה שורה יעלה אותו, וזה מה שכלל 4 קיים בשבילו.
+# המחרוזת מילולית ולא מחלקת תווים, כלל 11. נמדד ב-bash -c לפני הכתיבה.
+# **הוכח שנכשל:** עותק של GeoPicks תחת שם אחר מחזיר "3 · 2 · 2".
+geo_calls() {
+  grep -rh "runGeoLookup(" --include='*.ts' --include='*.tsx' app/ \
+    | grep -v "export function" | grep -vE "^[[:space:]]*(//|\*)"
+}
+ok "חיפוש כתובות: קוראים · מציירים · קבצים עם השורה" "3 · 2 · 1" "$(geo_calls | wc -l | tr -d ' ') · $(grep -rho '<GeoPicks ' --include='*.tsx' app/ | wc -l | tr -d ' ') · $(grep -rl 'התחנה הקרובה:' --include='*.tsx' app/ | wc -l | tr -d ' ')"
 ok "מפת העמודים: סתירות/עמודים" "0/4" "$(node scripts/pagemap.mjs count 2>/dev/null)"
 ok "בדיקת ה-FAQ נבדקת: נכשלו/מקרים" "0/6" "$(node scripts/faq-selftest.mjs count 2>/dev/null)"
 # כניסה C של שאול המלך נוספה ב-05.11.2026, והפיצול לשורות הוא מקום
