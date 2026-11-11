@@ -203,6 +203,8 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
    */
   const trackLayersRef = useRef<Layer[]>([]);
   const trackLoadingRef = useRef(false);
+  /** `sync` נוצרת בתוך אפקט הבנייה ורואה רק refs. */
+  const ensureTrackRef = useRef<() => Promise<void>>(async () => {});
   const declutterRef = useRef<() => void>(() => {});
   /** מה מוצג כרגע, כדי שהרצועה שמעל המפה תגיד את הדבר הנכון. */
   const [stage, setStage] = useState<"far" | "stations" | "all">("far");
@@ -257,13 +259,27 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
     syncRef.current();
   };
 
+  ensureTrackRef.current = ensureTrack;
+
+  /**
+   * מה שהודלק נשאר דלוק. בעל האתר דיווח ב-10.11.2026 שהדליק את
+   * המסילות, "סגר ופתח", והן לא הוצגו — ברירת המחדל חזרה לכבוי בכל
+   * טעינה. מצב שבחרת ואינו נשמר נקרא כתקלה, בצדק.
+   *
+   * אותו מפתח לשלוש השכבות ולכל המפות באתר, ולכן המצב אחיד בין עמוד
+   * המפה לעמוד הבית ולעמוד התחנה. נכתב רק מתוך פעולת משתמש.
+   */
+  const LAYERS_KEY = "derechkala:map-layers";
+
   const toggleLayer = (key: "poi" | "rail" | "track") => {
     const next = { ...layersRef.current, [key]: !layersRef.current[key] };
     layersRef.current = next;
     setLayers(next);
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify(next)); } catch { /* חסום — לא נורא */ }
     if (key === "track" && next.track) void ensureTrack();
     else syncRef.current();
   };
+
 
   const markersRef = useRef<Marker[]>([]);
   /**
@@ -292,6 +308,30 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
   // ורואים mapRef ריק. בלי הדגל הזה הם חזרו מוקדם ולא רצו שוב, והמפה
   // נשארה בלי 34 סמני התחנות ובלי התוויות שלהן.
   const [mapReady, setMapReady] = useState(false);
+
+  /**
+   * הקריאה מהזיכרון המקומי היא **אחרי** שהמפה מוכנה ולא ברינדור:
+   * קריאה ברינדור הייתה יוצרת פער מול מה שהשרת בנה, ו-ensureTrack
+   * זקוקה למפה קיימת.
+   */
+  useEffect(() => {
+    if (!mapReady) return;
+    try {
+      const raw = localStorage.getItem(LAYERS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<{ poi: boolean; rail: boolean; track: boolean }>;
+      const next = {
+        poi: saved.poi ?? true,
+        rail: saved.rail ?? true,
+        track: saved.track ?? false,
+      };
+      layersRef.current = next;
+      setLayers(next);
+      if (next.track) void ensureTrack();
+      else syncRef.current();
+    } catch { /* ערך פגום — נשארים בברירת המחדל */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady]);
   /**
    * הנקודה שהמשתמש בחר על גוף המפה, כש-`pickPoint` דולקת.
    * `label` null פירושו שאין כתובת — או שהיא עוד נשלפת (`pending`), או
@@ -684,6 +724,12 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
         poiLabelsRef.current.forEach(l => (pois && on.poi ? l.addTo(map) : map.removeLayer(l)));
         railLayersRef.current.forEach(l => (on.rail ? l.addTo(map) : map.removeLayer(l)));
         trackLayersRef.current.forEach(l => (on.track ? l.addTo(map) : map.removeLayer(l)));
+        // דלוק אבל ריק = מצב שנטען מהזיכרון המקומי לפני שהמפה הייתה
+        // מוכנה, או מפה שנבנתה מחדש. הטעינה קוראת ל-sync בסופה, והשומר
+        // למעלה עוצר את הלולאה.
+        if (on.track && !trackLayersRef.current.length && !trackLoadingRef.current) {
+          void ensureTrackRef.current();
+        }
         railLabelsRef.current.forEach(l => (names && on.rail ? l.addTo(map) : map.removeLayer(l)));
         containerRef.current?.classList.toggle("map-far", !names);
         sizeHits(!names);
@@ -711,6 +757,15 @@ export default function Map({ stations, userLoc, onSelectStation, fromStation, t
       markersRef.current = [];
       dotsRef.current = [];
       overlayRef.current = [];
+      // שאר השכבות נבנות מחדש באפקט הזה עצמו; המסילות נבנות ב-ensureTrack,
+      // שמדלג כשה-ref מלא. ריקון כאן מחזיר אותן למסלול הטעינה הרגיל.
+      //
+      // **ולמען הדיוק: זאת הגנה, לא תיקון של תקלה שנצפתה.** ניסיתי
+      // לשחזר — ניווט בין עמודי תחנה בלי טעינה מלאה, שהוא הנתיב שבו
+      // המפה נבנית מחדש בלי שהרכיב מתפרק — והשכבות **כן** חזרו גם בלי
+      // השורה הזאת. היא נשארת כי ref שמחזיק שכבות של מפה שנהרסה הוא
+      // מצב לא תקין בפני עצמו, ושאר ה-refs מנוקים כאן ממש.
+      trackLayersRef.current = [];
       setMapReady(false);
     };
     // focusStation כאן כי הוא קובע את תצוגת הפתיחה, ותצוגת הפתיחה נקבעת
