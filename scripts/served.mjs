@@ -175,6 +175,34 @@ async function clarity() {
   return { pages: PAGES.length, gated, tags, negative, bad };
 }
 
+// ── ga4 ──────────────────────────────────────────────────────────────
+// אותה בדיקה בדיוק כמו clarity, לסקריפט Google Analytics שנוסף
+// ב-20.11.2026, ומאותה סיבה. פונקציה נפרדת ולא clarity() עם פרמטר,
+// כי הנרמול כאן שונה: הסקריפט רב-שורתי, ו-Next מגיש שבירת שורה כ-`\n`.
+// שיטוח הלוכסנים לבדו היה הופך אותה ל-`n` ומדביק אותה למילה הבאה,
+// ולכן `\n` מוחלף ברווח קודם, ואז כל רצף רווחים מכווץ לאחד. הלשון
+// כוללת את `window.dataLayer` שמיד אחרי הסוגריים, ולכן תנאי שיושב ליד
+// הטוען ואינו עוטף אותו לא עובר. מה שהיא אינה אומרת: שגוגל מקבל נתונים
+// — את זה רק דוח הזמן-אמת ב-Analytics יכול לומר, אחרי דחיפה.
+async function ga4() {
+  const TAG = "G-3L6HEVQXWD";
+  const GATE = 'location.hostname === "derechkala.online") { window.dataLayer = window.dataLayer || [];';
+  const norm = (h) => h.replace(/\\n/g, " ").replace(/\\/g, "").replace(/\s+/g, " ");
+  let gated = 0, tags = 0;
+  const bad = [];
+  for (const p of PAGES) {
+    const h = norm(await (await fetch(BASE + p, { signal: AbortSignal.timeout(20000) })).text());
+    const hasTag = h.includes(TAG);
+    if (hasTag) tags++; else bad.push(`${p} · אין סקריפט Analytics בכלל`);
+    if (h.includes(GATE)) gated++;
+    else if (hasTag) bad.push(`${p} · הסקריפט מוגש בלי תנאי הדומיין`);
+  }
+  const raw = norm(await (await fetch(BASE + PAGES[0], { signal: AbortSignal.timeout(20000) })).text());
+  const stripped = raw.replace(GATE, "{ window.dataLayer = window.dataLayer || [];");
+  const negative = raw.includes(GATE) && !stripped.includes(GATE) && stripped.includes(TAG);
+  return { pages: PAGES.length, gated, tags, negative, bad };
+}
+
 if (mode === "links") {
   const r = await links();
   if (process.argv.includes("count"))
@@ -213,7 +241,17 @@ if (mode === "links") {
     console.log("בקרה שלילית (התנאי נמחק מהמסמך המוגש): %s", r.negative ? "כן" : "לא");
   }
   process.exit(r.gated === r.pages && r.tags === r.pages && r.negative ? 0 : 1);
+} else if (mode === "ga4") {
+  const r = await ga4();
+  if (process.argv.includes("count"))
+    console.log("%d/%d · תג: %d · שלילית: %s", r.gated, r.pages, r.tags, r.negative ? "כן" : "לא");
+  else {
+    console.log("תנאי הדומיין מוגש ב-%d מתוך %d עמודים · הסקריפט עצמו ב-%d", r.gated, r.pages, r.tags);
+    for (const b of r.bad) console.log("  ✗ %s", b);
+    console.log("בקרה שלילית (התנאי נמחק מהמסמך המוגש): %s", r.negative ? "כן" : "לא");
+  }
+  process.exit(r.gated === r.pages && r.tags === r.pages && r.negative ? 0 : 1);
 } else {
-  console.log("שימוש: served.mjs links|fares|css|clarity [count] [base-url]");
+  console.log("שימוש: served.mjs links|fares|css|clarity|ga4 [count] [base-url]");
   process.exit(2);
 }

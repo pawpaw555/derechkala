@@ -60,6 +60,25 @@ export default function RootLayout({
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "yrc8o851ob");}`}
         </Script>
+        {/*
+          Google Analytics 4, נכס G-3L6HEVQXWD (חשבון rlcc, 20.11.2026).
+          אותו תנאי דומיין כמו Clarity ומאותה סיבה. לכן הטעינה נעשית כאן
+          ביד ולא דרך @next/third-parties: הרכיב שם (ניסיוני לפי התיעוד)
+          טוען תמיד, ואין בו דרך להגביל לדומיין. בלי gtag('config') שום
+          דבר לא נשלח — זה ההבדל מקטע ה-GTM שהציע אשף ההתקנה.
+        */}
+        <Script id="ga4" strategy="afterInteractive">
+          {`if (location.hostname === "derechkala.online") {
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function(){window.dataLayer.push(arguments);};
+        window.gtag("js", new Date());
+        window.gtag("config", "G-3L6HEVQXWD");
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = "https://www.googletagmanager.com/gtag/js?id=G-3L6HEVQXWD";
+        document.head.appendChild(s);
+    }`}
+        </Script>
         </ThemeProvider>
 
       </body>

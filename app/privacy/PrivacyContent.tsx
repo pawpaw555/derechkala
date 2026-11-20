@@ -23,7 +23,7 @@ export default function PrivacyContent() {
 
       <section style={{ maxWidth: 560, margin: "0 auto", padding: "40px 24px 48px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: t.text, marginBottom: 8 }}>מדיניות פרטיות</h1>
-        <p style={{ fontSize: 13, color: t.muted, marginBottom: 32 }}>עדכון אחרון: אוקטובר 2026</p>
+        <p style={{ fontSize: 13, color: t.muted, marginBottom: 32 }}>עדכון אחרון: נובמבר 2026</p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
@@ -40,7 +40,7 @@ export default function PrivacyContent() {
               האתר אינו אוסף מידע אישי מזהה. אין טפסי הרשמה, אין חשבונות משתמש, ולא נשמרים שם, כתובת דואר אלקטרוני או מספר טלפון.
             </p>
             <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
-              לצורך שיפור האתר נאסף מידע סטטיסטי על אופן השימוש: אילו עמודים נצפו, לחיצות, גלילה ותנועות עכבר. המידע נאסף באמצעות שירות Microsoft Clarity, משמש להבנת דפוסי שימוש ולשיפור הממשק, ואינו מזוהה עם אדם מסוים.
+              לצורך שיפור האתר נאסף מידע סטטיסטי על אופן השימוש: אילו עמודים נצפו, לחיצות, גלילה ותנועות עכבר. המידע נאסף באמצעות שירותי Microsoft Clarity ו-Google Analytics, משמש להבנת דפוסי שימוש ולשיפור הממשק, ואינו מזוהה עם אדם מסוים.
             </p>
           </div>
 
@@ -50,7 +50,7 @@ export default function PrivacyContent() {
               האתר משתמש ב-localStorage של הדפדפן לשני דברים: העדפת מצב בהיר או כהה, והמקום האחרון שבחרתם בשדה החיפוש — שמו והקואורדינטות שלו — כדי שתוכלו לחזור אליו בלחיצה. שניהם נשמרים על המכשיר שלכם בלבד ואינם מועברים לשום שרת. ניקוי נתוני האתר בדפדפן מוחק אותם.
             </p>
             <p style={{ fontSize: 14, color: t.muted, lineHeight: 1.8 }}>
-              בנוסף, שירות Microsoft Clarity מציב עוגיות לצורך זיהוי ביקורים חוזרים וניתוח סטטיסטי. ניתן לחסום עוגיות דרך הגדרות הדפדפן, וחסימה כזו לא תפגע בתפקוד האתר.
+              בנוסף, שירותי Microsoft Clarity ו-Google Analytics מציבים עוגיות לצורך זיהוי ביקורים חוזרים וניתוח סטטיסטי. ניתן לחסום עוגיות דרך הגדרות הדפדפן, וחסימה כזו לא תפגע בתפקוד האתר.
             </p>
           </div>
 
@@ -65,6 +65,7 @@ export default function PrivacyContent() {
               <li><strong style={{ color: t.text }}>Google Fonts</strong> — גופן Rubik נטען משרתי Google Fonts. הדפדפן עשוי לשלוח בקשה לשרתי Google בעת טעינת העמוד.</li>
               <li><strong style={{ color: t.text }}>Netlify</strong> — האתר מתארח על שרתי Netlify. Netlify עשויה לתעד נתוני גישה בסיסיים כגון כתובת IP לצורכי אבטחה ותפעול.</li>
               <li><strong style={{ color: t.text }}>Microsoft Clarity</strong> — שירות לניתוח התנהגות משתמשים מבית מיקרוסופט. השירות מתעד את אופן השימוש באתר (לחיצות, גלילה ותנועות עכבר) לצורך שיפור הממשק, ומסתיר כברירת מחדל תוכן רגיש. המידע מאוחסן בשרתי מיקרוסופט וכפוף למדיניות הפרטיות של מיקרוסופט.</li>
+              <li><strong style={{ color: t.text }}>Google Analytics</strong> — שירות מדידת תנועה מבית Google. השירות סופר ביקורים וצפיות בעמודים, ומתעד מאיפה הגעתם לאתר, סוג המכשיר והדפדפן ומיקום משוער ברמת מדינה ועיר. המידע מאוחסן בשרתי Google וכפוף למדיניות הפרטיות של Google.</li>
               <li><strong style={{ color: t.text }}>Photon (OpenStreetMap)</strong> — חיפוש כתובות ומקומות, בשני הכיוונים. אין כפתור חיפוש: הטקסט שאתם מקלידים נשלח לשרתי Photon אוטומטית, כשליש שנייה אחרי שאתם מפסיקים להקליד. ובעמוד המפה, לחיצה על גוף המפה שולחת לשרתי Photon את הקואורדינטה שלחצתם עליה — כדי להחזיר את שם הרחוב והעיר שם. הקואורדינטה הזאת היא המקום שבחרתם על המפה ולא המיקום שלכם.</li>
               <li><strong style={{ color: t.text }}>Nominatim (OpenStreetMap)</strong> — איתור מספר בית, כשהקלדתם מספר ו-Photon לא מצא אותו. במקרה כזה בלבד נשלח אותו טקסט גם לשרתי Nominatim.</li>
               <li><strong style={{ color: t.text }}>OSRM</strong> — חישוב מסלול הליכה, בשרת שמפעילה העמותה הגרמנית FOSSGIS בכתובת routing.openstreetmap.de. נשלחות שתי נקודות בלבד: נקודת המוצא שבחרתם והתחנה. לא נשלח מידע מזהה.</li>
